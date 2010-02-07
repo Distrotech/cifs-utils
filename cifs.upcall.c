@@ -38,6 +38,13 @@ create dns_resolver * * /usr/local/sbin/cifs.upcall %k
 
 #define	MAX_CCNAME_LEN			PATH_MAX + 5
 
+/*
+ * samba forces the build to fail if strncasecmp is used, disable that for now
+ */
+#ifdef strncasecmp
+#undef strncasecmp
+#endif
+
 const char *CIFSSPNEGO_VERSION = "1.3";
 static const char *prog = "cifs.upcall";
 typedef enum _sectype {
@@ -70,6 +77,13 @@ static char *cifs_krb5_principal_get_realm(krb5_context context,
 	return NULL;
 #endif
 }
+
+#if !defined(HAVE_KRB5_FREE_UNPARSED_NAME)
+void krb5_free_unparsed_name(krb5_context context, char *val)
+{
+	SAFE_FREE(val);
+}
+#endif
 
 /* does the ccache have a valid TGT? */
 static time_t
@@ -114,17 +128,17 @@ get_tgt_time(const char *ccname) {
 
 	while (!credtime && !krb5_cc_next_cred(context, ccache, &cur, &creds)) {
 		char *name;
-		if (smb_krb5_unparse_name(NULL, context, creds.server, &name)) {
+		if (krb5_unparse_name(context, creds.server, &name)) {
 			syslog(LOG_DEBUG, "%s: unable to unparse name", __func__);
 			goto err_endseq;
 		}
 		if (krb5_realm_compare(context, creds.server, principal) &&
-		    strnequal(name, KRB5_TGS_NAME, KRB5_TGS_NAME_SIZE) &&
-		    strnequal(name+KRB5_TGS_NAME_SIZE+1, realm, strlen(realm)) &&
+		    !strncasecmp(name, KRB5_TGS_NAME, KRB5_TGS_NAME_SIZE) &&
+		    !strncasecmp(name+KRB5_TGS_NAME_SIZE+1, realm, strlen(realm)) &&
 		    creds.times.endtime > time(NULL))
 			credtime = creds.times.endtime;
                 krb5_free_cred_contents(context, &creds);
-		TALLOC_FREE(name);
+		krb5_free_unparsed_name(context, name);
         }
 err_endseq:
         krb5_cc_end_seq_get(context, ccache, &cur);
