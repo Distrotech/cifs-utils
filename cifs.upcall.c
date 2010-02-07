@@ -46,6 +46,31 @@ typedef enum _sectype {
 	MS_KRB5
 } sectype_t;
 
+/*
+ * smb_krb5_principal_get_realm
+ *
+ * @brief Get realm of a principal
+ *
+ * @param[in] context		The krb5_context
+ * @param[in] principal		The principal
+ * @return pointer to the realm
+ *
+ */
+
+static char *cifs_krb5_principal_get_realm(krb5_context context,
+				   krb5_principal principal)
+{
+#ifdef HAVE_KRB5_PRINCIPAL_GET_REALM /* Heimdal */
+	return krb5_principal_get_realm(context, principal);
+#elif defined(krb5_princ_realm) /* MIT */
+	krb5_data *realm;
+	realm = krb5_princ_realm(context, principal);
+	return (char *)realm->data;
+#else
+	return NULL;
+#endif
+}
+
 /* does the ccache have a valid TGT? */
 static time_t
 get_tgt_time(const char *ccname) {
@@ -82,7 +107,7 @@ get_tgt_time(const char *ccname) {
 		goto err_ccstart;
 	}
 
-	if ((realm = smb_krb5_principal_get_realm(context, principal)) == NULL) {
+	if ((realm = cifs_krb5_principal_get_realm(context, principal)) == NULL) {
 		syslog(LOG_DEBUG, "%s: unable to get realm", __func__);
 		goto err_ccstart;
 	}
