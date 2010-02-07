@@ -62,7 +62,6 @@ bool asn1_write_implicit_Integer(struct asn1_data *data, int i);
 bool asn1_write_Integer(struct asn1_data *data, int i);
 bool asn1_write_BitString(struct asn1_data *data, const void *p, size_t length, uint8_t padding);
 bool ber_write_OID_String(TALLOC_CTX *mem_ctx, DATA_BLOB *blob, const char *OID);
-bool ber_write_partial_OID_String(TALLOC_CTX *mem_ctx, DATA_BLOB *blob, const char *partial_oid);
 bool asn1_write_OID(struct asn1_data *data, const char *OID);
 bool asn1_write_OctetString(struct asn1_data *data, const void *p, size_t length);
 bool asn1_write_LDAPString(struct asn1_data *data, const char *s);
@@ -84,7 +83,6 @@ bool asn1_start_tag(struct asn1_data *data, uint8_t tag);
 bool asn1_end_tag(struct asn1_data *data);
 int asn1_tag_remaining(struct asn1_data *data);
 bool ber_read_OID_String(TALLOC_CTX *mem_ctx, DATA_BLOB blob, const char **OID);
-bool ber_read_partial_OID_String(TALLOC_CTX *mem_ctx, DATA_BLOB blob, const char **partial_oid);
 bool asn1_read_OID(struct asn1_data *data, TALLOC_CTX *mem_ctx, const char **OID);
 bool asn1_check_OID(struct asn1_data *data, const char *OID);
 bool asn1_read_LDAPString(struct asn1_data *data, TALLOC_CTX *mem_ctx, char **s);
@@ -99,6 +97,5 @@ bool asn1_check_enumerated(struct asn1_data *data, int v);
 bool asn1_write_enumerated(struct asn1_data *data, uint8_t v);
 bool asn1_blob(const struct asn1_data *asn1, DATA_BLOB *blob);
 void asn1_load_nocopy(struct asn1_data *data, uint8_t *buf, size_t len);
-NTSTATUS asn1_full_tag(DATA_BLOB blob, uint8_t tag, size_t *packet_size);
 
 #endif /* _ASN_1_H */

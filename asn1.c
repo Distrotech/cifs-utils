@@ -260,41 +260,6 @@ bool ber_write_OID_String(TALLOC_CTX *mem_ctx, DATA_BLOB *blob, const char *OID)
 	return true;
 }
 
-/**
- * Serialize partial OID string.
- * Partial OIDs are in the form:
- *   1:2.5.6:0x81
- *   1:2.5.6:0x8182
- */
-bool ber_write_partial_OID_String(TALLOC_CTX *mem_ctx, DATA_BLOB *blob, const char *partial_oid)
-{
-	TALLOC_CTX *tmp_ctx = talloc_new(mem_ctx);
-	char *oid = talloc_strdup(tmp_ctx, partial_oid);
-	char *p;
-
-	/* truncate partial part so ber_write_OID_String() works */
-	p = strchr(oid, ':');
-	if (p) {
-		*p = '\0';
-		p++;
-	}
-
-	if (!ber_write_OID_String(mem_ctx, blob, oid)) {
-		talloc_free(tmp_ctx);
-		return false;
-	}
-
-	/* Add partially endcoded subidentifier */
-	if (p) {
-		DATA_BLOB tmp_blob = strhex_to_data_blob(tmp_ctx, p);
-		data_blob_append(mem_ctx, blob, tmp_blob.data, tmp_blob.length);
-	}
-
-	talloc_free(tmp_ctx);
-
-	return true;
-}
-
 /* write an object ID to a ASN1 buffer */
 bool asn1_write_OID(struct asn1_data *data, const char *OID)
 {
@@ -631,42 +596,6 @@ bool ber_read_OID_String(TALLOC_CTX *mem_ctx, DATA_BLOB blob, const char **OID)
 	return (bytes_eaten == blob.length);
 }
 
-/**
- * Deserialize partial OID string.
- * Partial OIDs are in the form:
- *   1:2.5.6:0x81
- *   1:2.5.6:0x8182
- */
-bool ber_read_partial_OID_String(TALLOC_CTX *mem_ctx, DATA_BLOB blob, const char **partial_oid)
-{
-	size_t bytes_left;
-	size_t bytes_eaten;
-	char *identifier = NULL;
-	char *tmp_oid = NULL;
-
-	if (!_ber_read_OID_String_impl(mem_ctx, blob, (const char **)&tmp_oid, &bytes_eaten))
-		return false;
-
-	if (bytes_eaten < blob.length) {
-		bytes_left = blob.length - bytes_eaten;
-		identifier = hex_encode_talloc(mem_ctx, &blob.data[bytes_eaten], bytes_left);
-		if (!identifier)	goto nomem;
-
-		*partial_oid = talloc_asprintf_append_buffer(tmp_oid, ":0x%s", identifier);
-		if (!*partial_oid)	goto nomem;
-		TALLOC_FREE(identifier);
-	} else {
-		*partial_oid = tmp_oid;
-	}
-
-	return true;
-
-nomem:
-	TALLOC_FREE(identifier);
-	TALLOC_FREE(tmp_oid);
-	return false;
-}
-
 /* read an object ID from a ASN1 buffer */
 bool asn1_read_OID(struct asn1_data *data, TALLOC_CTX *mem_ctx, const char **OID)
 {
@@ -918,31 +847,3 @@ void asn1_load_nocopy(struct asn1_data *data, uint8_t *buf, size_t len)
 	data->length = len;
 }
 
-/*
-  check if a ASN.1 blob is a full tag
-*/
-NTSTATUS asn1_full_tag(DATA_BLOB blob, uint8_t tag, size_t *packet_size)
-{
-	struct asn1_data *asn1 = asn1_init(NULL);
-	int size;
-
-	NT_STATUS_HAVE_NO_MEMORY(asn1);
-
-	asn1->data = blob.data;
-	asn1->length = blob.length;
-	asn1_start_tag(asn1, tag);
-	if (asn1->has_error) {
-		talloc_free(asn1);
-		return STATUS_MORE_ENTRIES;
-	}
-	size = asn1_tag_remaining(asn1) + asn1->ofs;
-
-	talloc_free(asn1);
-
-	if (size > blob.length) {
-		return STATUS_MORE_ENTRIES;
-	}		
-
-	*packet_size = size;
-	return NT_STATUS_OK;
-}
