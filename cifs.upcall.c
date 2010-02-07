@@ -25,12 +25,19 @@ create dns_resolver * * /usr/local/sbin/cifs.upcall %k
 * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
 
-#include "includes.h"
-#include "../libcli/auth/spnego.h"
-#include "smb_krb5.h"
-#include <keyutils.h>
+#include <string.h>
 #include <getopt.h>
+#include <krb5.h>
+#include <syslog.h>
+#include <dirent.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <keyutils.h>
 
+
+#include "replace.h"
+#include "data_blob.h"
 #include "cifs_spnego.h"
 
 #define	CIFS_DEFAULT_KRB5_DIR		"/tmp"
