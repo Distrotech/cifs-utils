@@ -408,7 +408,7 @@ decode_key_description(const char *desc, struct decoded_args *arg)
 
 			len -= 4;
 			SAFE_FREE(arg->hostname);
-			arg->hostname = SMB_XMALLOC_ARRAY(char, len);
+			arg->hostname = calloc(sizeof(char), len);
 			strlcpy(arg->hostname, tkn + 5, len);
 			retval |= DKD_HAVE_HOSTNAME;
 		} else if (!strncmp(tkn, "ip4=", 4) ||
@@ -420,7 +420,7 @@ decode_key_description(const char *desc, struct decoded_args *arg)
 
 			len -= 3;
 			SAFE_FREE(arg->ip);
-			arg->ip = SMB_XMALLOC_ARRAY(char, len);
+			arg->ip = calloc(sizeof(char), len);
 			strlcpy(arg->ip, tkn + 4, len);
 			retval |= DKD_HAVE_IP;
 		} else if (strncmp(tkn, "pid=", 4) == 0) {
@@ -690,7 +690,7 @@ int main(const int argc, char *const argv[])
 retry_new_hostname:
 		/* for "cifs/" service name + terminating 0 */
 		datalen = strlen(host) + 5 + 1;
-		princ = SMB_XMALLOC_ARRAY(char, datalen);
+		princ = calloc(sizeof(char), datalen);
 		if (!princ) {
 			rc = -ENOMEM;
 			break;
@@ -741,7 +741,7 @@ retry_new_hostname:
 	/* pack SecurityBLob and SessionKey into downcall packet */
 	datalen =
 	    sizeof(struct cifs_spnego_msg) + secblob.length + sess_key.length;
-	keydata = (struct cifs_spnego_msg*)SMB_XMALLOC_ARRAY(char, datalen);
+	keydata = (struct cifs_spnego_msg*) calloc(sizeof(char), datalen);
 	if (!keydata) {
 		rc = 1;
 		goto out;
