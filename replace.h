@@ -714,4 +714,8 @@ char *ufc_crypt(const char *key, const char *salt);
 #define SAFE_FREE(x) do { if ((x) != NULL) {free(x); x=NULL;} } while(0)
 #endif
 
+typedef uint32_t NTSTATUS;
+#define NT_STATUS(x) (x)
+#define NT_STATUS_V(x) (x)
+
 #endif /* _LIBREPLACE_REPLACE_H */
