@@ -220,7 +220,7 @@ find_krb5_cc(const char *dirname, uid_t uid)
 
 		syslog(LOG_DEBUG, "%s: %s is valid ccache", __func__, ccname);
 		free(best_cache);
-		best_cache = SMB_STRNDUP(ccname, MAX_CCNAME_LEN);
+		best_cache = strndup(ccname, MAX_CCNAME_LEN);
 		best_time = cred_time;
 		free(namelist[i]);
 	}
