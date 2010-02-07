@@ -229,6 +229,89 @@ find_krb5_cc(const char *dirname, uid_t uid)
 	return best_cache;
 }
 
+static int
+cifs_krb5_get_req(const char *principal, const char *ccname,
+		  DATA_BLOB *mechtoken, DATA_BLOB *sess_key)
+{
+	krb5_error_code ret;
+	krb5_keyblock *tokb;
+	krb5_context context;
+	krb5_ccache ccache;
+	krb5_creds in_creds = { }, *out_creds;
+	krb5_data apreq_pkt, in_data;
+	krb5_auth_context auth_context = NULL;
+
+	ret = krb5_init_context(&context);
+	if (ret) {
+		syslog(LOG_DEBUG, "%s: unable to init krb5 context", __func__);
+		return ret;
+	}
+
+	ret = krb5_cc_resolve(context, ccname, &ccache);
+	if (ret) {
+		syslog(LOG_DEBUG, "%s: unable to resolve %s to ccache\n",
+				__func__, ccname);
+		goto out_free_context;
+	}
+
+	ret = krb5_cc_get_principal(context, ccache, &in_creds.client);
+	if (ret) {
+		syslog(LOG_DEBUG, "%s: unable to get client principal name",
+				  __func__);
+		goto out_free_ccache;
+	}
+
+	ret = krb5_parse_name(context, principal, &in_creds.server);
+	if (ret) {
+		syslog(LOG_DEBUG, "%s: unable to parse principal (%s).",
+				  __func__, principal);
+		goto out_free_principal;
+	}
+
+	in_creds.keyblock.enctype = 0;
+	ret = krb5_get_credentials(context, 0, ccache, &in_creds, &out_creds);
+	krb5_free_principal(context, in_creds.server);
+	if (ret) {
+		syslog(LOG_DEBUG, "%s: unable to get credentials for %s",
+				__func__, principal);
+		goto out_free_principal;
+	}
+
+	apreq_pkt.data = NULL;
+	in_data.length = 0;
+	ret = krb5_mk_req_extended(context, &auth_context, AP_OPTS_USE_SUBKEY,
+					&in_data, out_creds, &apreq_pkt);
+	if (ret) {
+		syslog(LOG_DEBUG, "%s: unable to make AP-REQ for %s",
+				__func__, principal);
+		goto out_free_creds;
+	}
+
+	ret = krb5_auth_con_getsendsubkey(context, auth_context, &tokb);
+	if (ret) {
+		syslog(LOG_DEBUG, "%s: unable to get session key for %s",
+				__func__, principal);
+		goto out_free_creds;
+	}
+
+	*mechtoken = data_blob(apreq_pkt.data, apreq_pkt.length);
+	*sess_key = data_blob(tokb->contents, tokb->length);
+
+	krb5_free_keyblock(context, tokb);
+out_free_creds:
+	krb5_free_creds(context, out_creds);
+out_free_principal:
+	krb5_free_principal(context, in_creds.client);
+out_free_ccache:
+#if defined(KRB5_TC_OPENCLOSE)
+        krb5_cc_set_flags(context, ccache, KRB5_TC_OPENCLOSE);
+#endif
+	krb5_cc_close(context, ccache);
+out_free_context:
+	krb5_free_context(context);
+	return ret;
+}
+
 /*
  * Prepares AP-REQ data for mechToken and gets session key
  * Uses credentials from cache. It will not ask for password
@@ -260,9 +343,7 @@ handle_krb5_mech(const char *oid, const char *principal, DATA_BLOB *secblob,
 			  principal);
 
 	/* get a kerberos ticket for the service and extract the session key */
-	retval = cli_krb5_get_ticket(principal, 0, &tkt, sess_key, 0, ccname,
-				     NULL, NULL);
-
+	retval = cifs_krb5_get_req(principal, ccname, &tkt, sess_key);
 	if (retval) {
 		syslog(LOG_DEBUG, "%s: failed to obtain service ticket (%d)",
 				  __func__, retval);
