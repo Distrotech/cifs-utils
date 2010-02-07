@@ -38,6 +38,7 @@ create dns_resolver * * /usr/local/sbin/cifs.upcall %k
 
 #include "replace.h"
 #include "data_blob.h"
+#include "spnego.h"
 #include "cifs_spnego.h"
 
 #define	CIFS_DEFAULT_KRB5_DIR		"/tmp"
