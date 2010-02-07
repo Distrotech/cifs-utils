@@ -710,4 +710,8 @@ char *ufc_crypt(const char *key, const char *salt);
 #endif
 #endif
 
+#ifndef SAFE_FREE
+#define SAFE_FREE(x) do { if ((x) != NULL) {free(x); x=NULL;} } while(0)
+#endif
+
 #endif /* _LIBREPLACE_REPLACE_H */
