@@ -36,6 +36,7 @@ create dns_resolver * * /usr/local/sbin/cifs.upcall %k
 #include <keyutils.h>
 #include <time.h>
 #include <netdb.h>
+#include <arpa/inet.h>
 
 
 #include "replace.h"
