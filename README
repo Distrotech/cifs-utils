@@ -1,0 +1,4 @@
+This is the release version of cifs-utils, a package of utilities for
+doing and managing mounts of the Linux CIFS filesystem.
+
+This package is primarily maintained by Jeff Layton <jlayton@samba.org> and Steve French <smfrench@gmail.com>.
