@@ -133,11 +133,6 @@ extern int errno;
 char *rep_strdup(const char *s);
 #endif
 
-#ifndef HAVE_MEMMOVE
-#define memmove rep_memmove
-void *rep_memmove(void *dest,const void *src,int size);
-#endif
-
 #ifndef HAVE_MEMMEM
 #define memmem rep_memmem
 void *rep_memmem(const void *haystack, size_t haystacklen,
@@ -162,28 +157,6 @@ void *rep_memmem(const void *haystack, size_t haystacklen,
 #ifndef HAVE_UTIMES
 #define utimes rep_utimes
 /* prototype is in "system/time.h" */
-#endif
-
-#ifndef HAVE_STRLCPY
-#define strlcpy rep_strlcpy
-size_t rep_strlcpy(char *d, const char *s, size_t bufsize);
-#endif
-
-#ifndef HAVE_STRLCAT
-#define strlcat rep_strlcat
-size_t rep_strlcat(char *d, const char *s, size_t bufsize);
-#endif
-
-#if (defined(BROKEN_STRNDUP) || !defined(HAVE_STRNDUP))
-#undef HAVE_STRNDUP
-#define strndup rep_strndup
-char *rep_strndup(const char *s, size_t n);
-#endif
-
-#if (defined(BROKEN_STRNLEN) || !defined(HAVE_STRNLEN))
-#undef HAVE_STRNLEN
-#define strnlen rep_strnlen
-size_t rep_strnlen(const char *s, size_t n);
 #endif
 
 #if !HAVE_DECL_ENVIRON
@@ -354,32 +327,7 @@ int rep_dlclose(void *handle);
 int rep_vasprintf(char **ptr, const char *format, va_list ap) PRINTF_ATTRIBUTE(2,0);
 #endif
 
-#if !defined(HAVE_SNPRINTF) || !defined(HAVE_C99_VSNPRINTF)
-#define snprintf rep_snprintf
-int rep_snprintf(char *,size_t ,const char *, ...) PRINTF_ATTRIBUTE(3,4);
-#endif
-
-#if !defined(HAVE_VSNPRINTF) || !defined(HAVE_C99_VSNPRINTF)
-#define vsnprintf rep_vsnprintf
-int rep_vsnprintf(char *,size_t ,const char *, va_list ap) PRINTF_ATTRIBUTE(3,0);
-#endif
-
-#ifndef HAVE_ASPRINTF
-#define asprintf rep_asprintf
-int rep_asprintf(char **,const char *, ...) PRINTF_ATTRIBUTE(2,3);
-#endif
-
-#ifndef HAVE_VSYSLOG
-#ifdef HAVE_SYSLOG
-#define vsyslog rep_vsyslog
-void rep_vsyslog (int facility_priority, const char *format, va_list arglist) PRINTF_ATTRIBUTE(2,0);
-#endif
-#endif
-
-/* we used to use these fns, but now we have good replacements
-   for snprintf and vsnprintf */
 #define slprintf snprintf
-
 
 #ifndef HAVE_VA_COPY
 #undef va_copy
