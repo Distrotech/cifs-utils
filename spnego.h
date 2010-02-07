@@ -14,4 +14,7 @@
 #define TOK_ID_GSS_GETMIC	(unsigned char *)"\x01\x01"
 #define TOK_ID_GSS_WRAP		(unsigned char *)"\x02\x01"
 
+extern DATA_BLOB gen_negTokenInit(const char *OID, DATA_BLOB blob);
+extern DATA_BLOB spnego_gen_krb5_wrap(const DATA_BLOB ticket, const uint8_t tok_id[2]);
+
 #endif /* _SPNEGO_H */
