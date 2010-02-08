@@ -2,12 +2,12 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.63])
-AC_INIT(cifs-utils, 0.1, jlayton@samba.org)
+AC_INIT(cifs-utils, 0.5, jlayton@samba.org)
 AC_CONFIG_SRCDIR([replace.h])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_FILES([Makefile])
 
-AM_INIT_AUTOMAKE(cifs-utils, 0.1)
+AM_INIT_AUTOMAKE(cifs-utils, 0.5)
 
 # Checks for programs.
 AC_PROG_CC
@@ -16,7 +16,7 @@ AC_PROG_CC
 
 # Checks for header files.
 AC_USE_SYSTEM_EXTENSIONS
-AC_CHECK_HEADERS([arpa/inet.h fcntl.h inttypes.h limits.h mntent.h netdb.h stddef.h stdint.h stdlib.h string.h strings.h sys/mount.h sys/param.h sys/socket.h sys/time.h syslog.h unistd.h])
+AC_CHECK_HEADERS([arpa/inet.h fcntl.h inttypes.h limits.h mntent.h netdb.h stddef.h stdint.h stdlib.h string.h strings.h sys/mount.h sys/param.h sys/socket.h sys/time.h syslog.h unistd.h krb5.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_HEADER_STDBOOL
