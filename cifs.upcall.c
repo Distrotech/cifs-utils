@@ -38,6 +38,7 @@ create dns_resolver * * /usr/local/sbin/cifs.upcall %k
 #include <netdb.h>
 #include <arpa/inet.h>
 
+#include "util.h"
 #include "replace.h"
 #include "data_blob.h"
 #include "spnego.h"

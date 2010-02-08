@@ -2,12 +2,12 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.63])
-AC_INIT(cifs-utils, 0.5, jlayton@samba.org)
+AC_INIT(cifs-utils, 0.1, jlayton@samba.org)
 AC_CONFIG_SRCDIR([replace.h])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_FILES([Makefile])
 
-AM_INIT_AUTOMAKE(cifs-utils, 0.5)
+AM_INIT_AUTOMAKE(cifs-utils, 0.1)
 
 # Checks for programs.
 AC_PROG_CC
