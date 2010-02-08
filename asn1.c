@@ -588,7 +588,7 @@ nomem:
 /* read an object ID from a data blob */
 bool ber_read_OID_String(TALLOC_CTX *mem_ctx, DATA_BLOB blob, const char **OID)
 {
-	size_t bytes_eaten;
+	size_t bytes_eaten = 0;
 
 	if (!_ber_read_OID_String_impl(mem_ctx, blob, OID, &bytes_eaten))
 		return false;

@@ -1198,7 +1198,7 @@ int main(int argc, char ** argv)
 	char * optionstail;
 	char * resolved_path = NULL;
 	char * temp;
-	char * dev_name;
+	char * dev_name = NULL;
 	int rc = 0;
 	int rsize = 0;
 	int wsize = 0;
@@ -1213,8 +1213,8 @@ int main(int argc, char ** argv)
 	struct addrinfo *addrhead = NULL, *addr;
 	struct utsname sysinfo;
 	struct mntent mountent;
-	struct sockaddr_in *addr4;
-	struct sockaddr_in6 *addr6;
+	struct sockaddr_in *addr4 = NULL;
+	struct sockaddr_in6 *addr6 = NULL;
 	FILE * pmntfile;
 
 	if (check_setuid())
