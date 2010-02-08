@@ -1,4 +1,21 @@
 This is the release version of cifs-utils, a package of utilities for
-doing and managing mounts of the Linux CIFS filesystem.
+doing and managing mounts of the Linux CIFS filesystem. These programs
+were originally part of Samba, but have now been split off into a
+separate package.
 
-This package is primarily maintained by Jeff Layton <jlayton@samba.org> and Steve French <smfrench@gmail.com>.
+0. PROJECT RESOURCES
+
+    Home page: http://linux-cifs.samba.org/
+
+    Mailing list: linux-cifs-client@lists.samba.org
+
+1. COMPILING
+
+Unpack the sources and run these commands:
+
+    $ configure
+    $ make
+
+To install binaries and documentation, run this:
+
+    # make install

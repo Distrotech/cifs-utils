@@ -38,7 +38,6 @@ create dns_resolver * * /usr/local/sbin/cifs.upcall %k
 #include <netdb.h>
 #include <arpa/inet.h>
 
-
 #include "replace.h"
 #include "data_blob.h"
 #include "spnego.h"
@@ -49,14 +48,7 @@ create dns_resolver * * /usr/local/sbin/cifs.upcall %k
 
 #define	MAX_CCNAME_LEN			PATH_MAX + 5
 
-/*
- * samba forces the build to fail if strncasecmp is used, disable that for now
- */
-#ifdef strncasecmp
-#undef strncasecmp
-#endif
-
-const char *CIFSSPNEGO_VERSION = "1.3";
+const char *CIFSSPNEGO_VERSION = "1.4";
 static const char *prog = "cifs.upcall";
 typedef enum _sectype {
 	NONE = 0,
