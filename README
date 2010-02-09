@@ -14,7 +14,7 @@ separate package.
 
 Unpack the sources and run these commands:
 
-    $ configure
+    $ ./configure
     $ make
 
 To install binaries and documentation, run this:
