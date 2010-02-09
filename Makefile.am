@@ -1,3 +1,4 @@
+AM_CFLAGS = -Wall
 root_sbindir = "/sbin"
 root_sbin_PROGRAMS = mount.cifs
 mount_cifs_SOURCES = mount.cifs.c mtab.c util.c
