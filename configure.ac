@@ -16,8 +16,7 @@ AC_PROG_CC
 
 # Checks for header files.
 AC_USE_SYSTEM_EXTENSIONS
-AC_CHECK_HEADERS([arpa/inet.h fcntl.h inttypes.h limits.h mntent.h netdb.h stddef.h stdint.h stdlib.h string.h strings.h sys/mount.h sys/param.h sys/socket.h sys/time.h syslog.h unistd.h])
-AC_CHECK_HEADERS([krb5.h talloc.h], , [AC_MSG_ERROR([necessary header(s) not found])])
+AC_CHECK_HEADERS([arpa/inet.h fcntl.h inttypes.h limits.h mntent.h netdb.h stddef.h stdint.h stdlib.h string.h strings.h sys/mount.h sys/param.h sys/socket.h sys/time.h syslog.h unistd.h krb5.h talloc.h], , [AC_MSG_ERROR([necessary header(s) not found])])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_HEADER_STDBOOL
@@ -36,6 +35,11 @@ AC_FUNC_LSTAT_FOLLOWS_SLASHED_SYMLINK
 AC_FUNC_MALLOC
 AC_FUNC_REALLOC
 AC_FUNC_STRNLEN
-AC_CHECK_FUNCS([alarm atexit endpwent getmntent getpass gettimeofday inet_ntop memset realpath setenv strchr strdup strerror strncasecmp strndup strpbrk strrchr strstr strtol strtoul uname krb5_principal_get_realm krb5_free_unparsed_name])
+
+# check for required functions
+AC_CHECK_FUNCS([alarm atexit endpwent getmntent getpass gettimeofday inet_ntop memset realpath setenv strchr strdup strerror strncasecmp strndup strpbrk strrchr strstr strtol strtoul uname], , [AC_MSG_ERROR([necessary functions(s) not found])])
+
+# non-critical functions (we have workarounds for these)
+AC_CHECK_FUNCS([krb5_principal_get_realm krb5_free_unparsed_name])
 
 AC_OUTPUT
