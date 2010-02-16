@@ -34,8 +34,9 @@ DATA_BLOB spnego_gen_krb5_wrap(const DATA_BLOB ticket, const uint8_t tok_id[2])
 {
 	ASN1_DATA *data;
 	DATA_BLOB ret;
+	TALLOC_CTX *mem_ctx = talloc_init("gssapi");
 
-	data = asn1_init(talloc_init("gssapi"));
+	data = asn1_init(mem_ctx);
 	if (data == NULL) {
 		return data_blob_null;
 	}
@@ -55,6 +56,7 @@ DATA_BLOB spnego_gen_krb5_wrap(const DATA_BLOB ticket, const uint8_t tok_id[2])
 
 	ret = data_blob(data->data, data->length);
 	asn1_free(data);
+	talloc_free(mem_ctx);
 
 	return ret;
 }
@@ -70,8 +72,9 @@ DATA_BLOB gen_negTokenInit(const char *OID, DATA_BLOB blob)
 {
 	ASN1_DATA *data;
 	DATA_BLOB ret;
+	TALLOC_CTX *mem_ctx = talloc_init("spnego");
 
-	data = asn1_init(talloc_init("spnego"));
+	data = asn1_init(mem_ctx);
 	if (data == NULL) {
 		return data_blob_null;
 	}
@@ -104,6 +107,7 @@ DATA_BLOB gen_negTokenInit(const char *OID, DATA_BLOB blob)
 
 	ret = data_blob(data->data, data->length);
 	asn1_free(data);
+	talloc_free(mem_ctx);
 
 	return ret;
 }
