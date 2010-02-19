@@ -1,7 +1,6 @@
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
-AC_PREREQ([2.63])
 AC_INIT([cifs-utils], [4.0], [jlayton@samba.org])
 AC_CONFIG_SRCDIR([replace.h])
 AC_CONFIG_HEADERS([config.h])
@@ -15,8 +14,8 @@ AC_PROG_CC
 # Checks for libraries.
 
 # Checks for header files.
-AC_USE_SYSTEM_EXTENSIONS
-AC_CHECK_HEADERS([arpa/inet.h fcntl.h inttypes.h limits.h mntent.h netdb.h stddef.h stdint.h stdlib.h string.h strings.h sys/mount.h sys/param.h sys/socket.h sys/time.h syslog.h unistd.h krb5.h talloc.h], , [AC_MSG_ERROR([necessary header(s) not found])])
+AC_CHECK_HEADERS([arpa/inet.h fcntl.h inttypes.h limits.h mntent.h netdb.h stddef.h stdint.h stdlib.h string.h strings.h sys/mount.h sys/param.h sys/socket.h sys/time.h syslog.h unistd.h krb5.h], , [AC_MSG_ERROR([necessary header(s) not found])])
+AC_CHECK_HEADERS([talloc.h], , [AC_MSG_ERROR([necessary header not found, install libtalloc-devel])])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_HEADER_STDBOOL
@@ -24,10 +23,7 @@ AC_TYPE_UID_T
 AC_TYPE_OFF_T
 AC_TYPE_PID_T
 AC_TYPE_SIZE_T
-AC_TYPE_SSIZE_T
-AC_TYPE_UINT32_T
-AC_TYPE_UINT8_T
-AC_CHECK_TYPES([ptrdiff_t])
+AC_CHECK_TYPES([ptrdiff_t, ssize_t, uint32_t, uint8_t])
 
 # Checks for library functions.
 AC_FUNC_GETMNTENT
