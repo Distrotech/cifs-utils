@@ -25,6 +25,10 @@ create dns_resolver * * /usr/local/sbin/cifs.upcall %k
 * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif /* HAVE_CONFIG_H */
+
 #include <string.h>
 #include <getopt.h>
 #include <krb5.h>

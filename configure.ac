@@ -10,6 +10,7 @@ AM_INIT_AUTOMAKE([cifs-utils], [4.0])
 
 # Checks for programs.
 AC_PROG_CC
+AC_GNU_SOURCE
 
 # Checks for libraries.
 
