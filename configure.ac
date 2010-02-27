@@ -15,8 +15,9 @@ AC_GNU_SOURCE
 # Checks for libraries.
 
 # Checks for header files.
-AC_CHECK_HEADERS([arpa/inet.h fcntl.h inttypes.h limits.h mntent.h netdb.h stddef.h stdint.h stdlib.h string.h strings.h sys/mount.h sys/param.h sys/socket.h sys/time.h syslog.h unistd.h krb5.h], , [AC_MSG_ERROR([necessary header(s) not found])])
-AC_CHECK_HEADERS([talloc.h], , [AC_MSG_ERROR([necessary header not found, install libtalloc-devel])])
+AC_CHECK_HEADERS([arpa/inet.h fcntl.h inttypes.h limits.h mntent.h netdb.h stddef.h stdint.h stdlib.h string.h strings.h sys/mount.h sys/param.h sys/socket.h sys/time.h syslog.h unistd.h], , [AC_MSG_ERROR([necessary header(s) not found])])
+AC_CHECK_HEADERS([talloc.h], , [AC_MSG_ERROR([talloc.h not found, install libtalloc-devel])])
+AC_CHECK_HEADERS([krb5/krb5.h], , [AC_MSG_ERROR([krb5/krb5.h not found, install krb5-devel])])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_HEADER_STDBOOL

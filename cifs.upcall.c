@@ -31,7 +31,7 @@ create dns_resolver * * /usr/local/sbin/cifs.upcall %k
 
 #include <string.h>
 #include <getopt.h>
-#include <krb5.h>
+#include <krb5/krb5.h>
 #include <syslog.h>
 #include <dirent.h>
 #include <sys/types.h>
