@@ -29,8 +29,7 @@
 <refsect1>
         <title>DESCRIPTION</title>
 
-        <para>This tool is part of the <citerefentry><refentrytitle>samba</refentrytitle>
-        <manvolnum>7</manvolnum></citerefentry> suite.</para>
+        <para>This tool is part of the cifs-utils suite.</para>
 
 <para>cifs.upcall is a userspace helper program for the linux CIFS client
 filesystem. There are a number of activities that the kernel cannot easily
