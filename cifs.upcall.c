@@ -53,7 +53,6 @@ create dns_resolver * * /usr/local/sbin/cifs.upcall %k
 
 #define	MAX_CCNAME_LEN			PATH_MAX + 5
 
-const char *CIFSSPNEGO_VERSION = "1.4";
 static const char *prog = "cifs.upcall";
 typedef enum _sectype {
 	NONE = 0,
@@ -615,7 +614,7 @@ int main(const int argc, char *const argv[])
 			try_dns++;
 			break;
 		case 'v':
-			printf("version: %s\n", CIFSSPNEGO_VERSION);
+			printf("version: %s\n", VERSION);
 			goto out;
 		default:
 			syslog(LOG_ERR, "unknown option: %c", c);

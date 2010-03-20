@@ -1,12 +1,12 @@
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
-AC_INIT([cifs-utils], [4.0], [jlayton@samba.org])
+AC_INIT([cifs-utils], [4.1rc1], [jlayton@samba.org], [cifs-utils], [http://samba.org/linux-cifs/cifs-utils/])
 AC_CONFIG_SRCDIR([replace.h])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_FILES([Makefile])
 
-AM_INIT_AUTOMAKE([cifs-utils], [4.0])
+AM_INIT_AUTOMAKE
 
 # "with" options
 AC_ARG_ENABLE(cifsupcall,

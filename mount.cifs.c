@@ -43,9 +43,6 @@
 #include "mount.h"
 #include "util.h"
 
-#define MOUNT_CIFS_VERSION_MAJOR "1"
-#define MOUNT_CIFS_VERSION_MINOR "14"
-
 #ifndef MOUNT_CIFS_VENDOR_SUFFIX
  #ifdef _SAMBA_BUILD_
   #include "version.h"
@@ -1149,10 +1146,7 @@ uppercase_string(char *string)
 
 static void print_cifs_mount_version(void)
 {
-	printf("mount.cifs version: %s.%s%s\n",
-		MOUNT_CIFS_VERSION_MAJOR,
-		MOUNT_CIFS_VERSION_MINOR,
-		MOUNT_CIFS_VENDOR_SUFFIX);
+	printf("mount.cifs version: %s\n", VERSION);
 }
 
 /*
@@ -1561,7 +1555,7 @@ mount_retry:
 	}
 
 	strlcat(options,",ver=",options_size);
-	strlcat(options,MOUNT_CIFS_VERSION_MAJOR,options_size);
+	strlcat(options,VERSION,options_size);
 
 	if(orgoptions) {
 		strlcat(options,",",options_size);
