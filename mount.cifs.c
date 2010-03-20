@@ -43,23 +43,6 @@
 #include "mount.h"
 #include "util.h"
 
-#ifndef MOUNT_CIFS_VENDOR_SUFFIX
- #ifdef _SAMBA_BUILD_
-  #include "version.h"
-  #ifdef SAMBA_VERSION_VENDOR_SUFFIX
-   #define MOUNT_CIFS_VENDOR_SUFFIX "-"SAMBA_VERSION_OFFICIAL_STRING"-"SAMBA_VERSION_VENDOR_SUFFIX
-  #else
-   #define MOUNT_CIFS_VENDOR_SUFFIX "-"SAMBA_VERSION_OFFICIAL_STRING
-  #endif /* SAMBA_VERSION_OFFICIAL_STRING and SAMBA_VERSION_VENDOR_SUFFIX */
- #else
-   #define MOUNT_CIFS_VENDOR_SUFFIX ""
- #endif /* _SAMBA_BUILD_ */
-#endif /* MOUNT_CIFS_VENDOR_SUFFIX */
-
-#ifdef _SAMBA_BUILD_
-#include "include/config.h"
-#endif
-
 #ifndef MS_MOVE 
 #define MS_MOVE 8192 
 #endif 
