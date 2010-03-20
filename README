@@ -8,11 +8,18 @@ separate package.
     Home page: http://linux-cifs.samba.org/
     Mailing list: linux-cifs-client@lists.samba.org
     Maintainer: Jeff Layton <jlayton@samba.org>
-    Git Repository: git://git.samba.org/jlayton/cifs-utils
+    Git Repository: git://git.samba.org/cifs-utils.git
 
 1. COMPILING
 
-Unpack the sources and run these commands:
+If you pulled down the git tree directly, then you'll need to
+generate the autoconf/automake files before you can build. cd to
+the top of the build tree and run:
+
+    $ autoreconf
+
+If you downloaded a release tarball, then just unpack the sources
+and run these commands:
 
     $ ./configure
     $ make
