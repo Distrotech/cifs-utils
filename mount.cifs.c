@@ -1187,7 +1187,6 @@ int main(int argc, char ** argv)
 	size_t current_len;
 	int retry = 0; /* set when we have to retry mount with uppercase */
 	struct addrinfo *addrhead = NULL, *addr;
-	struct utsname sysinfo;
 	struct mntent mountent;
 	struct sockaddr_in *addr4 = NULL;
 	struct sockaddr_in6 *addr6 = NULL;
@@ -1208,12 +1207,6 @@ int main(int argc, char ** argv)
 	if(thisprogram == NULL)
 		thisprogram = "mount.cifs";
 
-	uname(&sysinfo);
-	/* BB add workstation name and domain and pass down */
-
-/* #ifdef _GNU_SOURCE
-	fprintf(stderr, " node: %s machine: %s sysname %s domain %s\n", sysinfo.nodename,sysinfo.machine,sysinfo.sysname,sysinfo.domainname);
-#endif */
 	if(argc > 2) {
 		dev_name = argv[1];
 		share_name = strndup(argv[1], MAX_UNC_LEN);
