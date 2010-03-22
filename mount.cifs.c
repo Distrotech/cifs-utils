@@ -231,7 +231,8 @@ BB end finish BB */
 static char * check_for_domain(char **);
 
 
-static void mount_cifs_usage(FILE *stream)
+static int
+mount_cifs_usage(FILE *stream)
 {
 	fprintf(stream, "\nUsage:  %s <remotetarget> <dir> -o <options>\n", thisprogram);
 	fprintf(stream, "\nMount the remote target, specified as a UNC name,");
@@ -254,11 +255,9 @@ static void mount_cifs_usage(FILE *stream)
 	fprintf(stream, "\nTo display the version number of the mount helper:");
 	fprintf(stream, "\n\t%s -V\n",thisprogram);
 
-	SAFE_FREE(mountpassword);
-
 	if (stream == stderr)
-		exit(EX_USAGE);
-	exit(0);
+		return EX_USAGE;
+	return 0;
 }
 
 /* caller frees username if necessary */
@@ -289,7 +288,7 @@ static int open_cred_file(char * file_name)
 	line_buf = (char *)malloc(4096);
 	if(line_buf == NULL) {
 		fclose(fs);
-		return ENOMEM;
+		return EX_SYSERR;
 	}
 
 	while(fgets(line_buf,4096,fs)) {
@@ -316,7 +315,7 @@ static int open_cred_file(char * file_name)
 				if(length > 4086) {
 					fprintf(stderr, "mount.cifs failed due to malformed username in credentials file\n");
 					memset(line_buf,0,4096);
-					exit(EX_USAGE);
+					return EX_USAGE;
 				} else {
 					got_user = 1;
 					user_name = (char *)calloc(1 + length,1);
@@ -340,7 +339,7 @@ static int open_cred_file(char * file_name)
 				if(length > MOUNT_PASSWD_SIZE) {
 					fprintf(stderr, "mount.cifs failed: password in credentials file too long\n");
 					memset(line_buf,0, 4096);
-					exit(EX_USAGE);
+					return EX_USAGE;
 				} else {
 					if(mountpassword == NULL) {
 						mountpassword = (char *)calloc(MOUNT_PASSWD_SIZE+1,1);
@@ -368,7 +367,7 @@ static int open_cred_file(char * file_name)
                                 }
                                 if(length > DOMAIN_SIZE) {
                                         fprintf(stderr, "mount.cifs failed: domain in credentials file too long\n");
-                                        exit(EX_USAGE);
+                                        return EX_USAGE;
                                 } else {
                                         if(domain_name == NULL) {
                                                 domain_name = (char *)calloc(DOMAIN_SIZE+1,1);
@@ -648,11 +647,11 @@ static int parse_options(char ** optionsp, unsigned long * filesys_flags)
 		} else if (strncmp(data, "cred", 4) == 0) {
 			if (value && *value) {
 				rc = open_cred_file(value);
-				if(rc) {
+				if (rc) {
 					fprintf(stderr, "error %d (%s) opening credential file %s\n",
 						rc, strerror(rc), value);
 					SAFE_FREE(out);
-					return 1;
+					return rc;
 				}
 			} else {
 				fprintf(stderr, "invalid credential file name specified\n");
@@ -1181,11 +1180,12 @@ int main(int argc, char ** argv)
 	bindtextdomain(PACKAGE, LOCALEDIR);
 	textdomain(PACKAGE); */
 
-	if(argc && argv)
-		thisprogram = argv[0];
-	else
-		mount_cifs_usage(stderr);
+	if (!argc || !argv) {
+		rc = mount_cifs_usage(stderr);
+		goto mount_exit;
+	}
 
+	thisprogram = argv[0];
 	if(thisprogram == NULL)
 		thisprogram = "mount.cifs";
 
@@ -1206,7 +1206,8 @@ int main(int argc, char ** argv)
 
 		case '?':
 		case 'h':	 /* help */
-			mount_cifs_usage(stdout);
+			rc = mount_cifs_usage(stdout);
+			goto mount_exit;
 		case 'n':
 			++nomtab;
 			break;
@@ -1315,12 +1316,15 @@ int main(int argc, char ** argv)
 			break;
 		default:
 			fprintf(stderr, "unknown mount option %c\n",c);
-			mount_cifs_usage(stderr);
+			rc = mount_cifs_usage(stderr);
+			goto mount_exit;
 		}
 	}
 
-	if(argc < 3 || argv[optind] == NULL || argv[optind + 1] == NULL)
-		mount_cifs_usage(stderr);
+	if(argc < 3 || argv[optind] == NULL || argv[optind + 1] == NULL) {
+		rc = mount_cifs_usage(stderr);
+		goto mount_exit;
+	}
 
 	dev_name = argv[optind];
 	share_name = strndup(argv[optind], MAX_UNC_LEN);
