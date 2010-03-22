@@ -1091,8 +1091,6 @@ static struct option longopts[] = {
 	{ "rw", 0, NULL, 'w' },
 	{ "options", 1, NULL, 'o' },
 	{ "type", 1, NULL, 't' },
-	{ "rsize",1, NULL, 'R' },
-	{ "wsize",1, NULL, 'W' },
 	{ "uid", 1, NULL, '1'},
 	{ "gid", 1, NULL, '2'},
 	{ "user",1,NULL,'u'},
@@ -1176,8 +1174,6 @@ int main(int argc, char ** argv)
 	char * temp;
 	char * dev_name = NULL;
 	int rc = 0;
-	int rsize = 0;
-	int wsize = 0;
 	int nomtab = 0;
 	int uid = 0;
 	int gid = 0;
@@ -1261,12 +1257,6 @@ int main(int argc, char ** argv)
 			exit (0);
 		case 'w':
 			flags &= ~MS_RDONLY;
-			break;
-		case 'R':
-			rsize = atoi(optarg) ;
-			break;
-		case 'W':
-			wsize = atoi(optarg);
 			break;
 		case '1':
 			if (isdigit(*optarg)) {
