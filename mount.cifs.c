@@ -1101,7 +1101,6 @@ static struct option longopts[] = {
 	{ "pass",1,NULL,'p'},
 	{ "credentials",1,NULL,'c'},
 	{ "port",1,NULL,'P'},
-	/* { "uuid",1,NULL,'U'}, */ /* BB unimplemented */
 	{ NULL, 0, NULL, 0 }
 };
 
@@ -1166,7 +1165,6 @@ int main(int argc, char ** argv)
 	char * orgoptions = NULL;
 	char * share_name = NULL;
 	const char * ipaddr = NULL;
-	char * uuid = NULL;
 	char * mountpoint = NULL;
 	char * options = NULL;
 	char * optionstail;
@@ -1245,9 +1243,6 @@ int main(int argc, char ** argv)
 		    break;
 		case 'r':  /* mount readonly */
 			flags |= MS_RDONLY;
-			break;
-		case 'U':
-			uuid = optarg;
 			break;
 		case 'v':
 			++verboseflag;
