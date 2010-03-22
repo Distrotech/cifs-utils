@@ -1207,33 +1207,6 @@ int main(int argc, char ** argv)
 	if(thisprogram == NULL)
 		thisprogram = "mount.cifs";
 
-	if(argc > 2) {
-		dev_name = argv[1];
-		share_name = strndup(argv[1], MAX_UNC_LEN);
-		if (share_name == NULL) {
-			fprintf(stderr, "%s: %s", argv[0], strerror(ENOMEM));
-			exit(EX_SYSERR);
-		}
-		mountpoint = argv[2];
-	} else if (argc == 2) {
-		if ((strcmp(argv[1], "-V") == 0) ||
-		    (strcmp(argv[1], "--version") == 0))
-		{
-			print_cifs_mount_version();
-			exit(0);
-		}
-
-		if ((strcmp(argv[1], "-h") == 0) ||
-		    (strcmp(argv[1], "-?") == 0) ||
-		    (strcmp(argv[1], "--help") == 0))
-			mount_cifs_usage(stdout);
-
-		mount_cifs_usage(stderr);
-	} else {
-		mount_cifs_usage(stderr);
-	}
-
-
 	/* add sharename in opts string as unc= parm */
 	while ((c = getopt_long (argc, argv, "afFhilL:no:O:rsSU:vVwt:",
 			 longopts, NULL)) != -1) {
@@ -1365,9 +1338,16 @@ int main(int argc, char ** argv)
 		}
 	}
 
-	if((argc < 3) || (dev_name == NULL) || (mountpoint == NULL)) {
+	if(argc < 3 || argv[optind] == NULL || argv[optind + 1] == NULL)
 		mount_cifs_usage(stderr);
+
+	dev_name = argv[optind];
+	share_name = strndup(argv[optind], MAX_UNC_LEN);
+	if (share_name == NULL) {
+		fprintf(stderr, "%s: %s", thisprogram, strerror(ENOMEM));
+		exit(EX_SYSERR);
 	}
+	mountpoint = argv[optind + 1];
 
 	/* make sure mountpoint is legit */
 	rc = chdir(mountpoint);
