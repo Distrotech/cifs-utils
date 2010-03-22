@@ -115,31 +115,10 @@ char * domain_name = NULL;
 char * prefixpath = NULL;
 const char *cifs_fstype = "cifs";
 
-/*
- * If an unprivileged user is doing the mounting then we need to ensure
- * that the entry is in /etc/fstab.
- */
+#if CIFS_LEGACY_SETUID_CHECK
 static int
 check_mountpoint(const char *progname, char *mountpoint)
 {
-	int err;
-	struct stat statbuf;
-
-	/* does mountpoint exist and is it a directory? */
-	err = stat(".", &statbuf);
-	if (err) {
-		fprintf(stderr, "%s: failed to stat %s: %s\n", progname,
-				mountpoint, strerror(errno));
-		return EX_USAGE;
-	}
-
-	if (!S_ISDIR(statbuf.st_mode)) {
-		fprintf(stderr, "%s: %s is not a directory!", progname,
-				mountpoint);
-		return EX_USAGE;
-	}
-
-#if CIFS_LEGACY_SETUID_CHECK
 	/* do extra checks on mountpoint for legacy setuid behavior */
 	if (!getuid() || geteuid())
 		return 0;
@@ -155,10 +134,16 @@ check_mountpoint(const char *progname, char *mountpoint)
 			mountpoint);
 		return EX_USAGE;
 	}
-#endif /* CIFS_LEGACY_SETUID_CHECK */
 
 	return 0;
 }
+#else /* CIFS_LEGACY_SETUID_CHECK */
+static int
+check_mountpoint(const char *progname, char *mountpoint)
+{
+	return 0;
+}
+#endif /* CIFS_LEGACY_SETUID_CHECK */
 
 #if CIFS_DISABLE_SETUID_CHECK
 static int
