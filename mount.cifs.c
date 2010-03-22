@@ -400,7 +400,7 @@ static int get_password_from_file(int file_descript, char * filename)
 
 	if (mountpassword == NULL) {
 		fprintf(stderr, "malloc failed\n");
-		exit(EX_SYSERR);
+		return EX_SYSERR;
 	}
 
 	if(filename != NULL) {
@@ -408,13 +408,13 @@ static int get_password_from_file(int file_descript, char * filename)
 		if (rc) {
 			fprintf(stderr, "mount.cifs failed: access check of %s failed: %s\n",
 					filename, strerror(errno));
-			exit(EX_SYSERR);
+			return EX_SYSERR;
 		}
 		file_descript = open(filename, O_RDONLY);
 		if(file_descript < 0) {
 			fprintf(stderr, "mount.cifs failed. %s attempting to open password file %s\n",
 				   strerror(errno),filename);
-			exit(EX_SYSERR);
+			return EX_SYSERR;
 		}
 	}
 	/* else file already open and fd provided */
@@ -425,7 +425,7 @@ static int get_password_from_file(int file_descript, char * filename)
 			fprintf(stderr, "mount.cifs failed. Error %s reading password file\n",strerror(errno));
 			if(filename != NULL)
 				close(file_descript);
-			exit(EX_SYSERR);
+			return EX_SYSERR;
 		} else if(rc == 0) {
 			if(mountpassword[0] == 0) {
 				if(verboseflag)
@@ -1307,7 +1307,9 @@ int main(int argc, char ** argv)
 			}
 			break;
 		case 'S':
-			get_password_from_file(0 /* stdin */,NULL);
+			rc = get_password_from_file(0 /* stdin */,NULL);
+			if (rc)
+				goto mount_exit;
 			break;
 		case 't':
 			break;
@@ -1367,9 +1369,13 @@ int main(int argc, char ** argv)
 			got_password = 1;
 		}
 	} else if (getenv("PASSWD_FD")) {
-		get_password_from_file(atoi(getenv("PASSWD_FD")),NULL);
+		rc = get_password_from_file(atoi(getenv("PASSWD_FD")),NULL);
+		if (rc)
+			goto mount_exit;
 	} else if (getenv("PASSWD_FILE")) {
-		get_password_from_file(0, getenv("PASSWD_FILE"));
+		rc = get_password_from_file(0, getenv("PASSWD_FILE"));
+		if (rc)
+			goto mount_exit;
 	}
 
         if (orgoptions && parse_options(&orgoptions, &flags)) {
