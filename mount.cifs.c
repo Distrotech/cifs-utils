@@ -1228,8 +1228,10 @@ int main(int argc, char ** argv)
 			break;
 		case 'o':
 			orgoptions = strndup(optarg, MAX_OPTIONS_LEN);
-			if (!orgoptions)
-				exit(EX_SYSERR);
+			if (!orgoptions) {
+				rc = EX_SYSERR;
+				goto mount_exit;
+			}
 			break;
 		case 'r':  /* mount readonly */
 			flags |= MS_RDONLY;
@@ -1250,14 +1252,16 @@ int main(int argc, char ** argv)
 				uid = strtoul(optarg, &ep, 10);
 				if (*ep) {
 					fprintf(stderr, "bad uid value \"%s\"\n", optarg);
-					exit(EX_USAGE);
+					rc = EX_USAGE;
+					goto mount_exit;
 				}
 			} else {
 				struct passwd *pw;
 
 				if (!(pw = getpwnam(optarg))) {
 					fprintf(stderr, "bad user name \"%s\"\n", optarg);
-					exit(EX_USAGE);
+					rc = EX_USAGE;
+					goto mount_exit;
 				}
 				uid = pw->pw_uid;
 				endpwent();
@@ -1270,14 +1274,16 @@ int main(int argc, char ** argv)
 				gid = strtoul(optarg, &ep, 10);
 				if (*ep) {
 					fprintf(stderr, "bad gid value \"%s\"\n", optarg);
-					exit(EX_USAGE);
+					rc = EX_USAGE;
+					goto mount_exit;
 				}
 			} else {
 				struct group *gr;
 
 				if (!(gr = getgrnam(optarg))) {
 					fprintf(stderr, "bad user name \"%s\"\n", optarg);
-					exit(EX_USAGE);
+					rc = EX_USAGE;
+					goto mount_exit;
 				}
 				gid = gr->gr_gid;
 				endpwent();
@@ -1320,7 +1326,8 @@ int main(int argc, char ** argv)
 	share_name = strndup(argv[optind], MAX_UNC_LEN);
 	if (share_name == NULL) {
 		fprintf(stderr, "%s: %s", thisprogram, strerror(ENOMEM));
-		exit(EX_SYSERR);
+		rc = EX_SYSERR;
+		goto mount_exit;
 	}
 	mountpoint = argv[optind + 1];
 
@@ -1429,7 +1436,8 @@ int main(int argc, char ** argv)
 		mountpassword = (char *)calloc(MOUNT_PASSWD_SIZE+1,1);
 		if (!tmp_pass || !mountpassword) {
 			fprintf(stderr, "Password not entered, exiting\n");
-			exit(EX_USAGE);
+			rc = EX_USAGE;
+			goto mount_exit;
 		}
 		strlcpy(mountpassword, tmp_pass, MOUNT_PASSWD_SIZE+1);
 		got_password = 1;
@@ -1445,8 +1453,8 @@ int main(int argc, char ** argv)
 		optlen += strlen(share_name) + 4;
 	else {
 		fprintf(stderr, "No server share name specified\n");
-		fprintf(stderr, "\nMounting the DFS root for server not implemented yet\n");
-                exit(EX_USAGE);
+                rc = EX_USAGE;
+		goto mount_exit;
 	}
 	if(user_name)
 		optlen += strlen(user_name) + 6;
@@ -1656,5 +1664,5 @@ mount_exit:
 	SAFE_FREE(orgoptions);
 	SAFE_FREE(resolved_path);
 	SAFE_FREE(share_name);
-	exit(rc);
+	return rc;
 }
