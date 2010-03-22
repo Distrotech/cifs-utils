@@ -57,6 +57,9 @@
 
 #define MAX_UNC_LEN 1024
 
+/* I believe that the kernel limits options data to a page */
+#define MAX_OPTIONS_LEN	4096
+
 #ifndef SAFE_FREE
 #define SAFE_FREE(x) do { if ((x) != NULL) {free(x); x=NULL;} } while(0)
 #endif
@@ -1224,8 +1227,10 @@ int main(int argc, char ** argv)
 #endif
 			break;
 		case 'o':
-			orgoptions = strdup(optarg);
-		    break;
+			orgoptions = strndup(optarg, MAX_OPTIONS_LEN);
+			if (!orgoptions)
+				exit(EX_SYSERR);
+			break;
 		case 'r':  /* mount readonly */
 			flags |= MS_RDONLY;
 			break;
