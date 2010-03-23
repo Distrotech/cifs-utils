@@ -71,6 +71,12 @@
 #define MAX_ADDRESS_LEN INET6_ADDRSTRLEN
 
 /*
+ * value of the ver= option that gets passed to the kernel. Used to indicate
+ * behavioral changes introduced in the mount helper.
+ */
+#define OPTIONS_VERSION "1"
+
+/*
  * mount.cifs has been the subject of many "security" bugs that have arisen
  * because of users and distributions installing it as a setuid root program.
  * mount.cifs has not been audited for security. Thus, we strongly recommend
@@ -1503,7 +1509,7 @@ mount_retry:
 	}
 
 	strlcat(options,",ver=",options_size);
-	strlcat(options,VERSION,options_size);
+	strlcat(options,OPTIONS_VERSION,options_size);
 
 	if(orgoptions) {
 		strlcat(options,",",options_size);
