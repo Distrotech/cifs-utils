@@ -541,7 +541,7 @@ parse_options(const char *data, struct parsed_mount_info *parsed_info)
 					goto nocopy;
 				} else {
 					fprintf(stderr, "username specified with no parameter\n");
-					return 1;	/* needs_arg; */
+					return EX_USAGE;
 				}
 			} else {
 				if (strnlen(value, 260) < 260) {
@@ -573,7 +573,7 @@ parse_options(const char *data, struct parsed_mount_info *parsed_info)
 					domain_name = check_for_domain(&value);
 				} else {
 					fprintf(stderr, "username too long\n");
-					return 1;
+					return EX_USAGE;
 				}
 			}
 		} else if (strncmp(data, "pass", 4) == 0) {
@@ -589,13 +589,13 @@ parse_options(const char *data, struct parsed_mount_info *parsed_info)
 					mountpassword = strndup(value, MOUNT_PASSWD_SIZE);
 					if (!mountpassword) {
 						fprintf(stderr, "mount.cifs error: %s", strerror(ENOMEM));
-						return 1;
+						return EX_USAGE;
 					}
 					got_password = 1;
 				}
 			} else {
 				fprintf(stderr, "password too long\n");
-				return 1;
+				return EX_USAGE;
 			}
 			goto nocopy;
 		} else if (strncmp(data, "sec", 3) == 0) {
@@ -613,14 +613,14 @@ parse_options(const char *data, struct parsed_mount_info *parsed_info)
 				got_ip = 1;
 			} else {
 				fprintf(stderr, "ip address too long\n");
-				return 1;
+				return EX_USAGE;
 			}
 		} else if ((strncmp(data, "unc", 3) == 0)
 		   || (strncmp(data, "target", 6) == 0)
 		   || (strncmp(data, "path", 4) == 0)) {
 			if (!value || !*value) {
 				fprintf(stderr, "invalid path to network resource\n");
-				return 1;  /* needs_arg; */
+				return EX_USAGE;  /* needs_arg; */
 			} else if(strnlen(value,5) < 5) {
 				fprintf(stderr, "UNC name too short");
 			}
@@ -634,7 +634,7 @@ parse_options(const char *data, struct parsed_mount_info *parsed_info)
 						got_unc = 1;
 				} else if (strncmp(value, "\\\\", 2) != 0) {	                   
 					fprintf(stderr, "UNC Path does not begin with // or \\\\ \n");
-					return 1;
+					return EX_USAGE;
 				} else {
 					if(got_unc)
 						fprintf(stderr, "unc name specified twice, ignoring second\n");
@@ -643,7 +643,7 @@ parse_options(const char *data, struct parsed_mount_info *parsed_info)
 				}
 			} else {
 				fprintf(stderr, "CIFS: UNC name too long\n");
-				return 1;
+				return EX_USAGE;
 			}
 		} else if ((strncmp(data, "dom" /* domain */, 3) == 0)
 			   || (strncmp(data, "workg", 5) == 0)) {
@@ -652,13 +652,13 @@ parse_options(const char *data, struct parsed_mount_info *parsed_info)
 			   and "WORKGRP" etc. */
 			if (!value || !*value) {
 				fprintf(stderr, "CIFS: invalid domain name\n");
-				return 1;	/* needs_arg; */
+				return EX_USAGE;
 			}
 			if (strnlen(value, DOMAIN_SIZE+1) < DOMAIN_SIZE+1) {
 				got_domain = 1;
 			} else {
 				fprintf(stderr, "domain name too long\n");
-				return 1;
+				return EX_USAGE;
 			}
 		} else if (strncmp(data, "cred", 4) == 0) {
 			if (value && *value) {
@@ -670,7 +670,7 @@ parse_options(const char *data, struct parsed_mount_info *parsed_info)
 				}
 			} else {
 				fprintf(stderr, "invalid credential file name specified\n");
-				return 1;
+				return EX_USAGE;
 			}
 		} else if (strncmp(data, "uid", 3) == 0) {
 			if (value && *value) {
@@ -708,7 +708,7 @@ parse_options(const char *data, struct parsed_mount_info *parsed_info)
 		} else if (strcmp(data, "file_mode") == 0 || strcmp(data, "fmask")==0) {
 			if (!value || !*value) {
 				fprintf(stderr, "Option '%s' requires a numerical argument\n", data);
-				return 1;
+				return EX_USAGE;
 			}
 
 			if (value[0] != '0') {
@@ -722,7 +722,7 @@ parse_options(const char *data, struct parsed_mount_info *parsed_info)
 		} else if (strcmp(data, "dir_mode") == 0 || strcmp(data, "dmask")==0) {
 			if (!value || !*value) {
 				fprintf(stderr, "Option '%s' requires a numerical argument\n", data);
-				return 1;
+				return EX_USAGE;
 			}
 
 			if (value[0] != '0') {
@@ -1379,9 +1379,10 @@ int main(int argc, char ** argv)
 		goto mount_exit;
 	}
 
-        if (orgoptions && parse_options(orgoptions, parsed_info)) {
-                rc = EX_USAGE;
-		goto mount_exit;
+        if (orgoptions) {
+		rc = parse_options(orgoptions, parsed_info);
+		if (rc)
+			goto mount_exit;
 	}
 
 	if (getuid()) {
