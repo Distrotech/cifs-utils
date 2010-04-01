@@ -74,7 +74,7 @@
 #define MAX_ADDRESS_LEN INET6_ADDRSTRLEN
 
 /* limit list of addresses to 16 max-size addrs */
-#define MAX_ADDR_LIST_LEN (MAX_ADDRESS_LEN * 16)
+#define MAX_ADDR_LIST_LEN ((MAX_ADDRESS_LEN + 1) * 16)
 
 #ifndef SAFE_FREE
 #define SAFE_FREE(x) do { if ((x) != NULL) {free(x); x=NULL;} } while(0)
@@ -124,14 +124,14 @@
 /* struct for holding parsed mount info for use by privleged process */
 struct parsed_mount_info {
 	unsigned long	flags;
-	char		host[NI_MAXHOST];
-	char		share[MAX_SHARE_LEN];
-	char		prefix[PATH_MAX];
+	char		host[NI_MAXHOST + 1];
+	char		share[MAX_SHARE_LEN + 1];
+	char		prefix[PATH_MAX + 1];
 	char		options[MAX_OPTIONS_LEN];
 	char		domain[DOMAIN_SIZE + 1];
 	char		username[MAX_USERNAME_SIZE + 1];
 	char		password[MOUNT_PASSWD_SIZE + 1];
-	char		address_list[MAX_ADDR_LIST_LEN];
+	char		addrlist[MAX_ADDR_LIST_LEN];
 	unsigned int	got_domain:1;
 	unsigned int	got_user:1;
 	unsigned int	got_password:1;
@@ -139,13 +139,9 @@ struct parsed_mount_info {
 
 const char *thisprogram;
 int verboseflag = 0;
-int fakemnt = 0;
-static int got_ip = 0;
-static int got_unc = 0;
-static int got_uid = 0;
-static int got_gid = 0;
-char * prefixpath = NULL;
 const char *cifs_fstype = "cifs";
+
+static int parse_unc(char *unc_name, struct parsed_mount_info *parsed_info);
 
 #if CIFS_LEGACY_SETUID_CHECK
 static int
@@ -509,6 +505,7 @@ parse_options(const char *data, struct parsed_mount_info *parsed_info)
 	int out_len = 0;
 	int word_len;
 	int rc = 0;
+	int got_uid = 0, got_gid = 0;
 	char user[32];
 	char group[32];
 
@@ -600,7 +597,6 @@ parse_options(const char *data, struct parsed_mount_info *parsed_info)
 			} else if (strnlen(value, MAX_ADDRESS_LEN) <= MAX_ADDRESS_LEN) {
 				if(verboseflag)
 					fprintf(stderr, "ip address %s override specified\n",value);
-				got_ip = 1;
 			} else {
 				fprintf(stderr, "ip address too long\n");
 				return EX_USAGE;
@@ -611,30 +607,10 @@ parse_options(const char *data, struct parsed_mount_info *parsed_info)
 			if (!value || !*value) {
 				fprintf(stderr, "invalid path to network resource\n");
 				return EX_USAGE;  /* needs_arg; */
-			} else if(strnlen(value,5) < 5) {
-				fprintf(stderr, "UNC name too short");
 			}
-
-			if (strnlen(value, 300) < 300) {
-				got_unc = 1;
-				if (strncmp(value, "//", 2) == 0) {
-					if(got_unc)
-						fprintf(stderr, "unc name specified twice, ignoring second\n");
-					else
-						got_unc = 1;
-				} else if (strncmp(value, "\\\\", 2) != 0) {	                   
-					fprintf(stderr, "UNC Path does not begin with // or \\\\ \n");
-					return EX_USAGE;
-				} else {
-					if(got_unc)
-						fprintf(stderr, "unc name specified twice, ignoring second\n");
-					else
-						got_unc = 1;
-				}
-			} else {
-				fprintf(stderr, "CIFS: UNC name too long\n");
-				return EX_USAGE;
-			}
+			rc = parse_unc(value, parsed_info);
+			if (rc)
+				return rc;
 		} else if ((strncmp(data, "dom" /* domain */, 3) == 0)
 			   || (strncmp(data, "workg", 5) == 0)) {
 			/* note this allows for synonyms of "domain"
@@ -844,107 +820,165 @@ replace_commas(char *pass)
 	return 0;
 }
 
-/* replace all occurances of "from" in a string with "to" */
-static void replace_char(char *string, char from, char to, int maxlen)
+/*
+ * resolve "host" portion of parsed info to comma-separated list of
+ * address(es)
+ */
+static int
+resolve_host(struct parsed_mount_info *parsed_info)
 {
-	char *lastchar = string + maxlen;
-	while (string) {
-		string = strchr(string, from);
-		if (string) {
-			*string = to;
-			if (string >= lastchar)
-				return;
-		}
+	int rc;
+	/* 10 for max width of decimal scopeid */
+	char tmpbuf[NI_MAXHOST + 1 + 10 + 1];
+	const char *ipaddr;
+	size_t len;
+	struct addrinfo *addrlist, *addr;
+	struct sockaddr_in *sin;
+	struct sockaddr_in6 *sin6;
+
+	rc = getaddrinfo(parsed_info->host, NULL, NULL, &addrlist);
+	if (rc != 0) {
+		fprintf(stderr, "mount error: could not resolve address for "
+				"%s: %s\n", parsed_info->host,
+				rc == EAI_SYSTEM ? strerror(errno) :
+				gai_strerror(rc));
+		/* FIXME: return better error based on rc? */
+		return EX_USAGE;
 	}
+
+	addr = addrlist;
+	while (addr) {
+		/* skip non-TCP entries */
+		if (addr->ai_socktype != SOCK_STREAM ||
+		    addr->ai_protocol != IPPROTO_TCP) {
+			addr = addr->ai_next;
+			continue;
+		}
+
+		switch (addr->ai_addr->sa_family) {
+		case AF_INET6:
+			sin6 = (struct sockaddr_in6 *) addr->ai_addr;
+			ipaddr = inet_ntop(AF_INET6, &sin6->sin6_addr, tmpbuf,
+					   sizeof(tmpbuf));
+			if (!ipaddr) {
+				rc = EX_SYSERR;
+				fprintf(stderr, "mount error: problem parsing address "
+					"list: %s\n", strerror(errno));
+				goto resolve_host_out;
+			}
+
+			if (sin6->sin6_scope_id) {
+				len = strnlen(tmpbuf, sizeof(tmpbuf));
+				ipaddr = tmpbuf + len;
+				snprintf(tmpbuf, sizeof(tmpbuf) - len, "%%%u", 
+						sin6->sin6_scope_id);
+			}
+			break;
+		case AF_INET:
+			sin = (struct sockaddr_in *) addr->ai_addr;
+			ipaddr = inet_ntop(AF_INET, &sin->sin_addr, tmpbuf,
+					   sizeof(tmpbuf));
+			if (!ipaddr) {
+				rc = EX_SYSERR;
+				fprintf(stderr, "mount error: problem parsing address "
+					"list: %s\n", strerror(errno));
+				goto resolve_host_out;
+			}
+
+			break;
+		default:
+			addr = addr->ai_next;
+			continue;
+		}
+
+		if (parsed_info->addrlist[0] != '\0')
+			strlcat(parsed_info->addrlist, ",",
+				sizeof(parsed_info->addrlist));
+		strlcat(parsed_info->addrlist, tmpbuf,
+				sizeof(parsed_info->addrlist));
+		addr = addr->ai_next;
+	}
+
+resolve_host_out:
+	freeaddrinfo(addrlist);
+	return rc;
 }
 
-/* Note that caller frees the returned buffer if necessary */
-static struct addrinfo *
-parse_server(char **punc_name)
+static int
+parse_unc(char *unc_name, struct parsed_mount_info *parsed_info)
 {
-	char *unc_name = *punc_name;
 	int length = strnlen(unc_name, MAX_UNC_LEN);
-	char *share;
-	struct addrinfo *addrlist;
-	int rc;
+	char *host, *share, *prepath;
+	size_t hostlen, sharelen, prepathlen;
 
 	if(length > (MAX_UNC_LEN - 1)) {
 		fprintf(stderr, "mount error: UNC name too long\n");
-		return NULL;
+		return EX_USAGE;
 	}
 
 	if(length < 3) {
 		fprintf(stderr, "mount error: UNC name too short\n");
-		return NULL;
+		return EX_USAGE;
 	}
 
 	if ((strncasecmp("cifs://", unc_name, 7) == 0) ||
 	    (strncasecmp("smb://", unc_name, 6) == 0)) {
 		fprintf(stderr, "Mounting cifs URL not implemented yet. Attempt to mount %s\n", unc_name);
-		return NULL;
+		return EX_USAGE;
 	}
 
-	if(strncmp(unc_name,"//",2) && strncmp(unc_name,"\\\\",2)) {
-		/* check for nfs syntax ie server:share */
-		share = strchr(unc_name,':');
+	/* Set up "host" and "share" pointers based on UNC format. */
+	if(strncmp(unc_name, "//", 2) && strncmp(unc_name, "\\\\", 2)) {
+		/*
+		 * check for nfs syntax (server:/share/prepath)
+		 *
+		 * FIXME: IPv6 addresses?
+		 */
+		host = unc_name;
+		share = strchr(host, ':');
 		if(!share) {
-			fprintf(stderr, "mount error: improperly formatted UNC name.");
-			fprintf(stderr, " %s does not begin with \\\\ or //\n",unc_name);
-			return NULL;
+			fprintf(stderr, "mount.cifs: bad UNC (%s)\n", unc_name);
+			return EX_USAGE;
 		}
-
-		*punc_name = (char *)malloc(length + 3);
-		if(*punc_name == NULL) {
-			*punc_name = unc_name;
-			return NULL;
+		hostlen = share - host;
+		share++;
+		if (*share == '/')
+			++share;
+	} else {
+		host = unc_name + 2;
+		hostlen = strcspn(host, "/\\");
+		if (!hostlen) {
+			fprintf(stderr, "mount.cifs: bad UNC (%s)\n", unc_name);
+			return EX_USAGE;
 		}
-
-		*share = '/';
-		strlcpy((*punc_name)+2, unc_name, length + 1);
-		SAFE_FREE(unc_name);
-		unc_name = *punc_name;
-		unc_name[length+2] = 0;
+		share = host + hostlen + 1;
 	}
 
-	unc_name[0] = '/';
-	unc_name[1] = '/';
-	unc_name += 2;
-
-	/*
-	 * allow for either delimiter between host and sharename
-	 * If there's not one, then the UNC is malformed
-	 */
-	if (!(share = strpbrk(unc_name, "/\\"))) {
-		fprintf(stderr, "mount error: Malformed UNC\n");
-		return NULL;
+	if (hostlen + 1 > sizeof(parsed_info->host)) {
+		fprintf(stderr, "mount.cifs: host portion of UNC too long\n");
+		return EX_USAGE;
 	}
 
-	*share = 0;  /* temporarily terminate the string */
-	share += 1;
-	if(got_ip == 0) {
-		rc = getaddrinfo(unc_name, NULL, NULL, &addrlist);
-		if (rc != 0) {
-			fprintf(stderr, "mount error: could not resolve address for %s: %s\n",
-				unc_name, gai_strerror(rc));
-			addrlist = NULL;
-		}
+	sharelen = strcspn(share, "/\\");
+	if (sharelen + 1 > sizeof(parsed_info->share)) {
+		fprintf(stderr, "mount.cifs: share portion of UNC too long\n");
+		return EX_USAGE;
 	}
-	*(share - 1) = '/'; /* put delimiter back */
 
-	/* we don't convert the prefixpath delimiters since '\\' is a valid char in posix paths */
-	if ((prefixpath = strpbrk(share, "/\\"))) {
-		*prefixpath = 0;  /* permanently terminate the string */
-		if (!strlen(++prefixpath))
-			prefixpath = NULL; /* this needs to be done explicitly */
-	}
-	if(got_ip) {
-		if(verboseflag)
-			fprintf(stderr, "ip address specified explicitly\n");
-		return NULL;
-	}
-	/* BB should we pass an alternate version of the share name as Unicode */
+	prepath = share + sharelen;
+	prepathlen = strlen(prepath);
 
-	return addrlist;
+	if (prepathlen + 1 > sizeof(parsed_info->prefix)) {
+		fprintf(stderr, "mount.cifs: UNC prefixpath too long\n");
+		return EX_USAGE;
+	}
+
+	/* copy pieces into their resepective buffers */
+	memcpy(parsed_info->host, host, hostlen);
+	memcpy(parsed_info->share, share, sharelen);
+	memcpy(parsed_info->prefix, prepath, prepathlen);
+
+	return 0;
 }
 
 static int
@@ -1047,25 +1081,20 @@ int main(int argc, char ** argv)
 {
 	int c;
 	char * orgoptions = NULL;
-	char * share_name = NULL;
-	const char * ipaddr = NULL;
 	char * mountpoint = NULL;
 	char * options = NULL;
-	char * optionstail;
 	char * resolved_path = NULL;
-	char * temp;
-	char * dev_name = NULL;
+	char * dev_name;
+	char *currentaddress, *nextaddress;
 	int rc = 0;
 	int nomtab = 0;
 	int uid = 0;
 	int gid = 0;
+	int fakemnt = 0;
+	int already_uppercased = 0;
 	size_t options_size = MAX_OPTIONS_LEN;
-	size_t current_len;
 	int retry = 0; /* set when we have to retry mount with uppercase */
-	struct addrinfo *addrhead = NULL, *addr;
 	struct mntent mountent;
-	struct sockaddr_in *addr4 = NULL;
-	struct sockaddr_in6 *addr6 = NULL;
 	struct parsed_mount_info *parsed_info = NULL;
 	FILE * pmntfile;
 
@@ -1230,12 +1259,6 @@ int main(int argc, char ** argv)
 	}
 
 	dev_name = argv[optind];
-	share_name = strndup(argv[optind], MAX_UNC_LEN);
-	if (share_name == NULL) {
-		fprintf(stderr, "%s: %s", thisprogram, strerror(ENOMEM));
-		rc = EX_SYSERR;
-		goto mount_exit;
-	}
 	mountpoint = argv[optind + 1];
 
 	/* make sure mountpoint is legit */
@@ -1292,13 +1315,14 @@ int main(int argc, char ** argv)
 
 	parsed_info->flags &= ~(MS_USERS|MS_USER);
 
-	addrhead = addr = parse_server(&share_name);
-	if((addrhead == NULL) && (got_ip == 0)) {
-		fprintf(stderr, "No ip address specified and hostname not found\n");
-		rc = EX_USAGE;
+	rc = parse_unc(dev_name, parsed_info);
+	if (rc)
 		goto mount_exit;
-	}
-	
+
+	rc = resolve_host(parsed_info);
+	if (rc)
+		goto mount_exit;
+
 	/* BB save off path and pop after mount returns? */
 	resolved_path = (char *)malloc(PATH_MAX+1);
 	if (!resolved_path) {
@@ -1345,12 +1369,6 @@ int main(int argc, char ** argv)
 		parsed_info->got_password = 1;
 	}
 
-	if(!share_name) {
-		fprintf(stderr, "No server share name specified\n");
-                rc = EX_USAGE;
-		goto mount_exit;
-	}
-
 	/* copy in ver= string. It's not really needed, but what the hell */
 	strlcat(parsed_info->options, ",ver=", sizeof(parsed_info->options));
 	strlcat(parsed_info->options, OPTIONS_VERSION, sizeof(parsed_info->options));
@@ -1377,63 +1395,33 @@ int main(int argc, char ** argv)
 		goto mount_exit;
 	}
 
-mount_retry:
-	strlcpy(options, "unc=", options_size);
-	strlcat(options, share_name, options_size);
+	currentaddress = parsed_info->addrlist;
+	nextaddress = strchr(currentaddress, ',');
+	if (nextaddress)
+		*nextaddress++ = '\0';
 
-	/* scan backwards and reverse direction of slash */
-	temp = strrchr(options, '/');
-	if(temp > options + 6)
-		*temp = '\\';
+mount_retry:
+	if (!currentaddress) {
+		fprintf(stderr, "Unable to find suitable address.\n");
+		rc = EX_SYSERR;
+		goto mount_exit;
+	}
+	strlcpy(options, "ip=", options_size);
+	strlcat(options, currentaddress, options_size);
+
+	strlcat(options, ",unc=\\\\", options_size);
+	strlcat(options, parsed_info->host, options_size);
+	strlcat(options, "\\", options_size);
+	strlcat(options, parsed_info->share, options_size);
 
 	if (*parsed_info->options) {
 		strlcat(options, ",", options_size);
 		strlcat(options, parsed_info->options, options_size);
 	}
 
-	if(prefixpath) {
+	if(*parsed_info->prefix) {
 		strlcat(options,",prefixpath=",options_size);
-		strlcat(options,prefixpath,options_size); /* no need to cat the / */
-	}
-
-	/* convert all '\\' to '/' in share portion so that /proc/mounts looks pretty */
-	replace_char(dev_name, '\\', '/', strlen(share_name));
-
-	if (!got_ip && addr) {
-		strlcat(options, ",ip=", options_size);
-		current_len = strnlen(options, options_size);
-		optionstail = options + current_len;
-		switch (addr->ai_addr->sa_family) {
-		case AF_INET6:
-			addr6 = (struct sockaddr_in6 *) addr->ai_addr;
-			ipaddr = inet_ntop(AF_INET6, &addr6->sin6_addr, optionstail,
-					   options_size - current_len);
-			break;
-		case AF_INET:
-			addr4 = (struct sockaddr_in *) addr->ai_addr;
-			ipaddr = inet_ntop(AF_INET, &addr4->sin_addr, optionstail,
-					   options_size - current_len);
-			break;
-		default:
-			ipaddr = NULL;
-		}
-
-		/* if the address looks bogus, try the next one */
-		if (!ipaddr) {
-			addr = addr->ai_next;
-			if (addr)
-				goto mount_retry;
-			rc = EX_SYSERR;
-			goto mount_exit;
-		}
-	}
-
-	if (addr && addr->ai_addr->sa_family == AF_INET6 && addr6->sin6_scope_id) {
-		strlcat(options, "%", options_size);
-		current_len = strnlen(options, options_size);
-		optionstail = options + current_len;
-		snprintf(optionstail, options_size - current_len, "%u",
-			 addr6->sin6_scope_id);
+		strlcat(options, parsed_info->prefix, options_size);
 	}
 
 	if(verboseflag)
@@ -1463,24 +1451,22 @@ mount_retry:
 		switch (errno) {
 		case ECONNREFUSED:
 		case EHOSTUNREACH:
-			if (addr) {
-				addr = addr->ai_next;
-				if (addr)
-					goto mount_retry;
-			}
-			break;
+			currentaddress = nextaddress;
+			nextaddress = strchr(currentaddress, ',');
+			if (nextaddress)
+				*nextaddress++ = '\0';
+			goto mount_retry;
 		case ENODEV:
 			fprintf(stderr, "mount error: cifs filesystem not supported by the system\n");
 			break;
 		case ENXIO:
-			if(retry == 0) {
-				retry = 1;
-				if (uppercase_string(dev_name) &&
-				    uppercase_string(share_name) &&
-				    uppercase_string(prefixpath)) {
-					fprintf(stderr, "retrying with upper case share name\n");
-					goto mount_retry;
-				}
+			if (!already_uppercased &&
+			    uppercase_string(parsed_info->host) &&
+			    uppercase_string(parsed_info->share) &&
+			    uppercase_string(parsed_info->prefix)) {
+				fprintf(stderr, "Retrying with upper case share name\n");
+				already_uppercased = 1;
+				goto mount_retry;
 			}
 		}
 		fprintf(stderr, "mount error(%d): %s\n", errno, strerror(errno));
@@ -1544,13 +1530,10 @@ mount_retry:
 	if (rc)
 		rc = EX_FILEIO;
 mount_exit:
-	if (addrhead)
-		freeaddrinfo(addrhead);
 	memset(parsed_info->password, 0, sizeof(parsed_info->password));
 	SAFE_FREE(parsed_info);
 	SAFE_FREE(options);
 	SAFE_FREE(orgoptions);
 	SAFE_FREE(resolved_path);
-	SAFE_FREE(share_name);
 	return rc;
 }
