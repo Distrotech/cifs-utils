@@ -60,15 +60,25 @@
 /* I believe that the kernel limits options data to a page */
 #define MAX_OPTIONS_LEN	4096
 
+/*
+ * Maximum length of "share" portion of a UNC. I have no idea if this is at
+ * all valid. According to MSDN, the typical max length of any component is
+ * 255, so use that here.
+ */
+#define MAX_SHARE_LEN 256
+
+/* currently maximum length of IPv6 address string */
+#define MAX_ADDRESS_LEN INET6_ADDRSTRLEN
+
+/* limit list of addresses to 16 max-size addrs */
+#define MAX_ADDR_LIST_LEN (MAX_ADDRESS_LEN * 16)
+
 #ifndef SAFE_FREE
 #define SAFE_FREE(x) do { if ((x) != NULL) {free(x); x=NULL;} } while(0)
 #endif
 
 #define MOUNT_PASSWD_SIZE 128
 #define DOMAIN_SIZE 64
-
-/* currently maximum length of IPv6 address string */
-#define MAX_ADDRESS_LEN INET6_ADDRSTRLEN
 
 /*
  * value of the ver= option that gets passed to the kernel. Used to indicate
@@ -107,6 +117,16 @@
  * flags by default. These defaults can be changed here.
  */
 #define CIFS_SETUID_FLAGS (MS_NOSUID|MS_NODEV)
+
+/* struct for holding parsed mount info for use by privleged process */
+struct parsed_mount_info {
+	unsigned long	flags;
+	char		host[NI_MAXHOST];
+	char		share[MAX_SHARE_LEN];
+	char		prefix[PATH_MAX];
+	char		options[MAX_OPTIONS_LEN];
+	char		address_list[MAX_ADDR_LIST_LEN];
+};
 
 const char *thisprogram;
 int verboseflag = 0;
