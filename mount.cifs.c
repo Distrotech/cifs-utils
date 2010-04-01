@@ -478,25 +478,24 @@ static int get_password_from_file(int file_descript, char * filename)
 	return rc;
 }
 
-static int parse_options(char ** optionsp, unsigned long * filesys_flags)
+static int
+parse_options(const char *data, struct parsed_mount_info *parsed_info)
 {
-	const char * data;
-	char * percent_char = NULL;
-	char * value = NULL;
-	char * next_keyword = NULL;
-	char * out = NULL;
+	char *percent_char = NULL;
+	char *value = NULL, *equals = NULL;
+	char *next_keyword = NULL;
+	char *out = parsed_info->options;
+	unsigned long *filesys_flags = &parsed_info->flags;
 	int out_len = 0;
 	int word_len;
 	int rc = 0;
 	char user[32];
 	char group[32];
 
-	if (!optionsp || !*optionsp)
-		return 1;
-	data = *optionsp;
+	/* make sure we're starting from beginning */
+	out[0] = '\0';
 
 	/* BB fixme check for separator override BB */
-
 	if (getuid()) {
 		got_uid = 1;
 		snprintf(user,sizeof(user),"%u",getuid());
@@ -504,28 +503,29 @@ static int parse_options(char ** optionsp, unsigned long * filesys_flags)
 		snprintf(group,sizeof(group),"%u",getgid());
 	}
 
-/* while ((data = strsep(&options, ",")) != NULL) { */
-	while(data != NULL) {
-		/*  check if ends with trailing comma */
-		if(*data == 0)
-			break;
+	if (!data)
+		return EX_USAGE;
 
-		/* format is keyword=value,keyword2=value2,keyword3=value3 etc.) */
-		/* data  = next keyword */
-		/* value = next value ie stuff after equal sign */
-
+	/*
+	 * format is keyword,keyword2=value2,keyword3=value3... 
+	 * data  = next keyword
+	 * value = next value ie stuff after equal sign
+	 */
+	while (data && *data) {
 		next_keyword = strchr(data,','); /* BB handle sep= */
 	
 		/* temporarily null terminate end of keyword=value pair */
 		if(next_keyword)
 			*next_keyword++ = 0;
 
-		/* temporarily null terminate keyword to make keyword and value distinct */
-		if ((value = strchr(data, '=')) != NULL) {
-			*value = '\0';
-			value++;
+		/* temporarily null terminate keyword if there's a value */
+		value = NULL;
+		if ((equals = strchr(data, '=')) != NULL) {
+			*equals = '\0';
+			value = equals + 1;
 		}
 
+		/* FIXME: turn into a token parser? */
 		if (strncmp(data, "users",5) == 0) {
 			if(!value || !*value) {
 				*filesys_flags |= MS_USERS;
@@ -541,7 +541,6 @@ static int parse_options(char ** optionsp, unsigned long * filesys_flags)
 					goto nocopy;
 				} else {
 					fprintf(stderr, "username specified with no parameter\n");
-					SAFE_FREE(out);
 					return 1;	/* needs_arg; */
 				}
 			} else {
@@ -574,7 +573,6 @@ static int parse_options(char ** optionsp, unsigned long * filesys_flags)
 					domain_name = check_for_domain(&value);
 				} else {
 					fprintf(stderr, "username too long\n");
-					SAFE_FREE(out);
 					return 1;
 				}
 			}
@@ -591,14 +589,12 @@ static int parse_options(char ** optionsp, unsigned long * filesys_flags)
 					mountpassword = strndup(value, MOUNT_PASSWD_SIZE);
 					if (!mountpassword) {
 						fprintf(stderr, "mount.cifs error: %s", strerror(ENOMEM));
-						SAFE_FREE(out);
 						return 1;
 					}
 					got_password = 1;
 				}
 			} else {
 				fprintf(stderr, "password too long\n");
-				SAFE_FREE(out);
 				return 1;
 			}
 			goto nocopy;
@@ -617,7 +613,6 @@ static int parse_options(char ** optionsp, unsigned long * filesys_flags)
 				got_ip = 1;
 			} else {
 				fprintf(stderr, "ip address too long\n");
-				SAFE_FREE(out);
 				return 1;
 			}
 		} else if ((strncmp(data, "unc", 3) == 0)
@@ -625,7 +620,6 @@ static int parse_options(char ** optionsp, unsigned long * filesys_flags)
 		   || (strncmp(data, "path", 4) == 0)) {
 			if (!value || !*value) {
 				fprintf(stderr, "invalid path to network resource\n");
-				SAFE_FREE(out);
 				return 1;  /* needs_arg; */
 			} else if(strnlen(value,5) < 5) {
 				fprintf(stderr, "UNC name too short");
@@ -640,7 +634,6 @@ static int parse_options(char ** optionsp, unsigned long * filesys_flags)
 						got_unc = 1;
 				} else if (strncmp(value, "\\\\", 2) != 0) {	                   
 					fprintf(stderr, "UNC Path does not begin with // or \\\\ \n");
-					SAFE_FREE(out);
 					return 1;
 				} else {
 					if(got_unc)
@@ -650,7 +643,6 @@ static int parse_options(char ** optionsp, unsigned long * filesys_flags)
 				}
 			} else {
 				fprintf(stderr, "CIFS: UNC name too long\n");
-				SAFE_FREE(out);
 				return 1;
 			}
 		} else if ((strncmp(data, "dom" /* domain */, 3) == 0)
@@ -660,14 +652,12 @@ static int parse_options(char ** optionsp, unsigned long * filesys_flags)
 			   and "WORKGRP" etc. */
 			if (!value || !*value) {
 				fprintf(stderr, "CIFS: invalid domain name\n");
-				SAFE_FREE(out);
 				return 1;	/* needs_arg; */
 			}
 			if (strnlen(value, DOMAIN_SIZE+1) < DOMAIN_SIZE+1) {
 				got_domain = 1;
 			} else {
 				fprintf(stderr, "domain name too long\n");
-				SAFE_FREE(out);
 				return 1;
 			}
 		} else if (strncmp(data, "cred", 4) == 0) {
@@ -676,12 +666,10 @@ static int parse_options(char ** optionsp, unsigned long * filesys_flags)
 				if (rc) {
 					fprintf(stderr, "error %d (%s) opening credential file %s\n",
 						rc, strerror(rc), value);
-					SAFE_FREE(out);
 					return rc;
 				}
 			} else {
 				fprintf(stderr, "invalid credential file name specified\n");
-				SAFE_FREE(out);
 				return 1;
 			}
 		} else if (strncmp(data, "uid", 3) == 0) {
@@ -692,7 +680,7 @@ static int parse_options(char ** optionsp, unsigned long * filesys_flags)
 
 					if (!(pw = getpwnam(value))) {
 						fprintf(stderr, "bad user name \"%s\"\n", value);
-						exit(EX_USAGE);
+						return EX_USAGE;
 					}
 					snprintf(user, sizeof(user), "%u", pw->pw_uid);
 				} else {
@@ -708,7 +696,7 @@ static int parse_options(char ** optionsp, unsigned long * filesys_flags)
 
 					if (!(gr = getgrnam(value))) {
 						fprintf(stderr, "bad group name \"%s\"\n", value);
-						exit(EX_USAGE);
+						return EX_USAGE;
 					}
 					snprintf(group, sizeof(group), "%u", gr->gr_gid);
 				} else {
@@ -720,7 +708,6 @@ static int parse_options(char ** optionsp, unsigned long * filesys_flags)
 		} else if (strcmp(data, "file_mode") == 0 || strcmp(data, "fmask")==0) {
 			if (!value || !*value) {
 				fprintf(stderr, "Option '%s' requires a numerical argument\n", data);
-				SAFE_FREE(out);
 				return 1;
 			}
 
@@ -735,7 +722,6 @@ static int parse_options(char ** optionsp, unsigned long * filesys_flags)
 		} else if (strcmp(data, "dir_mode") == 0 || strcmp(data, "dmask")==0) {
 			if (!value || !*value) {
 				fprintf(stderr, "Option '%s' requires a numerical argument\n", data);
-				SAFE_FREE(out);
 				return 1;
 			}
 
@@ -780,49 +766,29 @@ static int parse_options(char ** optionsp, unsigned long * filesys_flags)
 			goto nocopy;
                 } else if (strncmp(data, "remount", 7) == 0) {
                         *filesys_flags |= MS_REMOUNT;
-		} /* else if (strnicmp(data, "port", 4) == 0) {
-			if (value && *value) {
-				vol->port =
-					simple_strtoul(value, &value, 0);
-			}
-		} else if (strnicmp(data, "rsize", 5) == 0) {
-			if (value && *value) {
-				vol->rsize =
-					simple_strtoul(value, &value, 0);
-			}
-		} else if (strnicmp(data, "wsize", 5) == 0) {
-			if (value && *value) {
-				vol->wsize =
-					simple_strtoul(value, &value, 0);
-			}
-		} else if (strnicmp(data, "version", 3) == 0) {
-		} else {
-			fprintf(stderr, "CIFS: Unknown mount option %s\n",data);
-		} */ /* nothing to do on those four mount options above.
-			Just pass to kernel and ignore them here */
+		}
 
-		/* Copy (possibly modified) option to out */
+		/* check size before copying option to buffer */
 		word_len = strlen(data);
 		if (value)
 			word_len += 1 + strlen(value);
 
-		out = (char *)realloc(out, out_len + word_len + 2);
-		if (out == NULL) {
-			perror("malloc");
-			exit(EX_SYSERR);
+		/* need 2 extra bytes for comma and null byte */
+		if (out_len + word_len + 2 > MAX_OPTIONS_LEN) {
+			fprintf(stderr, "Options string too long\n");
+			return EX_USAGE;
 		}
 
-		if (out_len) {
-			strlcat(out, ",", out_len + word_len + 2);
-			out_len++;
-		}
+		/* put back equals sign, if any */
+		if (equals)
+			*equals = '=';
 
-		if (value)
-			snprintf(out + out_len, word_len + 1, "%s=%s", data, value);
-		else
-			snprintf(out + out_len, word_len + 1, "%s", data);
+		/* go ahead and copy */
+		if (out_len)
+			strlcat(out, ",", MAX_OPTIONS_LEN);
+
+		strlcat(out, data, MAX_OPTIONS_LEN);
 		out_len = strlen(out);
-
 nocopy:
 		data = next_keyword;
 	}
@@ -831,10 +797,9 @@ nocopy:
 	if (got_uid) {
 		word_len = strlen(user);
 
-		out = (char *)realloc(out, out_len + word_len + 6);
-		if (out == NULL) {
-			perror("malloc");
-			exit(EX_SYSERR);
+		if (out_len + word_len + 6 > MAX_OPTIONS_LEN) {
+			fprintf(stderr, "Options string too long\n");
+			return EX_USAGE;
 		}
 
 		if (out_len) {
@@ -847,10 +812,9 @@ nocopy:
 	if (got_gid) {
 		word_len = strlen(group);
 
-		out = (char *)realloc(out, out_len + 1 + word_len + 6);
-		if (out == NULL) {
-		perror("malloc");
-			exit(EX_SYSERR);
+		if (out_len + 1 + word_len + 6 > MAX_OPTIONS_LEN) {
+			fprintf(stderr, "Options string too long\n");
+			return EX_USAGE;
 		}
 
 		if (out_len) {
@@ -861,8 +825,6 @@ nocopy:
 		out_len = strlen(out);
 	}
 
-	SAFE_FREE(*optionsp);
-	*optionsp = out;
 	return 0;
 }
 
@@ -1174,7 +1136,6 @@ static int check_mtab(const char *progname, const char *devname,
 int main(int argc, char ** argv)
 {
 	int c;
-	unsigned long flags = MS_MANDLOCK;
 	char * orgoptions = NULL;
 	char * share_name = NULL;
 	const char * ipaddr = NULL;
@@ -1188,15 +1149,14 @@ int main(int argc, char ** argv)
 	int nomtab = 0;
 	int uid = 0;
 	int gid = 0;
-	int optlen = 0;
-	int orgoptlen = 0;
-	size_t options_size = 0;
+	size_t options_size = MAX_OPTIONS_LEN;
 	size_t current_len;
 	int retry = 0; /* set when we have to retry mount with uppercase */
 	struct addrinfo *addrhead = NULL, *addr;
 	struct mntent mountent;
 	struct sockaddr_in *addr4 = NULL;
 	struct sockaddr_in6 *addr6 = NULL;
+	struct parsed_mount_info *parsed_info = NULL;
 	FILE * pmntfile;
 
 	if (check_setuid())
@@ -1214,6 +1174,14 @@ int main(int argc, char ** argv)
 	thisprogram = argv[0];
 	if(thisprogram == NULL)
 		thisprogram = "mount.cifs";
+
+	parsed_info = calloc(1, sizeof(*parsed_info));
+	if (!parsed_info) {
+		fprintf(stderr, "Unable to allocate memory.\n");
+		return EX_SYSERR;
+	}
+
+	parsed_info->flags = MS_MANDLOCK;
 
 	/* add sharename in opts string as unc= parm */
 	while ((c = getopt_long (argc, argv, "afFhilL:no:O:rsSU:vVwt:",
@@ -1239,7 +1207,7 @@ int main(int argc, char ** argv)
 			break;
 		case 'b':
 #ifdef MS_BIND
-			flags |= MS_BIND;
+			parsed_info->flags |= MS_BIND;
 #else
 			fprintf(stderr,
 				"option 'b' (MS_BIND) not supported\n");
@@ -1247,7 +1215,7 @@ int main(int argc, char ** argv)
 			break;
 		case 'm':
 #ifdef MS_MOVE		      
-			flags |= MS_MOVE;
+			parsed_info->flags |= MS_MOVE;
 #else
 			fprintf(stderr,
 				"option 'm' (MS_MOVE) not supported\n");
@@ -1260,8 +1228,8 @@ int main(int argc, char ** argv)
 				goto mount_exit;
 			}
 			break;
-		case 'r':  /* mount readonly */
-			flags |= MS_RDONLY;
+		case 'r':	/* mount readonly */
+			parsed_info->flags |= MS_RDONLY;
 			break;
 		case 'v':
 			++verboseflag;
@@ -1270,7 +1238,7 @@ int main(int argc, char ** argv)
 			print_cifs_mount_version();
 			exit (0);
 		case 'w':
-			flags &= ~MS_RDONLY;
+			parsed_info->flags &= ~MS_RDONLY;
 			break;
 		case '1':
 			if (isdigit(*optarg)) {
@@ -1384,7 +1352,7 @@ int main(int argc, char ** argv)
 			goto mount_exit;
 
 		/* enable any default user mount flags */
-		flags |= CIFS_SETUID_FLAGS;
+		parsed_info->flags |= CIFS_SETUID_FLAGS;
 	}
 
 	if (getenv("PASSWD")) {
@@ -1404,14 +1372,21 @@ int main(int argc, char ** argv)
 			goto mount_exit;
 	}
 
-        if (orgoptions && parse_options(&orgoptions, &flags)) {
+	options = calloc(options_size, 1);
+	if (!options) {
+		fprintf(stderr, "Unable to allocate memory.\n");
+		rc = EX_SYSERR;
+		goto mount_exit;
+	}
+
+        if (orgoptions && parse_options(orgoptions, parsed_info)) {
                 rc = EX_USAGE;
 		goto mount_exit;
 	}
 
 	if (getuid()) {
 #if !CIFS_LEGACY_SETUID_CHECK
-		if (!(flags & (MS_USERS|MS_USER))) {
+		if (!(parsed_info->flags & (MS_USERS|MS_USER))) {
 			fprintf(stderr, "%s: permission denied\n", thisprogram);
 			rc = EX_USAGE;
 			goto mount_exit;
@@ -1427,7 +1402,7 @@ int main(int argc, char ** argv)
 		}
 	}
 
-	flags &= ~(MS_USERS|MS_USER);
+	parsed_info->flags &= ~(MS_USERS|MS_USER);
 
 	addrhead = addr = parse_server(&share_name);
 	if((addrhead == NULL) && (got_ip == 0)) {
@@ -1478,37 +1453,20 @@ int main(int argc, char ** argv)
 		strlcpy(mountpassword, tmp_pass, MOUNT_PASSWD_SIZE+1);
 		got_password = 1;
 	}
-	/* FIXME launch daemon (handles dfs name resolution and credential change) 
-	   remember to clear parms and overwrite password field before launching */
-	if(orgoptions) {
-		optlen = strlen(orgoptions);
-		orgoptlen = optlen;
-	} else
-		optlen = 0;
-	if(share_name)
-		optlen += strlen(share_name) + 4;
-	else {
+
+	if(!share_name) {
 		fprintf(stderr, "No server share name specified\n");
                 rc = EX_USAGE;
 		goto mount_exit;
 	}
-	if(user_name)
-		optlen += strlen(user_name) + 6;
-	optlen += MAX_ADDRESS_LEN + 4;
-	if(mountpassword)
-		optlen += strlen(mountpassword) + 6;
+
 mount_retry:
-	SAFE_FREE(options);
-	options_size = optlen + 10 + DOMAIN_SIZE;
-	options = (char *)malloc(options_size /* space for commas in password */ + 8 /* space for domain=  , domain name itself was counted as part of the length username string above */);
+	if (*options)
+		strlcat(options, ",", options_size);
 
-	if(options == NULL) {
-		fprintf(stderr, "Could not allocate memory for mount options\n");
-		exit(EX_SYSERR);
-	}
+	strlcat(options, "unc=", options_size);
+	strlcat(options, share_name, options_size);
 
-	strlcpy(options, "unc=", options_size);
-	strlcat(options,share_name,options_size);
 	/* scan backwards and reverse direction of slash */
 	temp = strrchr(options, '/');
 	if(temp > options + 6)
@@ -1531,10 +1489,11 @@ mount_retry:
 	strlcat(options,",ver=",options_size);
 	strlcat(options,OPTIONS_VERSION,options_size);
 
-	if(orgoptions) {
-		strlcat(options,",",options_size);
-		strlcat(options,orgoptions,options_size);
+	if (*parsed_info->options) {
+		strlcat(options, ",", options_size);
+		strlcat(options, parsed_info->options, options_size);
 	}
+
 	if(prefixpath) {
 		strlcat(options,",prefixpath=",options_size);
 		strlcat(options,prefixpath,options_size); /* no need to cat the / */
@@ -1603,7 +1562,7 @@ mount_retry:
 	if (rc)
 		goto mount_exit;
 
-	if (!fakemnt && mount(dev_name, ".", cifs_fstype, flags, options)) {
+	if (!fakemnt && mount(dev_name, ".", cifs_fstype, parsed_info->flags, options)) {
 		switch (errno) {
 		case ECONNREFUSED:
 		case EHOSTUNREACH:
@@ -1656,19 +1615,19 @@ mount_retry:
 	if(mountent.mnt_opts) {
 		char * mount_user = getusername();
 		memset(mountent.mnt_opts,0,200);
-		if(flags & MS_RDONLY)
+		if(parsed_info->flags & MS_RDONLY)
 			strlcat(mountent.mnt_opts,"ro",220);
 		else
 			strlcat(mountent.mnt_opts,"rw",220);
-		if(flags & MS_MANDLOCK)
+		if(parsed_info->flags & MS_MANDLOCK)
 			strlcat(mountent.mnt_opts,",mand",220);
-		if(flags & MS_NOEXEC)
+		if(parsed_info->flags & MS_NOEXEC)
 			strlcat(mountent.mnt_opts,",noexec",220);
-		if(flags & MS_NOSUID)
+		if(parsed_info->flags & MS_NOSUID)
 			strlcat(mountent.mnt_opts,",nosuid",220);
-		if(flags & MS_NODEV)
+		if(parsed_info->flags & MS_NODEV)
 			strlcat(mountent.mnt_opts,",nodev",220);
-		if(flags & MS_SYNCHRONOUS)
+		if(parsed_info->flags & MS_SYNCHRONOUS)
 			strlcat(mountent.mnt_opts,",sync",220);
 		if(mount_user) {
 			if(getuid() != 0) {
