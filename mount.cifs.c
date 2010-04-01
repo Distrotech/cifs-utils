@@ -101,21 +101,6 @@
 #define CIFS_DISABLE_SETUID_CHECK 0
 
 /*
- * By default, mount.cifs follows the conventions set forth by /bin/mount
- * for user mounts. That is, it requires that the mount be listed in
- * /etc/fstab with the "user" option when run as an unprivileged user and
- * mount.cifs is setuid root.
- *
- * Older versions of mount.cifs however were "looser" in this regard. When
- * made setuid root, a user could run mount.cifs directly and mount any share
- * on a directory owned by that user.
- *
- * The legacy behavior is now disabled by default. To reenable it, set the
- * following #define to true.
- */
-#define CIFS_LEGACY_SETUID_CHECK 0
-
-/*
  * When an unprivileged user runs a setuid mount.cifs, we set certain mount
  * flags by default. These defaults can be changed here.
  */
@@ -142,36 +127,6 @@ const char *cifs_fstype = "cifs";
 
 static int parse_unc(char *unc_name, struct parsed_mount_info *parsed_info);
 
-#if CIFS_LEGACY_SETUID_CHECK
-static int
-check_mountpoint(const char *progname, char *mountpoint)
-{
-	/* do extra checks on mountpoint for legacy setuid behavior */
-	if (!getuid() || geteuid())
-		return 0;
-
-	if (statbuf.st_uid != getuid()) {
-		fprintf(stderr, "%s: %s is not owned by user\n", progname,
-			mountpoint);
-		return EX_USAGE;
-	}
-
-	if ((statbuf.st_mode & S_IRWXU) != S_IRWXU) {
-		fprintf(stderr, "%s: invalid permissions on %s\n", progname,
-			mountpoint);
-		return EX_USAGE;
-	}
-
-	return 0;
-}
-#else /* CIFS_LEGACY_SETUID_CHECK */
-static int
-check_mountpoint(const char *progname, char *mountpoint)
-{
-	return 0;
-}
-#endif /* CIFS_LEGACY_SETUID_CHECK */
-
 #if CIFS_DISABLE_SETUID_CHECK
 static int
 check_setuid(void)
@@ -195,14 +150,6 @@ check_setuid(void)
 }
 #endif /* CIFS_DISABLE_SETUID_CHECK */
 
-#if CIFS_LEGACY_SETUID_CHECK
-static int
-check_fstab(const char *progname, char *mountpoint, char *devname,
-	    char **options)
-{
-	return 0;
-}
-#else /* CIFS_LEGACY_SETUID_CHECK */
 static int
 check_fstab(const char *progname, char *mountpoint, char *devname,
 	    char **options)
@@ -241,7 +188,6 @@ check_fstab(const char *progname, char *mountpoint, char *devname,
 	*options = strdup(mnt->mnt_opts);
 	return 0;
 }
-#endif /* CIFS_LEGACY_SETUID_CHECK */
 
 /* BB finish BB
 
@@ -1079,7 +1025,6 @@ int main(int argc, char ** argv)
 	char * orgoptions = NULL;
 	char * mountpoint = NULL;
 	char * options = NULL;
-	char * resolved_path = NULL;
 	char * dev_name;
 	char *currentaddress, *nextaddress;
 	int rc = 0;
@@ -1256,7 +1201,7 @@ int main(int argc, char ** argv)
 	dev_name = argv[optind];
 	mountpoint = argv[optind + 1];
 
-	/* make sure mountpoint is legit */
+	/* chdir into mountpoint as soon as possible */
 	rc = chdir(mountpoint);
 	if (rc) {
 		fprintf(stderr, "Couldn't chdir to %s: %s\n", mountpoint,
@@ -1265,9 +1210,13 @@ int main(int argc, char ** argv)
 		goto mount_exit;
 	}
 
-	rc = check_mountpoint(thisprogram, mountpoint);
-	if (rc)
+	mountpoint = realpath(".", NULL);
+	if(!mountpoint) {
+		fprintf(stderr, "Unable to resolve %s to canonical path: %s\n",
+				mountpoint, strerror(errno));
+		rc = EX_SYSERR;
 		goto mount_exit;
+	}
 
 	/* sanity check for unprivileged mounts */
 	if (getuid()) {
@@ -1291,13 +1240,11 @@ int main(int argc, char ** argv)
 	}
 
 	if (getuid()) {
-#if !CIFS_LEGACY_SETUID_CHECK
 		if (!(parsed_info->flags & (MS_USERS|MS_USER))) {
 			fprintf(stderr, "%s: permission denied\n", thisprogram);
 			rc = EX_USAGE;
 			goto mount_exit;
 		}
-#endif /* !CIFS_LEGACY_SETUID_CHECK */
 		
 		if (geteuid()) {
 			fprintf(stderr, "%s: not installed setuid - \"user\" "
@@ -1317,25 +1264,6 @@ int main(int argc, char ** argv)
 	rc = resolve_host(parsed_info);
 	if (rc)
 		goto mount_exit;
-
-	/* BB save off path and pop after mount returns? */
-	resolved_path = (char *)malloc(PATH_MAX+1);
-	if (!resolved_path) {
-		fprintf(stderr, "Unable to allocate memory.\n");
-		rc = EX_SYSERR;
-		goto mount_exit;
-	}
-
-	/* Note that if we can not canonicalize the name, we get
-	   another chance to see if it is valid when we chdir to it */
-	if(!realpath(".", resolved_path)) {
-		fprintf(stderr, "Unable to resolve %s to canonical path: %s\n",
-				mountpoint, strerror(errno));
-		rc = EX_SYSERR;
-		goto mount_exit;
-	}
-
-	mountpoint = resolved_path; 
 
 	if (!parsed_info->got_user) {
 		/*
@@ -1420,7 +1348,7 @@ mount_retry:
 	}
 
 	if(verboseflag)
-		fprintf(stderr, "\nmount.cifs kernel mount options: %s", options);
+		fprintf(stderr, "mount.cifs kernel mount options: %s\n", options);
 
 	if (parsed_info->got_password) {
 		/*
@@ -1486,6 +1414,7 @@ mount_retry:
 		rc = EX_FILEIO;
 		goto mount_exit;
 	}
+
 	mountent.mnt_fsname = dev_name;
 	mountent.mnt_dir = mountpoint;
 	mountent.mnt_type = (char *)(void *)cifs_fstype;
@@ -1529,6 +1458,5 @@ mount_exit:
 	SAFE_FREE(parsed_info);
 	SAFE_FREE(options);
 	SAFE_FREE(orgoptions);
-	SAFE_FREE(resolved_path);
 	return rc;
 }
