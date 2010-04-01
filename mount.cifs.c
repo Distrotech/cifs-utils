@@ -1005,8 +1005,6 @@ int main(int argc, char ** argv)
 	char *currentaddress, *nextaddress;
 	int rc = 0;
 	int nomtab = 0;
-	int uid = 0;
-	int gid = 0;
 	int fakemnt = 0;
 	int already_uppercased = 0;
 	size_t options_size = MAX_OPTIONS_LEN;
@@ -1040,42 +1038,15 @@ int main(int argc, char ** argv)
 	parsed_info->flags = MS_MANDLOCK;
 
 	/* add sharename in opts string as unc= parm */
-	while ((c = getopt_long (argc, argv, "afFhilL:no:O:rsSU:vVwt:",
-			 longopts, NULL)) != -1) {
+	while ((c = getopt_long (argc, argv, "?fhno:rvVw",
+			longopts, NULL)) != -1) {
 		switch (c) {
-/* No code to do the following  options yet */
-/*	case 'l':
-		list_with_volumelabel = 1;
-		break;
-	case 'L':
-		volumelabel = optarg;
-		break; */
-/*	case 'a':	       
-		++mount_all;
-		break; */
-
 		case '?':
 		case 'h':	 /* help */
 			rc = mount_cifs_usage(stdout);
 			goto mount_exit;
 		case 'n':
 			++nomtab;
-			break;
-		case 'b':
-#ifdef MS_BIND
-			parsed_info->flags |= MS_BIND;
-#else
-			fprintf(stderr,
-				"option 'b' (MS_BIND) not supported\n");
-#endif
-			break;
-		case 'm':
-#ifdef MS_MOVE		      
-			parsed_info->flags |= MS_MOVE;
-#else
-			fprintf(stderr,
-				"option 'm' (MS_MOVE) not supported\n");
-#endif
 			break;
 		case 'o':
 			orgoptions = strndup(optarg, MAX_OPTIONS_LEN);
@@ -1096,75 +1067,11 @@ int main(int argc, char ** argv)
 		case 'w':
 			parsed_info->flags &= ~MS_RDONLY;
 			break;
-		case '1':
-			if (isdigit(*optarg)) {
-				char *ep;
-
-				uid = strtoul(optarg, &ep, 10);
-				if (*ep) {
-					fprintf(stderr, "bad uid value \"%s\"\n", optarg);
-					rc = EX_USAGE;
-					goto mount_exit;
-				}
-			} else {
-				struct passwd *pw;
-
-				if (!(pw = getpwnam(optarg))) {
-					fprintf(stderr, "bad user name \"%s\"\n", optarg);
-					rc = EX_USAGE;
-					goto mount_exit;
-				}
-				uid = pw->pw_uid;
-				endpwent();
-			}
-			break;
-		case '2':
-			if (isdigit(*optarg)) {
-				char *ep;
-
-				gid = strtoul(optarg, &ep, 10);
-				if (*ep) {
-					fprintf(stderr, "bad gid value \"%s\"\n", optarg);
-					rc = EX_USAGE;
-					goto mount_exit;
-				}
-			} else {
-				struct group *gr;
-
-				if (!(gr = getgrnam(optarg))) {
-					fprintf(stderr, "bad user name \"%s\"\n", optarg);
-					rc = EX_USAGE;
-					goto mount_exit;
-				}
-				gid = gr->gr_gid;
-				endpwent();
-			}
-			break;
-		case 'u':
-			parsed_info->got_user = 1;
-			strlcpy(parsed_info->username, optarg,
-				sizeof(parsed_info->username));
-			break;
-		case 'd':
-			strlcpy(parsed_info->domain, optarg, sizeof(parsed_info->domain));
-			break;
-		case 'p':
-			rc = set_password(parsed_info, optarg);
-			if (rc)
-				goto mount_exit;
-			break;
-		case 'S':
-			rc = get_password_from_file(0, NULL, parsed_info);
-			if (rc)
-				goto mount_exit;
-			break;
-		case 't':
-			break;
 		case 'f':
 			++fakemnt;
 			break;
 		default:
-			fprintf(stderr, "unknown mount option %c\n",c);
+			fprintf(stderr, "unknown command-line option: %c\n", c);
 			rc = mount_cifs_usage(stderr);
 			goto mount_exit;
 		}
