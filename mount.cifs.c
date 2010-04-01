@@ -100,14 +100,12 @@
 
 /*
  * mount.cifs has been the subject of many "security" bugs that have arisen
- * because of users and distributions installing it as a setuid root program.
- * mount.cifs has not been audited for security. Thus, we strongly recommend
- * that it not be installed setuid root. To make that abundantly clear,
- * mount.cifs now check whether it's running setuid root and exit with an
- * error if it is. If you wish to disable this check, then set the following
- * #define to 1, but please realize that you do so at your own peril.
+ * because of users and distributions installing it as a setuid root program
+ * before it had been audited for security holes. The default behavior is
+ * now to allow mount.cifs to be run as a setuid root program. Some admins
+ * may want to disable this fully, so this switch remains in place.
  */
-#define CIFS_DISABLE_SETUID_CHECK 0
+#define CIFS_DISABLE_SETUID_CAPABILITY 0
 
 /*
  * When an unprivileged user runs a setuid mount.cifs, we set certain mount
@@ -138,26 +136,24 @@ const char *cifs_fstype = "cifs";
 
 static int parse_unc(const char *unc_name, struct parsed_mount_info *parsed_info);
 
-#if CIFS_DISABLE_SETUID_CHECK
 static int check_setuid(void)
 {
-	return 0;
-}
-#else /* CIFS_DISABLE_SETUID_CHECK */
-static int check_setuid(void)
-{
+	if (geteuid()) {
+		fprintf(stderr, "This program is not installed setuid root - "
+			" \"user\" CIFS mounts not supported.\n");
+		return EX_USAGE;
+	}
+
+#if CIFS_DISABLE_SETUID_CAPABILITY
 	if (getuid() && !geteuid()) {
 		printf("This mount.cifs program has been built with the "
-		       "ability to run as a setuid root program disabled.\n"
-		       "mount.cifs has not been well audited for security "
-		       "holes. Therefore the Samba team does not recommend "
-		       "installing it as a setuid root program.\n");
-		return 1;
+		       "ability to run as a setuid root program disabled.\n");
+		return EX_USAGE;
 	}
+#endif /* CIFS_DISABLE_SETUID_CAPABILITY */
 
 	return 0;
 }
-#endif /* CIFS_DISABLE_SETUID_CHECK */
 
 static int
 check_fstab(const char *progname, const char *mountpoint, const char *devname,
@@ -1353,18 +1349,13 @@ int main(int argc, char **argv)
 	struct parsed_mount_info *parsed_info = NULL;
 	pid_t pid;
 
-	if (check_setuid())
-		return EX_USAGE;
+	rc = check_setuid();
+	if (rc)
+		return rc;
 
 	rc = drop_capabilities(1);
 	if (rc)
 		return EX_SYSERR;
-
-	if (geteuid()) {
-		fprintf(stderr, "%s: not installed setuid root - \"user\" "
-			"CIFS mounts not supported.", thisprogram);
-		return EX_FAIL;
-	}
 
 	/* setlocale(LC_ALL, "");
 	   bindtextdomain(PACKAGE, LOCALEDIR);
