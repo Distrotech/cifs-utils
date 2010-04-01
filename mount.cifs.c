@@ -60,6 +60,9 @@
 /* I believe that the kernel limits options data to a page */
 #define MAX_OPTIONS_LEN	4096
 
+/* max length of mtab options */
+#define MTAB_OPTIONS_LEN 220
+
 /*
  * Maximum length of "share" portion of a UNC. I have no idea if this is at
  * all valid. According to MSDN, the typical max length of any component is
@@ -994,6 +997,72 @@ static int check_mtab(const char *progname, const char *devname,
 	return 0;
 }
 
+static int
+add_mtab(char *devname, char *mountpoint, unsigned long flags)
+{
+	int rc = 0;
+	char *mount_user;
+	struct mntent mountent;
+	FILE *pmntfile;
+
+	atexit(unlock_mtab);
+	rc = lock_mtab();
+	if (rc) {
+		fprintf(stderr, "cannot lock mtab");
+		rc = EX_FILEIO;
+		goto add_mtab_exit;
+	}
+
+	pmntfile = setmntent(MOUNTED, "a+");
+	if (!pmntfile) {
+		fprintf(stderr, "could not update mount table\n");
+		unlock_mtab();
+		rc = EX_FILEIO;
+		goto add_mtab_exit;
+	}
+
+	mountent.mnt_fsname = devname;
+	mountent.mnt_dir = mountpoint;
+	mountent.mnt_type = (char *)(void *)cifs_fstype;
+	mountent.mnt_opts = (char *)calloc(MTAB_OPTIONS_LEN, 1);
+	if(mountent.mnt_opts) {
+		if (flags & MS_RDONLY)
+			strlcat(mountent.mnt_opts,"ro", MTAB_OPTIONS_LEN);
+		else
+			strlcat(mountent.mnt_opts,"rw", MTAB_OPTIONS_LEN);
+
+		if(flags & MS_MANDLOCK)
+			strlcat(mountent.mnt_opts,",mand", MTAB_OPTIONS_LEN);
+		if(flags & MS_NOEXEC)
+			strlcat(mountent.mnt_opts,",noexec", MTAB_OPTIONS_LEN);
+		if(flags & MS_NOSUID)
+			strlcat(mountent.mnt_opts,",nosuid", MTAB_OPTIONS_LEN);
+		if(flags & MS_NODEV)
+			strlcat(mountent.mnt_opts,",nodev", MTAB_OPTIONS_LEN);
+		if(flags & MS_SYNCHRONOUS)
+			strlcat(mountent.mnt_opts,",sync", MTAB_OPTIONS_LEN);
+		if(getuid() != 0) {
+			strlcat(mountent.mnt_opts, ",user=", MTAB_OPTIONS_LEN);
+			mount_user = getusername();
+			if (mount_user)
+				strlcat(mountent.mnt_opts, mount_user,
+					MTAB_OPTIONS_LEN);
+		}
+	}
+	mountent.mnt_freq = 0;
+	mountent.mnt_passno = 0;
+	rc = addmntent(pmntfile, &mountent);
+	endmntent(pmntfile);
+	unlock_mtab();
+	SAFE_FREE(mountent.mnt_opts);
+add_mtab_exit:
+	if (rc) {
+		fprintf(stderr, "unable to add mount entry to mtab\n");
+		rc = EX_FILEIO;
+	}
+
+	return rc;
+}
 
 int main(int argc, char ** argv)
 {
@@ -1009,9 +1078,7 @@ int main(int argc, char ** argv)
 	int already_uppercased = 0;
 	size_t options_size = MAX_OPTIONS_LEN;
 	size_t dev_len;
-	struct mntent mountent;
 	struct parsed_mount_info *parsed_info = NULL;
-	FILE * pmntfile;
 
 	if (check_setuid())
 		return EX_USAGE;
@@ -1299,62 +1366,9 @@ mount_retry:
 		goto mount_exit;
 	}
 
-	if (nomtab)
-		goto mount_exit;
+	if (!nomtab)
+		rc = add_mtab(dev_name, mountpoint, parsed_info->flags);
 
-	atexit(unlock_mtab);
-	rc = lock_mtab();
-	if (rc) {
-		fprintf(stderr, "cannot lock mtab");
-		goto mount_exit;
-	}
-	pmntfile = setmntent(MOUNTED, "a+");
-	if (!pmntfile) {
-		fprintf(stderr, "could not update mount table\n");
-		unlock_mtab();
-		rc = EX_FILEIO;
-		goto mount_exit;
-	}
-
-	mountent.mnt_fsname = dev_name;
-	mountent.mnt_dir = mountpoint;
-	mountent.mnt_type = (char *)(void *)cifs_fstype;
-	mountent.mnt_opts = (char *) calloc(220, 1);
-	if(mountent.mnt_opts) {
-		char * mount_user = getusername();
-		if(parsed_info->flags & MS_RDONLY)
-			strlcat(mountent.mnt_opts,"ro",220);
-		else
-			strlcat(mountent.mnt_opts,"rw",220);
-		if(parsed_info->flags & MS_MANDLOCK)
-			strlcat(mountent.mnt_opts,",mand",220);
-		if(parsed_info->flags & MS_NOEXEC)
-			strlcat(mountent.mnt_opts,",noexec",220);
-		if(parsed_info->flags & MS_NOSUID)
-			strlcat(mountent.mnt_opts,",nosuid",220);
-		if(parsed_info->flags & MS_NODEV)
-			strlcat(mountent.mnt_opts,",nodev",220);
-		if(parsed_info->flags & MS_SYNCHRONOUS)
-			strlcat(mountent.mnt_opts,",sync",220);
-		if(mount_user) {
-			if(getuid() != 0) {
-				strlcat(mountent.mnt_opts,
-					",user=", 220);
-				strlcat(mountent.mnt_opts,
-					mount_user, 220);
-			}
-		}
-	}
-	mountent.mnt_freq = 0;
-	mountent.mnt_passno = 0;
-	rc = addmntent(pmntfile,&mountent);
-	endmntent(pmntfile);
-	unlock_mtab();
-	SAFE_FREE(mountent.mnt_opts);
-	if (rc) {
-		fprintf(stderr, "unable to add mount entry to mtab\n");
-		rc = EX_FILEIO;
-	}
 mount_exit:
 	if (parsed_info)
 		memset(parsed_info->password, 0, sizeof(parsed_info->password));
