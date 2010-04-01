@@ -227,6 +227,31 @@ mount_cifs_usage(FILE *stream)
 	return 0;
 }
 
+/*
+ * CIFS has to "escape" commas in the password field so that they don't
+ * end up getting confused for option delimiters. Copy password into pw
+ * field, turning any commas into double commas.
+ */
+static int
+set_password(struct parsed_mount_info *parsed_info, const char *src)
+{
+	char *dst = parsed_info->password;
+	unsigned int i = 0, j = 0;
+
+	while (src[i]) {
+		if (src[i] == ',')
+			dst[j++] = ',';
+		dst[j++] = src[i++];
+		if (j > sizeof(parsed_info->password)) {
+			fprintf(stderr, "Converted password too long!\n");
+			return EX_USAGE;
+		}
+	}
+	dst[j] = '\0';
+	parsed_info->got_password = 1;
+	return 0;
+}
+
 /* caller frees username if necessary */
 static char * getusername(void) {
 	char *username = NULL;
@@ -245,18 +270,18 @@ static char * getusername(void) {
  * ...obviously the only required component is "username". The source string
  * is modified in the process, but it should remain unchanged at the end.
  */
-static void
+static int
 parse_username(char *rawuser, struct parsed_mount_info *parsed_info)
 {
 	char *user, *password, slash;
+	int rc = 0;
 
 	/* everything after first % sign is a password */
 	password = strchr(rawuser, '%');
 	if (password) {
-		*(password) = '\0';
-		strlcpy(parsed_info->password, password + 1,
-				sizeof(parsed_info->password));
-		parsed_info->got_password = 1;
+		rc = set_password(parsed_info, password);
+		if (rc)
+			return rc;
 	}
 
 	/* everything after first '/' or '\' is a username */
@@ -279,12 +304,14 @@ parse_username(char *rawuser, struct parsed_mount_info *parsed_info)
 	parsed_info->got_user = 1;
 	if (password)
 		*password = '%';
+
+	return 0;
 }
 
 static int open_cred_file(char *file_name, struct parsed_mount_info *parsed_info)
 {
 	char * line_buf;
-	char * temp_val;
+	char * temp_val, *newline;
 	FILE * fs;
 	int i, length;
 
@@ -310,6 +337,12 @@ static int open_cred_file(char *file_name, struct parsed_mount_info *parsed_info
 				break;
 			/* if whitespace - skip past it */
 		}
+
+		/* NULL terminate at newline */
+		newline = strchr(line_buf + i, '\n');
+		if (newline)
+			*newline = '\0';
+
 		if (strncasecmp("username",line_buf+i,8) == 0) {
 			temp_val = strchr(line_buf + i,'=');
 			if(temp_val) {
@@ -333,24 +366,12 @@ static int open_cred_file(char *file_name, struct parsed_mount_info *parsed_info
 			}
 		} else if (strncasecmp("password",line_buf+i,8) == 0) {
 			temp_val = strchr(line_buf+i, '=');
-			if(temp_val) {
-				/* go past equals sign */
-				temp_val++;
-				for(length = 0; length < sizeof(parsed_info->password); length++) {
-					if ((temp_val[length] == '\n')
-					    || (temp_val[length] == '\0')) {
-						temp_val[length] = '\0';
-						break;
-					}
-				}
-				if(length > MOUNT_PASSWD_SIZE) {
-					fprintf(stderr, "mount.cifs failed: password in credentials file too long\n");
-					memset(line_buf, 0, 4096);
-					return EX_USAGE;
-				}
-				strlcpy(parsed_info->password, temp_val, MOUNT_PASSWD_SIZE + 1);
-				parsed_info->got_password = 1;
-			}
+			if (!temp_val)
+				continue;
+			++temp_val;
+			i = set_password(parsed_info, temp_val);
+			if (i)
+				return i;
                 } else if (strncasecmp("domain",line_buf+i,6) == 0) {
                         temp_val = strchr(line_buf+i,'=');
                         if(temp_val) {
@@ -386,8 +407,7 @@ static int
 get_password_from_file(int file_descript, char *filename, struct parsed_mount_info *parsed_info)
 {
 	int rc = 0;
-	int i;
-	char c;
+	char buf[sizeof(parsed_info->password) + 1];
 
 	if(filename != NULL) {
 		rc = access(filename, R_OK);
@@ -403,38 +423,21 @@ get_password_from_file(int file_descript, char *filename, struct parsed_mount_in
 			return EX_SYSERR;
 		}
 	}
-	/* else file already open and fd provided */
 
-	for(i=0;i<MOUNT_PASSWD_SIZE;i++) {
-		rc = read(file_descript,&c,1);
-		if(rc < 0) {
-			fprintf(stderr, "mount.cifs failed. Error %s reading password file\n",strerror(errno));
-			if(filename != NULL)
-				close(file_descript);
-			return EX_SYSERR;
-		} else if(rc == 0) {
-			if(parsed_info->password[0] == 0) {
-				if(verboseflag)
-					fprintf(stderr, "\nWarning: null password used since cifs password file empty");
-			}
-			break;
-		} else /* read valid character */ {
-			if((c == 0) || (c == '\n')) {
-				parsed_info->password[i] = '\0';
-				break;
-			} else 
-				parsed_info->password[i] = c;
-		}
+	memset(buf, 0, sizeof(buf));
+	rc = read(file_descript, buf, sizeof(buf) - 1);
+	if (rc < 0) {
+		fprintf(stderr, "mount.cifs failed. Error %s reading password file\n",strerror(errno));
+		rc = EX_SYSERR;
+		goto get_pw_exit;
 	}
-	if((i == MOUNT_PASSWD_SIZE) && (verboseflag)) {
-		fprintf(stderr, "\nWarning: password longer than %d characters specified in cifs password file",
-			MOUNT_PASSWD_SIZE);
-	}
-	parsed_info->got_password = 1;
+
+	rc = set_password(parsed_info, buf);
+
+get_pw_exit:
 	if(filename != NULL) {
 		close(file_descript);
 	}
-
 	return rc;
 }
 
@@ -507,26 +510,25 @@ parse_options(const char *data, struct parsed_mount_info *parsed_info)
 					fprintf(stderr, "username too long\n");
 					return EX_USAGE;
 				}
-				parse_username(value, parsed_info);
+				rc = parse_username(value, parsed_info);
+				if (rc) {
+					fprintf(stderr, "problem parsing username\n");
+					return rc;
+				}
 				goto nocopy;
 			}
 		} else if (strncmp(data, "pass", 4) == 0) {
-			if (!value || !*value) {
-				if(parsed_info->got_password) {
-					fprintf(stderr, "\npassword specified twice, ignoring second\n");
-				} else
-					parsed_info->got_password = 1;
-			} else if (strnlen(value, MOUNT_PASSWD_SIZE) < MOUNT_PASSWD_SIZE) {
-				if (parsed_info->got_password) {
-					fprintf(stderr, "\nmount.cifs warning - password specified twice\n");
-				} else {
-					strlcpy(parsed_info->password, value, MOUNT_PASSWD_SIZE + 1);
-					parsed_info->got_password = 1;
-				}
-			} else {
-				fprintf(stderr, "password too long\n");
-				return EX_USAGE;
+			if (parsed_info->got_password) {
+				fprintf(stderr, "password specified twice, ignoring second\n");
+				goto nocopy;
 			}
+			if (!value || !*value) {
+				parsed_info->got_password = 1;
+				goto nocopy;
+			}
+			rc = set_password(parsed_info, value);
+			if (rc)
+				return rc;
 			goto nocopy;
 		} else if (strncmp(data, "sec", 3) == 0) {
 			if (value) {
@@ -736,31 +738,6 @@ nocopy:
 	return 0;
 }
 
-/* replace all (one or more) commas with double commas */
-static int
-replace_commas(char *pass)
-{
-	/* a little extra buffer to simplify conversion */
-	char tmpbuf[MOUNT_PASSWD_SIZE + 3];
-	int i = 0, j = 0;
-
-	/* don't do anything if there are no commas */
-	if (!strchr(pass, ','))
-		return 0;
-
-	while (pass[i]) {
-		if (pass[i] == ',')
-			tmpbuf[j++] = ',';
-		tmpbuf[j++] = pass[i++];
-		if (j > MOUNT_PASSWD_SIZE + 1) {
-			fprintf(stderr, "Converted password too long!\n");
-			return EX_USAGE;
-		}
-	}
-	tmpbuf[j] = '\0';
-	strlcpy(pass, tmpbuf, MOUNT_PASSWD_SIZE + 1);
-	return 0;
-}
 
 /*
  * resolve "host" portion of parsed info to comma-separated list of
@@ -928,10 +905,9 @@ get_pw_from_env(struct parsed_mount_info *parsed_info)
 {
 	int rc = 0;
 
-	if (getenv("PASSWD")) {
-		strlcpy(parsed_info->password, getenv("PASSWD"), MOUNT_PASSWD_SIZE + 1);
-		parsed_info->got_password = 1;
-	} else if (getenv("PASSWD_FD"))
+	if (getenv("PASSWD"))
+		rc = set_password(parsed_info, getenv("PASSWD"));
+	else if (getenv("PASSWD_FD"))
 		rc = get_password_from_file(atoi(getenv("PASSWD_FD")), NULL, parsed_info);
 	else if (getenv("PASSWD_FILE"))
 		rc = get_password_from_file(0, getenv("PASSWD_FILE"), parsed_info);
@@ -1034,7 +1010,6 @@ int main(int argc, char ** argv)
 	int fakemnt = 0;
 	int already_uppercased = 0;
 	size_t options_size = MAX_OPTIONS_LEN;
-	int retry = 0; /* set when we have to retry mount with uppercase */
 	struct mntent mountent;
 	struct parsed_mount_info *parsed_info = NULL;
 	FILE * pmntfile;
@@ -1173,8 +1148,9 @@ int main(int argc, char ** argv)
 			strlcpy(parsed_info->domain, optarg, sizeof(parsed_info->domain));
 			break;
 		case 'p':
-			strlcpy(parsed_info->password, optarg, sizeof(parsed_info->password));
-			parsed_info->got_password = 1;
+			rc = set_password(parsed_info, optarg);
+			if (rc)
+				goto mount_exit;
 			break;
 		case 'S':
 			rc = get_password_from_file(0, NULL, parsed_info);
@@ -1281,15 +1257,16 @@ int main(int argc, char ** argv)
 	}
 
 	if(!parsed_info->got_password) {
-		char *tmp_pass = getpass("Password: "); /* BB obsolete sys call but
-							   no good replacement yet. */
+		/* getpass is obsolete, but there's apparently nothing that replaces it */
+		char *tmp_pass = getpass("Password: "); 
 		if (!tmp_pass) {
-			fprintf(stderr, "Password not entered, exiting\n");
-			rc = EX_USAGE;
+			fprintf(stderr, "Error reading password, exiting\n");
+			rc = EX_SYSERR;
 			goto mount_exit;
 		}
-		strlcpy(parsed_info->password, tmp_pass, sizeof(parsed_info->password));
-		parsed_info->got_password = 1;
+		rc = set_password(parsed_info, tmp_pass);
+		if (rc)
+			goto mount_exit;
 	}
 
 	/* copy in ver= string. It's not really needed, but what the hell */
@@ -1355,8 +1332,6 @@ mount_retry:
 		 * Commas have to be doubled, or else they will
 		 * look like the parameter separator
 		 */
-		if(retry == 0)
-			replace_commas(parsed_info->password);
 		strlcat(options, ",pass=", options_size);
 		strlcat(options, parsed_info->password, options_size);
 		if (verboseflag)
