@@ -123,10 +123,12 @@ struct parsed_mount_info {
 	char addrlist[MAX_ADDR_LIST_LEN];
 	unsigned int got_user:1;
 	unsigned int got_password:1;
+	unsigned int fakemnt:1;
+	unsigned int nomtab:1;
+	unsigned int verboseflag:1;
 };
 
 const char *thisprogram;
-int verboseflag;
 const char *cifs_fstype = "cifs";
 
 static int parse_unc(const char *unc_name, struct parsed_mount_info *parsed_info);
@@ -389,7 +391,7 @@ static int open_cred_file(char *file_name,
 			if (temp_val) {
 				/* go past equals sign */
 				temp_val++;
-				if (verboseflag)
+				if (parsed_info->verboseflag)
 					fprintf(stderr, "\nDomain %s\n",
 						temp_val);
 
@@ -566,7 +568,7 @@ parse_options(const char *data, struct parsed_mount_info *parsed_info)
 					"target ip address argument missing");
 			} else if (strnlen(value, MAX_ADDRESS_LEN) <=
 				   MAX_ADDRESS_LEN) {
-				if (verboseflag)
+				if (parsed_info->verboseflag)
 					fprintf(stderr,
 						"ip address %s override specified\n",
 						value);
@@ -1226,8 +1228,6 @@ int main(int argc, char **argv)
 	char *dev_name = NULL, *orig_dev = NULL;
 	char *currentaddress, *nextaddress;
 	int rc = 0;
-	int nomtab = 0;
-	int fakemnt = 0;
 	int already_uppercased = 0;
 	size_t options_size = MAX_OPTIONS_LEN;
 	size_t dev_len;
@@ -1266,7 +1266,7 @@ int main(int argc, char **argv)
 			rc = mount_cifs_usage(stdout);
 			goto mount_exit;
 		case 'n':
-			++nomtab;
+			++parsed_info->nomtab;
 			break;
 		case 'o':
 			orgoptions = strndup(optarg, MAX_OPTIONS_LEN);
@@ -1279,7 +1279,7 @@ int main(int argc, char **argv)
 			parsed_info->flags |= MS_RDONLY;
 			break;
 		case 'v':
-			++verboseflag;
+			++parsed_info->verboseflag;
 			break;
 		case 'V':
 			print_cifs_mount_version();
@@ -1288,7 +1288,7 @@ int main(int argc, char **argv)
 			parsed_info->flags &= ~MS_RDONLY;
 			break;
 		case 'f':
-			++fakemnt;
+			++parsed_info->fakemnt;
 			break;
 		default:
 			fprintf(stderr, "unknown command-line option: %c\n", c);
@@ -1380,7 +1380,7 @@ mount_retry:
 		strlcat(options, parsed_info->prefix, options_size);
 	}
 
-	if (verboseflag)
+	if (parsed_info->verboseflag)
 		fprintf(stderr, "mount.cifs kernel mount options: %s\n",
 			options);
 
@@ -1391,18 +1391,18 @@ mount_retry:
 		 */
 		strlcat(options, ",pass=", options_size);
 		strlcat(options, parsed_info->password, options_size);
-		if (verboseflag)
+		if (parsed_info->verboseflag)
 			fprintf(stderr, ",pass=********");
 	}
 
-	if (verboseflag)
+	if (parsed_info->verboseflag)
 		fprintf(stderr, "\n");
 
 	rc = check_mtab(thisprogram, dev_name, mountpoint);
 	if (rc)
 		goto mount_exit;
 
-	if (!fakemnt
+	if (!parsed_info->fakemnt
 	    && mount(dev_name, ".", cifs_fstype, parsed_info->flags, options)) {
 		switch (errno) {
 		case ECONNREFUSED:
@@ -1436,7 +1436,7 @@ mount_retry:
 		goto mount_exit;
 	}
 
-	if (!nomtab)
+	if (!parsed_info->nomtab)
 		rc = add_mtab(dev_name, mountpoint, parsed_info->flags);
 
 mount_exit:
