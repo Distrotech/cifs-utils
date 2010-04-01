@@ -132,7 +132,6 @@ struct parsed_mount_info {
 	char		username[MAX_USERNAME_SIZE + 1];
 	char		password[MOUNT_PASSWD_SIZE + 1];
 	char		addrlist[MAX_ADDR_LIST_LEN];
-	unsigned int	got_domain:1;
 	unsigned int	got_user:1;
 	unsigned int	got_password:1;
 };
@@ -326,7 +325,6 @@ parse_username(char *rawuser, struct parsed_mount_info *parsed_info)
 		strlcpy(parsed_info->domain, rawuser,
 				sizeof(parsed_info->domain));
 		*(user++) = slash;
-		parsed_info->got_domain = 1;
 	} else {
 		user = rawuser;
 	}
@@ -429,7 +427,6 @@ static int open_cred_file(char *file_name, struct parsed_mount_info *parsed_info
                                 }
 
 				strlcpy(parsed_info->domain, temp_val, sizeof(parsed_info->domain));
-				parsed_info->got_domain = 1;
                         }
                 }
 
@@ -624,7 +621,6 @@ parse_options(const char *data, struct parsed_mount_info *parsed_info)
 				fprintf(stderr, "domain name too long\n");
 				return EX_USAGE;
 			}
-			parsed_info->got_domain = 1;
 			strlcpy(parsed_info->domain, value, sizeof(parsed_info->domain));
 			goto nocopy;
 		} else if (strncmp(data, "cred", 4) == 0) {
@@ -1230,7 +1226,6 @@ int main(int argc, char ** argv)
 			break;
 		case 'd':
 			strlcpy(parsed_info->domain, optarg, sizeof(parsed_info->domain));
-			parsed_info->got_domain = 1;
 			break;
 		case 'p':
 			strlcpy(parsed_info->password, optarg, sizeof(parsed_info->password));
@@ -1381,7 +1376,7 @@ int main(int argc, char ** argv)
 			sizeof(parsed_info->options));
 	}
 
-	if (parsed_info->got_domain) {
+	if (*parsed_info->domain) {
 		strlcat(parsed_info->options, ",domain=",
 			sizeof(parsed_info->options));
 		strlcat(parsed_info->options, parsed_info->domain,
