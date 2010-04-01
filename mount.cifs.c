@@ -67,6 +67,9 @@
  */
 #define MAX_SHARE_LEN 256
 
+/* max length of username (somewhat made up here) */
+#define MAX_USERNAME_SIZE 32
+
 /* currently maximum length of IPv6 address string */
 #define MAX_ADDRESS_LEN INET6_ADDRSTRLEN
 
@@ -125,22 +128,22 @@ struct parsed_mount_info {
 	char		share[MAX_SHARE_LEN];
 	char		prefix[PATH_MAX];
 	char		options[MAX_OPTIONS_LEN];
+	char		domain[DOMAIN_SIZE + 1];
+	char		username[MAX_USERNAME_SIZE + 1];
 	char		password[MOUNT_PASSWD_SIZE + 1];
 	char		address_list[MAX_ADDR_LIST_LEN];
+	unsigned int	got_domain:1;
+	unsigned int	got_user:1;
 	unsigned int	got_password:1;
 };
 
 const char *thisprogram;
 int verboseflag = 0;
 int fakemnt = 0;
-static int got_user = 0;
-static int got_domain = 0;
 static int got_ip = 0;
 static int got_unc = 0;
 static int got_uid = 0;
 static int got_gid = 0;
-static char * user_name = NULL;
-char * domain_name = NULL;
 char * prefixpath = NULL;
 const char *cifs_fstype = "cifs";
 
@@ -254,9 +257,6 @@ check_fstab(const char *progname, char *mountpoint, char *devname,
                 
 BB end finish BB */
 
-static char * check_for_domain(char **);
-
-
 static int
 mount_cifs_usage(FILE *stream)
 {
@@ -291,10 +291,54 @@ static char * getusername(void) {
 	char *username = NULL;
 	struct passwd *password = getpwuid(getuid());
 
-	if (password) {
+	if (password)
 		username = password->pw_name;
-	}
 	return username;
+}
+
+/*
+ * Parse a username string into parsed_mount_info fields. The format is:
+ *
+ * DOMAIN\username%password
+ *
+ * ...obviously the only required component is "username". The source string
+ * is modified in the process, but it should remain unchanged at the end.
+ */
+static void
+parse_username(char *rawuser, struct parsed_mount_info *parsed_info)
+{
+	char *user, *password, slash;
+
+	/* everything after first % sign is a password */
+	password = strchr(rawuser, '%');
+	if (password) {
+		*(password) = '\0';
+		strlcpy(parsed_info->password, password + 1,
+				sizeof(parsed_info->password));
+		parsed_info->got_password = 1;
+	}
+
+	/* everything after first '/' or '\' is a username */
+	user = strchr(rawuser, '/');
+	if (!user)
+		user = strchr(rawuser, '\\');
+
+	/* everything before that slash is a domain */
+	if (user) {
+		slash = *user;
+		*user = '\0';
+		strlcpy(parsed_info->domain, rawuser,
+				sizeof(parsed_info->domain));
+		*(user++) = slash;
+		parsed_info->got_domain = 1;
+	} else {
+		user = rawuser;
+	}
+
+	strlcpy(parsed_info->username, user, sizeof(parsed_info->username));
+	parsed_info->got_user = 1;
+	if (password)
+		*password = '%';
 }
 
 static int open_cred_file(char *file_name, struct parsed_mount_info *parsed_info)
@@ -342,20 +386,17 @@ static int open_cred_file(char *file_name, struct parsed_mount_info *parsed_info
 					fprintf(stderr, "mount.cifs failed due to malformed username in credentials file\n");
 					memset(line_buf,0,4096);
 					return EX_USAGE;
-				} else {
-					got_user = 1;
-					user_name = (char *)calloc(1 + length,1);
-					/* BB adding free of user_name string before exit,
-						not really necessary but would be cleaner */
-					strlcpy(user_name,temp_val, length+1);
 				}
+				parsed_info->got_user = 1;
+				strlcpy(parsed_info->username, temp_val,
+							sizeof(parsed_info->username));
 			}
 		} else if (strncasecmp("password",line_buf+i,8) == 0) {
-			temp_val = strchr(line_buf+i,'=');
+			temp_val = strchr(line_buf+i, '=');
 			if(temp_val) {
 				/* go past equals sign */
 				temp_val++;
-				for(length = 0;length<MOUNT_PASSWD_SIZE+1;length++) {
+				for(length = 0; length < sizeof(parsed_info->password); length++) {
 					if ((temp_val[length] == '\n')
 					    || (temp_val[length] == '\0')) {
 						temp_val[length] = '\0';
@@ -377,6 +418,7 @@ static int open_cred_file(char *file_name, struct parsed_mount_info *parsed_info
                                 temp_val++;
 				if(verboseflag)
 					fprintf(stderr, "\nDomain %s\n",temp_val);
+
                                 for(length = 0;length<DOMAIN_SIZE+1;length++) {
 					if ((temp_val[length] == '\n')
 					    || (temp_val[length] == '\0')) {
@@ -384,19 +426,14 @@ static int open_cred_file(char *file_name, struct parsed_mount_info *parsed_info
 						break;
 					}
                                 }
+
                                 if(length > DOMAIN_SIZE) {
                                         fprintf(stderr, "mount.cifs failed: domain in credentials file too long\n");
                                         return EX_USAGE;
-                                } else {
-                                        if(domain_name == NULL) {
-                                                domain_name = (char *)calloc(DOMAIN_SIZE+1,1);
-                                        } else
-                                                memset(domain_name,0,DOMAIN_SIZE);
-                                        if(domain_name) {
-                                                strlcpy(domain_name,temp_val,DOMAIN_SIZE+1);
-                                                got_domain = 1;
-                                        }
                                 }
+
+				strlcpy(parsed_info->domain, temp_val, sizeof(parsed_info->domain));
+				parsed_info->got_domain = 1;
                         }
                 }
 
@@ -465,7 +502,6 @@ get_password_from_file(int file_descript, char *filename, struct parsed_mount_in
 static int
 parse_options(const char *data, struct parsed_mount_info *parsed_info)
 {
-	char *percent_char = NULL;
 	char *value = NULL, *equals = NULL;
 	char *next_keyword = NULL;
 	char *out = parsed_info->options;
@@ -518,7 +554,6 @@ parse_options(const char *data, struct parsed_mount_info *parsed_info)
 		} else if (strncmp(data, "user_xattr",10) == 0) {
 		   /* do nothing - need to skip so not parsed as user name */
 		} else if (strncmp(data, "user", 4) == 0) {
-
 			if (!value || !*value) {
 				if(data[4] == '\0') {
 					*filesys_flags |= MS_USER;
@@ -528,33 +563,12 @@ parse_options(const char *data, struct parsed_mount_info *parsed_info)
 					return EX_USAGE;
 				}
 			} else {
-				if (strnlen(value, 260) < 260) {
-					got_user=1;
-					percent_char = strchr(value,'%');
-					if(percent_char) {
-						*percent_char = ',';
-						if(parsed_info->got_password)
-							fprintf(stderr, "\nmount.cifs warning - password specified twice\n");
-						parsed_info->got_password = 1;
-						percent_char++;
-						strlcpy(parsed_info->password, percent_char, sizeof(parsed_info->password));
-						/*  remove password from username */
-						while(*percent_char != 0) {
-							*percent_char = ',';
-							percent_char++;
-						}
-					}
-					/* this is only case in which the user
-					name buf is not malloc - so we have to
-					check for domain name embedded within
-					the user name here since the later
-					call to check_for_domain will not be
-					invoked */
-					domain_name = check_for_domain(&value);
-				} else {
+				if (strnlen(value, 260) >= 260) {
 					fprintf(stderr, "username too long\n");
 					return EX_USAGE;
 				}
+				parse_username(value, parsed_info);
+				goto nocopy;
 			}
 		} else if (strncmp(data, "pass", 4) == 0) {
 			if (!value || !*value) {
@@ -630,12 +644,13 @@ parse_options(const char *data, struct parsed_mount_info *parsed_info)
 				fprintf(stderr, "CIFS: invalid domain name\n");
 				return EX_USAGE;
 			}
-			if (strnlen(value, DOMAIN_SIZE+1) < DOMAIN_SIZE+1) {
-				got_domain = 1;
-			} else {
+			if (strnlen(value, sizeof(parsed_info->domain)) >= sizeof(parsed_info->domain)) {
 				fprintf(stderr, "domain name too long\n");
 				return EX_USAGE;
 			}
+			parsed_info->got_domain = 1;
+			strlcpy(parsed_info->domain, value, sizeof(parsed_info->domain));
+			goto nocopy;
 		} else if (strncmp(data, "cred", 4) == 0) {
 			if (value && *value) {
 				rc = open_cred_file(value, parsed_info);
@@ -731,8 +746,7 @@ parse_options(const char *data, struct parsed_mount_info *parsed_info)
 		} else if (strncmp(data, "exec", 4) == 0) {
 			*filesys_flags &= ~MS_NOEXEC;
 		} else if (strncmp(data, "guest", 5) == 0) {
-			user_name = (char *)calloc(1, 1);
-			got_user = 1;
+			parsed_info->got_user = 1;
 			parsed_info->got_password = 1;
 		} else if (strncmp(data, "ro", 2) == 0) {
 			*filesys_flags |= MS_RDONLY;
@@ -828,80 +842,6 @@ replace_commas(char *pass)
 	tmpbuf[j] = '\0';
 	strlcpy(pass, tmpbuf, MOUNT_PASSWD_SIZE + 1);
 	return 0;
-}
-
-/* Usernames can not have backslash in them and we use
-   [BB check if usernames can have forward slash in them BB] 
-   backslash as domain\user separator character
-*/
-static char * check_for_domain(char **ppuser)
-{
-	char * original_string;
-	char * usernm;
-	char * domainnm;
-	int    original_len;
-	int    len;
-	int    i;
-
-	if(ppuser == NULL)
-		return NULL;
-
-	original_string = *ppuser;
-
-	if (original_string == NULL)
-		return NULL;
-	
-	original_len = strlen(original_string);
-
-	usernm = strchr(*ppuser,'/');
-	if (usernm == NULL) {
-		usernm = strchr(*ppuser,'\\');
-		if (usernm == NULL)
-			return NULL;
-	}
-
-	if(got_domain) {
-		fprintf(stderr, "Domain name specified twice. Username probably malformed\n");
-		return NULL;
-	}
-
-	usernm[0] = 0;
-	domainnm = *ppuser;
-	if (domainnm[0] != 0) {
-		got_domain = 1;
-	} else {
-		fprintf(stderr, "null domain\n");
-	}
-	len = strlen(domainnm);
-	/* reset domainm to new buffer, and copy
-	domain name into it */
-	domainnm = (char *)malloc(len+1);
-	if(domainnm == NULL)
-		return NULL;
-
-	strlcpy(domainnm,*ppuser,len+1);
-
-/*	move_string(*ppuser, usernm+1) */
-	len = strlen(usernm+1);
-
-	if(len >= original_len) {
-		/* should not happen */
-		return domainnm;
-	}
-
-	for(i=0;i<original_len;i++) {
-		if(i<len)
-			original_string[i] = usernm[i+1];
-		else /* stuff with commas to remove last parm */
-			original_string[i] = ',';
-	}
-
-	/* BB add check for more than one slash? 
-	  strchr(*ppuser,'/');
-	  strchr(*ppuser,'\\') 
-	*/
-	
-	return domainnm;
 }
 
 /* replace all occurances of "from" in a string with "to" */
@@ -1255,12 +1195,13 @@ int main(int argc, char ** argv)
 			}
 			break;
 		case 'u':
-			got_user = 1;
-			user_name = optarg;
+			parsed_info->got_user = 1;
+			strlcpy(parsed_info->username, optarg,
+				sizeof(parsed_info->username));
 			break;
 		case 'd':
-			domain_name = optarg; /* BB fix this - currently ignored */
-			got_domain = 1;
+			strlcpy(parsed_info->domain, optarg, sizeof(parsed_info->domain));
+			parsed_info->got_domain = 1;
 			break;
 		case 'p':
 			strlcpy(parsed_info->password, optarg, sizeof(parsed_info->password));
@@ -1325,13 +1266,6 @@ int main(int argc, char ** argv)
 	if (rc)
 		goto mount_exit;
 
-	options = calloc(options_size, 1);
-	if (!options) {
-		fprintf(stderr, "Unable to allocate memory.\n");
-		rc = EX_SYSERR;
-		goto mount_exit;
-	}
-
         if (orgoptions) {
 		rc = parse_options(orgoptions, parsed_info);
 		if (rc)
@@ -1384,17 +1318,21 @@ int main(int argc, char ** argv)
 
 	mountpoint = resolved_path; 
 
-	if(got_user == 0) {
-		/* Note that the password will not be retrieved from the
-		   USER env variable (ie user%password form) as there is
-		   already a PASSWD environment varaible */
+	if (!parsed_info->got_user) {
+		/*
+		 * Note that the password will not be retrieved from the
+		 * USER env variable (ie user%password form) as there is
+		 * already a PASSWD environment varaible
+		 */
 		if (getenv("USER"))
-			user_name = strdup(getenv("USER"));
-		if (user_name == NULL)
-			user_name = getusername();
-		got_user = 1;
+			strlcpy(parsed_info->username, getenv("USER"),
+					sizeof(parsed_info->username));
+		else
+			strlcpy(parsed_info->username, getusername(),
+					sizeof(parsed_info->username));
+		parsed_info->got_user = 1;
 	}
-       
+
 	if(!parsed_info->got_password) {
 		char *tmp_pass = getpass("Password: "); /* BB obsolete sys call but
 							   no good replacement yet. */
@@ -1413,34 +1351,40 @@ int main(int argc, char ** argv)
 		goto mount_exit;
 	}
 
-mount_retry:
-	if (*options)
-		strlcat(options, ",", options_size);
+	/* copy in ver= string. It's not really needed, but what the hell */
+	strlcat(parsed_info->options, ",ver=", sizeof(parsed_info->options));
+	strlcat(parsed_info->options, OPTIONS_VERSION, sizeof(parsed_info->options));
 
-	strlcat(options, "unc=", options_size);
+	/* copy in user= string */
+	if (parsed_info->got_user) {
+		strlcat(parsed_info->options, ",user=",
+			sizeof(parsed_info->options));
+		strlcat(parsed_info->options, parsed_info->username,
+			sizeof(parsed_info->options));
+	}
+
+	if (parsed_info->got_domain) {
+		strlcat(parsed_info->options, ",domain=",
+			sizeof(parsed_info->options));
+		strlcat(parsed_info->options, parsed_info->domain,
+			sizeof(parsed_info->options));
+	}
+
+	options = calloc(options_size, 1);
+	if (!options) {
+		fprintf(stderr, "Unable to allocate memory.\n");
+		rc = EX_SYSERR;
+		goto mount_exit;
+	}
+
+mount_retry:
+	strlcpy(options, "unc=", options_size);
 	strlcat(options, share_name, options_size);
 
 	/* scan backwards and reverse direction of slash */
 	temp = strrchr(options, '/');
 	if(temp > options + 6)
 		*temp = '\\';
-	if(user_name) {
-		/* check for syntax like user=domain\user */
-		if(got_domain == 0)
-			domain_name = check_for_domain(&user_name);
-		strlcat(options,",user=",options_size);
-		strlcat(options,user_name,options_size);
-	}
-	if(retry == 0) {
-		if(domain_name) {
-			/* extra length accounted for in option string above */
-			strlcat(options,",domain=",options_size);
-			strlcat(options,domain_name,options_size);
-		}
-	}
-
-	strlcat(options,",ver=",options_size);
-	strlcat(options,OPTIONS_VERSION,options_size);
 
 	if (*parsed_info->options) {
 		strlcat(options, ",", options_size);
