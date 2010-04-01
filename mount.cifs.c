@@ -267,10 +267,10 @@ static int set_password(struct parsed_mount_info *parsed_info, const char *src)
 }
 
 /* caller frees username if necessary */
-static char *getusername(void)
+static char *getusername(uid_t uid)
 {
 	char *username = NULL;
-	struct passwd *password = getpwuid(getuid());
+	struct passwd *password = getpwuid(uid);
 
 	if (password)
 		username = password->pw_name;
@@ -1054,9 +1054,39 @@ static int
 add_mtab(char *devname, char *mountpoint, unsigned long flags)
 {
 	int rc = 0;
-	char *mount_user;
+	uid_t uid;
+	char *mount_user = NULL;
 	struct mntent mountent;
 	FILE *pmntfile;
+	sigset_t mask, oldmask;
+
+	uid = getuid();
+	if (uid != 0)
+		mount_user = getusername(uid);
+
+	/*
+	 * Set the real uid to the effective uid. This prevents unprivileged
+	 * users from sending signals to this process, though ^c on controlling
+	 * terminal should still work.
+	 */
+	rc = setreuid(geteuid(), -1);
+	if (rc != 0) {
+		fprintf(stderr, "Unable to set real uid to effective uid: %s\n",
+				strerror(errno));
+		rc = EX_FILEIO;
+	}
+
+	rc = sigfillset(&mask);
+	if (rc) {
+		fprintf(stderr, "Unable to set filled signal mask\n");
+		return EX_FILEIO;
+	}
+
+	rc = sigprocmask(SIG_SETMASK, &mask, &oldmask);
+	if (rc) {
+		fprintf(stderr, "Unable to make process ignore signals\n");
+		return EX_FILEIO;
+	}
 
 	atexit(unlock_mtab);
 	rc = lock_mtab();
@@ -1094,12 +1124,10 @@ add_mtab(char *devname, char *mountpoint, unsigned long flags)
 			strlcat(mountent.mnt_opts, ",nodev", MTAB_OPTIONS_LEN);
 		if (flags & MS_SYNCHRONOUS)
 			strlcat(mountent.mnt_opts, ",sync", MTAB_OPTIONS_LEN);
-		if (getuid() != 0) {
+		if (mount_user) {
 			strlcat(mountent.mnt_opts, ",user=", MTAB_OPTIONS_LEN);
-			mount_user = getusername();
-			if (mount_user)
-				strlcat(mountent.mnt_opts, mount_user,
-					MTAB_OPTIONS_LEN);
+			strlcat(mountent.mnt_opts, mount_user,
+				MTAB_OPTIONS_LEN);
 		}
 	}
 	mountent.mnt_freq = 0;
@@ -1109,6 +1137,7 @@ add_mtab(char *devname, char *mountpoint, unsigned long flags)
 	unlock_mtab();
 	SAFE_FREE(mountent.mnt_opts);
 add_mtab_exit:
+	sigprocmask(SIG_SETMASK, &oldmask, NULL);
 	if (rc) {
 		fprintf(stderr, "unable to add mount entry to mtab\n");
 		rc = EX_FILEIO;
@@ -1204,7 +1233,7 @@ assemble_mountinfo(struct parsed_mount_info *parsed_info,
 			strlcpy(parsed_info->username, getenv("USER"),
 				sizeof(parsed_info->username));
 		else
-			strlcpy(parsed_info->username, getusername(),
+			strlcpy(parsed_info->username, getusername(getuid()),
 				sizeof(parsed_info->username));
 		parsed_info->got_user = 1;
 	}
