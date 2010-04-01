@@ -1001,7 +1001,7 @@ int main(int argc, char ** argv)
 	char * orgoptions = NULL;
 	char * mountpoint = NULL;
 	char * options = NULL;
-	char * dev_name;
+	char * dev_name = NULL, *orig_dev = NULL;
 	char *currentaddress, *nextaddress;
 	int rc = 0;
 	int nomtab = 0;
@@ -1010,6 +1010,7 @@ int main(int argc, char ** argv)
 	int fakemnt = 0;
 	int already_uppercased = 0;
 	size_t options_size = MAX_OPTIONS_LEN;
+	size_t dev_len;
 	struct mntent mountent;
 	struct parsed_mount_info *parsed_info = NULL;
 	FILE * pmntfile;
@@ -1174,7 +1175,7 @@ int main(int argc, char ** argv)
 		goto mount_exit;
 	}
 
-	dev_name = argv[optind];
+	orig_dev = argv[optind];
 	mountpoint = argv[optind + 1];
 
 	/* chdir into mountpoint as soon as possible */
@@ -1196,7 +1197,7 @@ int main(int argc, char ** argv)
 
 	/* sanity check for unprivileged mounts */
 	if (getuid()) {
-		rc = check_fstab(thisprogram, mountpoint, dev_name,
+		rc = check_fstab(thisprogram, mountpoint, orig_dev,
 				 &orgoptions);
 		if (rc)
 			goto mount_exit;
@@ -1233,7 +1234,7 @@ int main(int argc, char ** argv)
 
 	parsed_info->flags &= ~(MS_USERS|MS_USER);
 
-	rc = parse_unc(dev_name, parsed_info);
+	rc = parse_unc(orig_dev, parsed_info);
 	if (rc)
 		goto mount_exit;
 
@@ -1294,6 +1295,23 @@ int main(int argc, char ** argv)
 		rc = EX_SYSERR;
 		goto mount_exit;
 	}
+
+	dev_len = strnlen(parsed_info->host, sizeof(parsed_info->host)) +
+		  strnlen(parsed_info->share, sizeof(parsed_info->share)) +
+		  strnlen(parsed_info->prefix, sizeof(parsed_info->prefix)) +
+		       2 + 1 + 1 + 1;
+	dev_name = calloc(dev_len, 1);
+	if (!dev_name) {
+		rc = EX_SYSERR;
+		goto mount_exit;
+	}
+
+	/* rebuild device name with forward slashes */
+	strlcpy(dev_name, "//", dev_len);
+	strlcat(dev_name, parsed_info->host, dev_len);
+	strlcat(dev_name, "/", dev_len);
+	strlcat(dev_name, parsed_info->share, dev_len);
+	strlcat(dev_name, parsed_info->prefix, dev_len);
 
 	currentaddress = parsed_info->addrlist;
 	nextaddress = strchr(currentaddress, ',');
@@ -1376,6 +1394,7 @@ mount_retry:
 
 	if (nomtab)
 		goto mount_exit;
+
 	atexit(unlock_mtab);
 	rc = lock_mtab();
 	if (rc) {
@@ -1393,10 +1412,9 @@ mount_retry:
 	mountent.mnt_fsname = dev_name;
 	mountent.mnt_dir = mountpoint;
 	mountent.mnt_type = (char *)(void *)cifs_fstype;
-	mountent.mnt_opts = (char *)malloc(220);
+	mountent.mnt_opts = (char *) calloc(220, 1);
 	if(mountent.mnt_opts) {
 		char * mount_user = getusername();
-		memset(mountent.mnt_opts,0,200);
 		if(parsed_info->flags & MS_RDONLY)
 			strlcat(mountent.mnt_opts,"ro",220);
 		else
@@ -1426,11 +1444,15 @@ mount_retry:
 	endmntent(pmntfile);
 	unlock_mtab();
 	SAFE_FREE(mountent.mnt_opts);
-	if (rc)
+	if (rc) {
+		fprintf(stderr, "unable to add mount entry to mtab\n");
 		rc = EX_FILEIO;
+	}
 mount_exit:
-	memset(parsed_info->password, 0, sizeof(parsed_info->password));
+	if (parsed_info)
+		memset(parsed_info->password, 0, sizeof(parsed_info->password));
 	SAFE_FREE(parsed_info);
+	SAFE_FREE(dev_name);
 	SAFE_FREE(options);
 	SAFE_FREE(orgoptions);
 	return rc;
