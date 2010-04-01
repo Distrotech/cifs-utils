@@ -43,6 +43,9 @@
 #include <fstab.h>
 #include <sys/mman.h>
 #include <sys/wait.h>
+#ifdef HAVE_LIBCAP
+#include <sys/capability.h>
+#endif /* HAVE_LIBCAP */
 #include "mount.h"
 #include "util.h"
 
@@ -1146,6 +1149,63 @@ add_mtab_exit:
 	return rc;
 }
 
+#ifdef HAVE_LIBCAP
+static int
+drop_capabilities(int parent)
+{
+	int rc = 0;
+	cap_t caps;
+	cap_value_t cap_list[2];
+
+	caps = cap_get_proc();
+	if (caps == NULL) {
+		fprintf(stderr, "Unable to get current capability set: %s\n",
+			strerror(errno));
+		return EX_SYSERR;
+	}
+
+	if (cap_clear(caps) == -1) {
+		fprintf(stderr, "Unable to clear capability set: %s\n",
+			strerror(errno));
+		rc = EX_SYSERR;
+		goto free_caps;
+	}
+
+	/* parent needs to keep some capabilities */
+	if (parent) {
+		cap_list[0] = CAP_SYS_ADMIN;
+		cap_list[1] = CAP_DAC_OVERRIDE;
+		if (cap_set_flag(caps, CAP_PERMITTED, 2, cap_list, CAP_SET) == -1) {
+			fprintf(stderr, "Unable to set permitted capabilities: %s\n",
+				strerror(errno));
+			rc = EX_SYSERR;
+			goto free_caps;
+		}
+		if (cap_set_flag(caps, CAP_EFFECTIVE, 2, cap_list, CAP_SET) == -1) {
+			fprintf(stderr, "Unable to set effective capabilities: %s\n",
+				strerror(errno));
+			rc = EX_SYSERR;
+			goto free_caps;
+		}
+	}
+
+	if (cap_set_proc(caps) != 0) {
+		fprintf(stderr, "Unable to set current process capabilities: %s\n",
+			strerror(errno));
+		rc = EX_SYSERR;
+	}
+free_caps:
+	cap_free(caps);
+	return rc;
+}
+#else /* HAVE_LIBCAP */
+static int
+drop_capabilities(int parent)
+{
+	return 0;
+}
+#endif /* HAVE_LIBCAP */
+
 /* have the child drop root privileges */
 static int
 drop_child_privs(void)
@@ -1180,6 +1240,10 @@ assemble_mountinfo(struct parsed_mount_info *parsed_info,
 		   const char *orig_dev, char *orgoptions)
 {
 	int rc;
+
+	rc = drop_capabilities(0);
+	if (rc)
+		goto assemble_exit;
 
 	rc = drop_child_privs();
 	if (rc)
@@ -1291,6 +1355,10 @@ int main(int argc, char **argv)
 
 	if (check_setuid())
 		return EX_USAGE;
+
+	rc = drop_capabilities(1);
+	if (rc)
+		return EX_SYSERR;
 
 	if (geteuid()) {
 		fprintf(stderr, "%s: not installed setuid root - \"user\" "
