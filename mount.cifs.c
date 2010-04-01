@@ -41,6 +41,8 @@
 #include <fcntl.h>
 #include <limits.h>
 #include <fstab.h>
+#include <sys/mman.h>
+#include <sys/wait.h>
 #include "mount.h"
 #include "util.h"
 
@@ -1115,6 +1117,34 @@ add_mtab_exit:
 	return rc;
 }
 
+/* have the child drop root privileges */
+static int
+drop_child_privs(void)
+{
+	int rc;
+	uid_t uid = getuid();
+	gid_t gid = getgid();
+
+	if (gid) {
+		rc = setgid(gid);
+		if (rc) {
+			fprintf(stderr, "Unable set group identity: %s\n",
+					strerror(errno));
+			return EX_SYSERR;
+		}
+	}
+	if (uid) {
+		rc = setuid(uid);
+		if (rc) {
+			fprintf(stderr, "Unable set user identity: %s\n",
+					strerror(errno));
+			return EX_SYSERR;
+		}
+	}
+
+	return 0;
+}
+
 static int
 assemble_mountinfo(struct parsed_mount_info *parsed_info,
 		   const char *thisprogram, const char *mountpoint,
@@ -1122,7 +1152,10 @@ assemble_mountinfo(struct parsed_mount_info *parsed_info,
 {
 	int rc;
 
-	/* sanity check for unprivileged mounts */
+	rc = drop_child_privs();
+	if (rc)
+		goto assemble_exit;
+
 	if (getuid()) {
 		rc = check_fstab(thisprogram, mountpoint, orig_dev,
 				 &orgoptions);
@@ -1147,13 +1180,6 @@ assemble_mountinfo(struct parsed_mount_info *parsed_info,
 		if (!(parsed_info->flags & (MS_USERS | MS_USER))) {
 			fprintf(stderr, "%s: permission denied\n", thisprogram);
 			rc = EX_USAGE;
-			goto assemble_exit;
-		}
-
-		if (geteuid()) {
-			fprintf(stderr, "%s: not installed setuid - \"user\" "
-				"CIFS mounts not supported.", thisprogram);
-			rc = EX_FAIL;
 			goto assemble_exit;
 		}
 	}
@@ -1232,9 +1258,16 @@ int main(int argc, char **argv)
 	size_t options_size = MAX_OPTIONS_LEN;
 	size_t dev_len;
 	struct parsed_mount_info *parsed_info = NULL;
+	pid_t pid;
 
 	if (check_setuid())
 		return EX_USAGE;
+
+	if (geteuid()) {
+		fprintf(stderr, "%s: not installed setuid root - \"user\" "
+			"CIFS mounts not supported.", thisprogram);
+		return EX_FAIL;
+	}
 
 	/* setlocale(LC_ALL, "");
 	   bindtextdomain(PACKAGE, LOCALEDIR);
@@ -1249,9 +1282,13 @@ int main(int argc, char **argv)
 	if (thisprogram == NULL)
 		thisprogram = "mount.cifs";
 
-	parsed_info = calloc(1, sizeof(*parsed_info));
-	if (!parsed_info) {
-		fprintf(stderr, "Unable to allocate memory.\n");
+	/* allocate parsed_info as shared anonymous memory range */
+	parsed_info = mmap(0, sizeof(*parsed_info), PROT_READ | PROT_WRITE,
+			   MAP_ANONYMOUS | MAP_SHARED, -1, 0);
+	if (parsed_info == (struct parsed_mount_info *) -1) {
+		parsed_info = NULL;
+		fprintf(stderr, "Unable to allocate memory: %s\n",
+				strerror(errno));
 		return EX_SYSERR;
 	}
 
@@ -1322,10 +1359,36 @@ int main(int argc, char **argv)
 		goto mount_exit;
 	}
 
-	rc = assemble_mountinfo(parsed_info, thisprogram, mountpoint,
-				orig_dev, orgoptions);
-	if (rc)
+	/*
+	 * mount.cifs does privilege separation. Most of the code to handle
+	 * assembling the mount info is done in a child process that drops
+	 * privileges. The info is assembled in parsed_info which is a
+	 * shared, mmaped memory segment. The parent waits for the child to
+	 * exit and checks the return code. If it's anything but "0", then
+	 * the process exits without attempting anything further.
+	 */
+	pid = fork();
+	if (pid == -1) {
+		fprintf(stderr, "Unable to fork: %s\n", strerror(errno));
+		rc = EX_SYSERR;
 		goto mount_exit;
+	} else if (!pid) {
+		/* child */
+		rc = assemble_mountinfo(parsed_info, thisprogram, mountpoint,
+					orig_dev, orgoptions);
+		return rc;
+	} else {
+		/* parent */
+		pid = wait(&rc);
+		if (!WIFEXITED(rc)) {
+			fprintf(stderr, "Child process terminated abnormally.\n");
+			rc = EX_SYSERR;
+			goto mount_exit;
+		}
+		rc = WEXITSTATUS(rc);
+		if (rc)
+			goto mount_exit;
+	}
 
 	options = calloc(options_size, 1);
 	if (!options) {
@@ -1440,9 +1503,10 @@ mount_retry:
 		rc = add_mtab(dev_name, mountpoint, parsed_info->flags);
 
 mount_exit:
-	if (parsed_info)
+	if (parsed_info) {
 		memset(parsed_info->password, 0, sizeof(parsed_info->password));
-	SAFE_FREE(parsed_info);
+		munmap(parsed_info, sizeof(*parsed_info));
+	}
 	SAFE_FREE(dev_name);
 	SAFE_FREE(options);
 	SAFE_FREE(orgoptions);
