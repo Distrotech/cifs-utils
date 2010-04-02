@@ -31,7 +31,11 @@ create dns_resolver * * /usr/local/sbin/cifs.upcall %k
 
 #include <string.h>
 #include <getopt.h>
+#ifdef HAVE_KRB5_KRB5_H
 #include <krb5/krb5.h>
+#elif defined(HAVE_KRB5_H)
+#include <krb5.h>
+#endif
 #include <syslog.h>
 #include <dirent.h>
 #include <sys/types.h>
