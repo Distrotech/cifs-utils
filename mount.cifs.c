@@ -1150,7 +1150,7 @@ add_mtab_exit:
 static int
 drop_capabilities(int parent)
 {
-	int rc = 0;
+	int rc = 0, ncap;
 	cap_t caps;
 	cap_value_t cap_list[2];
 
@@ -1168,17 +1168,20 @@ drop_capabilities(int parent)
 		goto free_caps;
 	}
 
-	/* parent needs to keep some capabilities */
-	if (parent) {
-		cap_list[0] = CAP_SYS_ADMIN;
-		cap_list[1] = CAP_DAC_OVERRIDE;
-		if (cap_set_flag(caps, CAP_PERMITTED, 2, cap_list, CAP_SET) == -1) {
+	if (parent || getuid() == 0) {
+		ncap = 1;
+		cap_list[0] = CAP_DAC_OVERRIDE;
+		if (parent) {
+			cap_list[1] = CAP_SYS_ADMIN;
+			++ncap;
+		}
+		if (cap_set_flag(caps, CAP_PERMITTED, ncap, cap_list, CAP_SET) == -1) {
 			fprintf(stderr, "Unable to set permitted capabilities: %s\n",
 				strerror(errno));
 			rc = EX_SYSERR;
 			goto free_caps;
 		}
-		if (cap_set_flag(caps, CAP_EFFECTIVE, 2, cap_list, CAP_SET) == -1) {
+		if (cap_set_flag(caps, CAP_EFFECTIVE, ncap, cap_list, CAP_SET) == -1) {
 			fprintf(stderr, "Unable to set effective capabilities: %s\n",
 				strerror(errno));
 			rc = EX_SYSERR;
