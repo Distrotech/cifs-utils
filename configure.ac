@@ -20,20 +20,40 @@ AC_ARG_ENABLE(cifsupcall,
 AC_PROG_CC
 AC_GNU_SOURCE
 
-# Checks for libraries.
-
 # Checks for header files.
 AC_CHECK_HEADERS([arpa/inet.h fcntl.h inttypes.h limits.h mntent.h netdb.h stddef.h stdint.h stdlib.h string.h strings.h sys/mount.h sys/param.h sys/socket.h sys/time.h syslog.h unistd.h], , [AC_MSG_ERROR([necessary header(s) not found])])
 
 if test $enable_cifsupcall != "no"; then
-	AC_CHECK_HEADERS([krb5/krb5.h], ,[
-				if test "$enable_cifsupcall" = "yes"; then
-					AC_MSG_ERROR([krb5/krb5.h not found, consider installing krb5-libs-devel.])
-				else
-					AC_MSG_WARN([krb5/krb5.h not found, consider installing krb5-libs-devel. Disabling cifs.upcall.])
-					enable_cifsupcall="no"
-				fi
-			])
+	AC_CHECK_HEADERS([krb5.h krb5/krb5.h])
+	if test x$ac_cv_header_krb5_krb5_h != xyes ; then
+		if test x$ac_cv_header_krb5_h != xyes ; then
+			if test "$enable_cifsupcall" = "yes"; then
+				AC_MSG_ERROR([krb5.h not found, consider installing krb5-libs-devel.])
+			else
+				AC_MSG_WARN([krb5.h not found, consider installing krb5-libs-devel. Disabling cifs.upcall.])
+				enable_cifsupcall="no"
+			fi
+		fi
+	fi
+fi
+if test $enable_cifsupcall != "no"; then
+	if test x$ac_cv_header_krb5_krb5_h = xyes ; then
+		krb5_include="#include <krb5/krb5.h>"
+	fi
+	if test x$ac_cv_header_krb5_h = xyes ; then
+		krb5_include="#include <krb5.h>"
+	fi
+
+	AC_CACHE_CHECK([for keyvalue in krb5_keyblock],
+		[ac_cv_have_krb5_keyblock_keyvalue],[
+			AC_TRY_COMPILE([$krb5_include],
+			[krb5_keyblock key; key.keyvalue.data = NULL;],
+			ac_cv_have_krb5_keyblock_keyvalue=yes,
+			ac_cv_have_krb5_keyblock_keyvalue=no)])
+	if test x"$ac_cv_have_krb5_keyblock_keyvalue" = x"yes" ; then
+		AC_DEFINE(HAVE_KRB5_KEYBLOCK_KEYVALUE,1,
+			[Whether the krb5_keyblock struct has a keyvalue property])
+	fi
 fi
 if test $enable_cifsupcall != "no"; then
 	AC_CHECK_HEADERS([talloc.h], , [
@@ -55,6 +75,9 @@ if test $enable_cifsupcall != "no"; then
 				fi
 			])
 fi
+if test $enable_cifsupcall != "no"; then
+	AC_CHECK_LIB([krb5], [krb5_init_context])
+fi
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_HEADER_STDBOOL
@@ -73,6 +96,11 @@ AC_FUNC_STRNLEN
 
 # check for required functions
 AC_CHECK_FUNCS([alarm atexit endpwent getmntent getpass gettimeofday inet_ntop memset realpath setenv strchr strdup strerror strncasecmp strndup strpbrk strrchr strstr strtol strtoul uname], , [AC_MSG_ERROR([necessary functions(s) not found])])
+
+# determine whether we can use MIT's new 'krb5_auth_con_getsendsubkey' to extract the signing key
+if test $enable_cifsupcall != "no"; then
+	AC_CHECK_FUNCS([krb5_auth_con_getsendsubkey])
+fi
 
 # non-critical functions (we have workarounds for these)
 if test $enable_cifsupcall != "no"; then

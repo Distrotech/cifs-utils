@@ -86,9 +86,20 @@ static char *cifs_krb5_principal_get_realm(krb5_context context,
 }
 
 #if !defined(HAVE_KRB5_FREE_UNPARSED_NAME)
-void krb5_free_unparsed_name(krb5_context context, char *val)
+static void
+krb5_free_unparsed_name(krb5_context context, char *val)
 {
 	SAFE_FREE(val);
+}
+#endif
+
+#if !defined(HAVE_KRB5_AUTH_CON_GETSENDSUBKEY) /* Heimdal */
+static krb5_error_code
+krb5_auth_con_getsendsubkey(krb5_context context,
+			    krb5_auth_context auth_context,
+			    krb5_keyblock **keyblock)
+{
+	return krb5_auth_con_getlocalsubkey(context, auth_context, keyblock);
 }
 #endif
 
@@ -275,7 +286,6 @@ cifs_krb5_get_req(const char *principal, const char *ccname,
 		goto out_free_principal;
 	}
 
-	in_creds.keyblock.enctype = 0;
 	ret = krb5_get_credentials(context, 0, ccache, &in_creds, &out_creds);
 	krb5_free_principal(context, in_creds.server);
 	if (ret) {
@@ -302,7 +312,7 @@ cifs_krb5_get_req(const char *principal, const char *ccname,
 	}
 
 	*mechtoken = data_blob(apreq_pkt.data, apreq_pkt.length);
-	*sess_key = data_blob(tokb->contents, tokb->length);
+	*sess_key = data_blob(KRB5_KEY_DATA(tokb), KRB5_KEY_LENGTH(tokb));
 
 	krb5_free_keyblock(context, tokb);
 out_free_creds:

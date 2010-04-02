@@ -666,4 +666,17 @@ typedef uint32_t NTSTATUS;
 #define NT_STATUS(x) (x)
 #define NT_STATUS_V(x) (x)
 
+/* These macros unify the keyblock handling of Heimdal and MIT somewhat */
+#ifdef HAVE_KRB5_KEYBLOCK_KEYVALUE /* Heimdal */
+#define KRB5_KEY_TYPE(k)        ((k)->keytype)
+#define KRB5_KEY_LENGTH(k)      ((k)->keyvalue.length)
+#define KRB5_KEY_DATA(k)        ((k)->keyvalue.data)
+#define KRB5_KEY_DATA_CAST      void
+#else /* MIT */
+#define KRB5_KEY_TYPE(k)        ((k)->enctype)
+#define KRB5_KEY_LENGTH(k)      ((k)->length)
+#define KRB5_KEY_DATA(k)        ((k)->contents)
+#define KRB5_KEY_DATA_CAST      krb5_octet
+#endif
+
 #endif /* _LIBREPLACE_REPLACE_H */
