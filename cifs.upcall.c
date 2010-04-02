@@ -76,11 +76,11 @@ typedef enum _sectype {
  */
 
 static char *cifs_krb5_principal_get_realm(krb5_context context,
-				   krb5_principal principal)
+					   krb5_principal principal)
 {
-#ifdef HAVE_KRB5_PRINCIPAL_GET_REALM /* Heimdal */
+#ifdef HAVE_KRB5_PRINCIPAL_GET_REALM	/* Heimdal */
 	return krb5_principal_get_realm(context, principal);
-#elif defined(krb5_princ_realm) /* MIT */
+#elif defined(krb5_princ_realm)	/* MIT */
 	krb5_data *realm;
 	realm = krb5_princ_realm(context, principal);
 	return (char *)realm->data;
@@ -90,14 +90,13 @@ static char *cifs_krb5_principal_get_realm(krb5_context context,
 }
 
 #if !defined(HAVE_KRB5_FREE_UNPARSED_NAME)
-static void
-krb5_free_unparsed_name(krb5_context context, char *val)
+static void krb5_free_unparsed_name(krb5_context context, char *val)
 {
 	SAFE_FREE(val);
 }
 #endif
 
-#if !defined(HAVE_KRB5_AUTH_CON_GETSENDSUBKEY) /* Heimdal */
+#if !defined(HAVE_KRB5_AUTH_CON_GETSENDSUBKEY)	/* Heimdal */
 static krb5_error_code
 krb5_auth_con_getsendsubkey(krb5_context context,
 			    krb5_auth_context auth_context,
@@ -108,8 +107,8 @@ krb5_auth_con_getsendsubkey(krb5_context context,
 #endif
 
 /* does the ccache have a valid TGT? */
-static time_t
-get_tgt_time(const char *ccname) {
+static time_t get_tgt_time(const char *ccname)
+{
 	krb5_context context;
 	krb5_ccache ccache;
 	krb5_cc_cursor cur;
@@ -151,19 +150,21 @@ get_tgt_time(const char *ccname) {
 	while (!credtime && !krb5_cc_next_cred(context, ccache, &cur, &creds)) {
 		char *name;
 		if (krb5_unparse_name(context, creds.server, &name)) {
-			syslog(LOG_DEBUG, "%s: unable to unparse name", __func__);
+			syslog(LOG_DEBUG, "%s: unable to unparse name",
+			       __func__);
 			goto err_endseq;
 		}
 		if (krb5_realm_compare(context, creds.server, principal) &&
 		    !strncasecmp(name, KRB5_TGS_NAME, KRB5_TGS_NAME_SIZE) &&
-		    !strncasecmp(name+KRB5_TGS_NAME_SIZE+1, realm, strlen(realm)) &&
-		    creds.times.endtime > time(NULL))
+		    !strncasecmp(name + KRB5_TGS_NAME_SIZE + 1, realm,
+				 strlen(realm))
+		    && creds.times.endtime > time(NULL))
 			credtime = creds.times.endtime;
-                krb5_free_cred_contents(context, &creds);
+		krb5_free_cred_contents(context, &creds);
 		krb5_free_unparsed_name(context, name);
-        }
+	}
 err_endseq:
-        krb5_cc_end_seq_get(context, ccache, &cur);
+	krb5_cc_end_seq_get(context, ccache, &cur);
 err_ccstart:
 	krb5_free_principal(context, principal);
 err_princ:
@@ -176,8 +177,7 @@ err_cache:
 	return credtime;
 }
 
-static int
-krb5cc_filter(const struct dirent *dirent)
+static int krb5cc_filter(const struct dirent *dirent)
 {
 	if (strstr(dirent->d_name, CIFS_DEFAULT_KRB5_PREFIX))
 		return 1;
@@ -186,8 +186,7 @@ krb5cc_filter(const struct dirent *dirent)
 }
 
 /* search for a credcache that looks like a likely candidate */
-static char *
-find_krb5_cc(const char *dirname, uid_t uid)
+static char *find_krb5_cc(const char *dirname, uid_t uid)
 {
 	struct dirent **namelist;
 	struct stat sbuf;
@@ -198,7 +197,7 @@ find_krb5_cc(const char *dirname, uid_t uid)
 	n = scandir(dirname, &namelist, krb5cc_filter, NULL);
 	if (n < 0) {
 		syslog(LOG_DEBUG, "%s: scandir error on directory '%s': %s",
-				  __func__, dirname, strerror(errno));
+		       __func__, dirname, strerror(errno));
 		return NULL;
 	}
 
@@ -210,32 +209,32 @@ find_krb5_cc(const char *dirname, uid_t uid)
 
 		if (lstat(credpath, &sbuf)) {
 			syslog(LOG_DEBUG, "%s: stat error on '%s': %s",
-					  __func__, credpath, strerror(errno));
+			       __func__, credpath, strerror(errno));
 			free(namelist[i]);
 			continue;
 		}
 		if (sbuf.st_uid != uid) {
 			syslog(LOG_DEBUG, "%s: %s is owned by %u, not %u",
-					__func__, credpath, sbuf.st_uid, uid);
+			       __func__, credpath, sbuf.st_uid, uid);
 			free(namelist[i]);
 			continue;
 		}
 		if (!S_ISREG(sbuf.st_mode)) {
 			syslog(LOG_DEBUG, "%s: %s is not a regular file",
-					__func__, credpath);
+			       __func__, credpath);
 			free(namelist[i]);
 			continue;
 		}
 		if (!(cred_time = get_tgt_time(ccname))) {
 			syslog(LOG_DEBUG, "%s: %s is not a valid credcache.",
-					__func__, ccname);
+			       __func__, ccname);
 			free(namelist[i]);
 			continue;
 		}
 
 		if (cred_time <= best_time) {
 			syslog(LOG_DEBUG, "%s: %s expires sooner than current "
-					  "best.", __func__, ccname);
+			       "best.", __func__, ccname);
 			free(namelist[i]);
 			continue;
 		}
@@ -253,7 +252,7 @@ find_krb5_cc(const char *dirname, uid_t uid)
 
 static int
 cifs_krb5_get_req(const char *principal, const char *ccname,
-		  DATA_BLOB *mechtoken, DATA_BLOB *sess_key)
+		  DATA_BLOB * mechtoken, DATA_BLOB * sess_key)
 {
 	krb5_error_code ret;
 	krb5_keyblock *tokb;
@@ -272,21 +271,21 @@ cifs_krb5_get_req(const char *principal, const char *ccname,
 	ret = krb5_cc_resolve(context, ccname, &ccache);
 	if (ret) {
 		syslog(LOG_DEBUG, "%s: unable to resolve %s to ccache\n",
-				__func__, ccname);
+		       __func__, ccname);
 		goto out_free_context;
 	}
 
 	ret = krb5_cc_get_principal(context, ccache, &in_creds.client);
 	if (ret) {
 		syslog(LOG_DEBUG, "%s: unable to get client principal name",
-				  __func__);
+		       __func__);
 		goto out_free_ccache;
 	}
 
 	ret = krb5_parse_name(context, principal, &in_creds.server);
 	if (ret) {
 		syslog(LOG_DEBUG, "%s: unable to parse principal (%s).",
-				  __func__, principal);
+		       __func__, principal);
 		goto out_free_principal;
 	}
 
@@ -294,24 +293,24 @@ cifs_krb5_get_req(const char *principal, const char *ccname,
 	krb5_free_principal(context, in_creds.server);
 	if (ret) {
 		syslog(LOG_DEBUG, "%s: unable to get credentials for %s",
-				__func__, principal);
+		       __func__, principal);
 		goto out_free_principal;
 	}
 
 	apreq_pkt.data = NULL;
 	in_data.length = 0;
 	ret = krb5_mk_req_extended(context, &auth_context, AP_OPTS_USE_SUBKEY,
-					&in_data, out_creds, &apreq_pkt);
+				   &in_data, out_creds, &apreq_pkt);
 	if (ret) {
 		syslog(LOG_DEBUG, "%s: unable to make AP-REQ for %s",
-				__func__, principal);
+		       __func__, principal);
 		goto out_free_creds;
 	}
 
 	ret = krb5_auth_con_getsendsubkey(context, auth_context, &tokb);
 	if (ret) {
 		syslog(LOG_DEBUG, "%s: unable to get session key for %s",
-				__func__, principal);
+		       __func__, principal);
 		goto out_free_creds;
 	}
 
@@ -325,7 +324,7 @@ out_free_principal:
 	krb5_free_principal(context, in_creds.client);
 out_free_ccache:
 #if defined(KRB5_TC_OPENCLOSE)
-        krb5_cc_set_flags(context, ccache, KRB5_TC_OPENCLOSE);
+	krb5_cc_set_flags(context, ccache, KRB5_TC_OPENCLOSE);
 #endif
 	krb5_cc_close(context, ccache);
 out_free_context:
@@ -354,20 +353,20 @@ out_free_context:
  * ret: 0 - success, others - failure
  */
 static int
-handle_krb5_mech(const char *oid, const char *principal, DATA_BLOB *secblob,
-		 DATA_BLOB *sess_key, const char *ccname)
+handle_krb5_mech(const char *oid, const char *principal, DATA_BLOB * secblob,
+		 DATA_BLOB * sess_key, const char *ccname)
 {
 	int retval;
 	DATA_BLOB tkt, tkt_wrapped;
 
 	syslog(LOG_DEBUG, "%s: getting service ticket for %s", __func__,
-			  principal);
+	       principal);
 
 	/* get a kerberos ticket for the service and extract the session key */
 	retval = cifs_krb5_get_req(principal, ccname, &tkt, sess_key);
 	if (retval) {
 		syslog(LOG_DEBUG, "%s: failed to obtain service ticket (%d)",
-				  __func__, retval);
+		       __func__, retval);
 		return retval;
 	}
 
@@ -393,12 +392,12 @@ handle_krb5_mech(const char *oid, const char *principal, DATA_BLOB *secblob,
 #define DKD_MUSTHAVE_SET (DKD_HAVE_HOSTNAME|DKD_HAVE_VERSION|DKD_HAVE_SEC)
 
 struct decoded_args {
-	int		ver;
-	char		*hostname;
-	char		*ip;
-	uid_t		uid;
-	pid_t		pid;
-	sectype_t	sec;
+	int ver;
+	char *hostname;
+	char *ip;
+	uid_t uid;
+	pid_t pid;
+	sectype_t sec;
 };
 
 static unsigned int
@@ -423,8 +422,7 @@ decode_key_description(const char *desc, struct decoded_args *arg)
 			arg->hostname = calloc(sizeof(char), len);
 			strlcpy(arg->hostname, tkn + 5, len);
 			retval |= DKD_HAVE_HOSTNAME;
-		} else if (!strncmp(tkn, "ip4=", 4) ||
-			   !strncmp(tkn, "ip6=", 4)) {
+		} else if (!strncmp(tkn, "ip4=", 4) || !strncmp(tkn, "ip6=", 4)) {
 			if (pos == NULL)
 				len = strlen(tkn);
 			else
@@ -481,8 +479,7 @@ decode_key_description(const char *desc, struct decoded_args *arg)
 	return retval;
 }
 
-static int
-cifs_resolver(const key_serial_t key, const char *key_descr)
+static int cifs_resolver(const key_serial_t key, const char *key_descr)
 {
 	int c;
 	struct addrinfo *addr;
@@ -491,10 +488,10 @@ cifs_resolver(const key_serial_t key, const char *key_descr)
 	const char *keyend = key_descr;
 	/* skip next 4 ';' delimiters to get to description */
 	for (c = 1; c <= 4; c++) {
-		keyend = index(keyend+1, ';');
+		keyend = index(keyend + 1, ';');
 		if (!keyend) {
 			syslog(LOG_ERR, "invalid key description: %s",
-					key_descr);
+			       key_descr);
 			return 1;
 		}
 	}
@@ -504,7 +501,7 @@ cifs_resolver(const key_serial_t key, const char *key_descr)
 	c = getaddrinfo(keyend, NULL, NULL, &addr);
 	if (c) {
 		syslog(LOG_ERR, "unable to resolve hostname: %s [%s]",
-				keyend, gai_strerror(c));
+		       keyend, gai_strerror(c));
 		return 1;
 	}
 
@@ -521,10 +518,10 @@ cifs_resolver(const key_serial_t key, const char *key_descr)
 	}
 
 	/* setup key */
-	c = keyctl_instantiate(key, ip, strlen(ip)+1, 0);
+	c = keyctl_instantiate(key, ip, strlen(ip) + 1, 0);
 	if (c == -1) {
 		syslog(LOG_ERR, "%s: keyctl_instantiate: %s", __func__,
-				strerror(errno));
+		       strerror(errno));
 		freeaddrinfo(addr);
 		return 1;
 	}
@@ -538,8 +535,7 @@ cifs_resolver(const key_serial_t key, const char *key_descr)
  * they're fixed-length strings. Convert these addresses to have colon
  * delimiters to make getaddrinfo happy.
  */
-static void
-convert_inet6_addr(const char *from, char *to)
+static void convert_inet6_addr(const char *from, char *to)
 {
 	int i = 1;
 
@@ -551,11 +547,10 @@ convert_inet6_addr(const char *from, char *to)
 	*to = 0;
 }
 
-static int
-ip_to_fqdn(const char *addrstr, char *host, size_t hostlen)
+static int ip_to_fqdn(const char *addrstr, char *host, size_t hostlen)
 {
 	int rc;
-	struct addrinfo hints = { .ai_flags = AI_NUMERICHOST };
+	struct addrinfo hints = {.ai_flags = AI_NUMERICHOST };
 	struct addrinfo *res;
 	const char *ipaddr = addrstr;
 	char converted[INET6_ADDRSTRLEN + 1];
@@ -568,8 +563,8 @@ ip_to_fqdn(const char *addrstr, char *host, size_t hostlen)
 	rc = getaddrinfo(ipaddr, NULL, &hints, &res);
 	if (rc) {
 		syslog(LOG_DEBUG, "%s: failed to resolve %s to "
-			"ipaddr: %s", __func__, ipaddr,
-		rc == EAI_SYSTEM ? strerror(errno) : gai_strerror(rc));
+		       "ipaddr: %s", __func__, ipaddr,
+		       rc == EAI_SYSTEM ? strerror(errno) : gai_strerror(rc));
 		return rc;
 	}
 
@@ -578,8 +573,8 @@ ip_to_fqdn(const char *addrstr, char *host, size_t hostlen)
 	freeaddrinfo(res);
 	if (rc) {
 		syslog(LOG_DEBUG, "%s: failed to resolve %s to fqdn: %s",
-			__func__, ipaddr,
-			rc == EAI_SYSTEM ? strerror(errno) : gai_strerror(rc));
+		       __func__, ipaddr,
+		       rc == EAI_SYSTEM ? strerror(errno) : gai_strerror(rc));
 		return rc;
 	}
 
@@ -587,17 +582,16 @@ ip_to_fqdn(const char *addrstr, char *host, size_t hostlen)
 	return 0;
 }
 
-static void
-usage(void)
+static void usage(void)
 {
 	syslog(LOG_INFO, "Usage: %s [-t] [-v] key_serial", prog);
 	fprintf(stderr, "Usage: %s [-t] [-v] key_serial\n", prog);
 }
 
 const struct option long_options[] = {
-	{ "trust-dns",	0, NULL, 't' },
-	{ "version",	0, NULL, 'v' },
-	{ NULL,		0, NULL, 0 }
+	{"trust-dns", 0, NULL, 't'},
+	{"version", 0, NULL, 'v'},
+	{NULL, 0, NULL, 0}
 };
 
 int main(const int argc, char *const argv[])
@@ -661,8 +655,8 @@ int main(const int argc, char *const argv[])
 
 	syslog(LOG_DEBUG, "key description: %s", buf);
 
-	if ((strncmp(buf, "cifs.resolver", sizeof("cifs.resolver")-1) == 0) ||
-	    (strncmp(buf, "dns_resolver", sizeof("dns_resolver")-1) == 0)) {
+	if ((strncmp(buf, "cifs.resolver", sizeof("cifs.resolver") - 1) == 0) ||
+	    (strncmp(buf, "dns_resolver", sizeof("dns_resolver") - 1) == 0)) {
 		rc = cifs_resolver(key, buf);
 		goto out;
 	}
@@ -671,14 +665,14 @@ int main(const int argc, char *const argv[])
 	SAFE_FREE(buf);
 	if ((have & DKD_MUSTHAVE_SET) != DKD_MUSTHAVE_SET) {
 		syslog(LOG_ERR, "unable to get necessary params from key "
-				"description (0x%x)", have);
+		       "description (0x%x)", have);
 		rc = 1;
 		goto out;
 	}
 
 	if (arg.ver > CIFS_SPNEGO_UPCALL_VERSION) {
 		syslog(LOG_ERR, "incompatible kernel upcall version: 0x%x",
-				arg.ver);
+		       arg.ver);
 		rc = 1;
 		goto out;
 	}
@@ -753,7 +747,7 @@ retry_new_hostname:
 	/* pack SecurityBLob and SessionKey into downcall packet */
 	datalen =
 	    sizeof(struct cifs_spnego_msg) + secblob.length + sess_key.length;
-	keydata = (struct cifs_spnego_msg*) calloc(sizeof(char), datalen);
+	keydata = (struct cifs_spnego_msg *)calloc(sizeof(char), datalen);
 	if (!keydata) {
 		rc = 1;
 		goto out;
@@ -782,7 +776,7 @@ out:
 	 * make sure the kernel doesn't hang it off of a searchable keyring
 	 * and interfere with the next attempt to instantiate the key.
 	 */
-	if (rc != 0  && key == 0)
+	if (rc != 0 && key == 0)
 		keyctl_negate(key, 1, KEY_REQKEY_DEFL_DEFAULT);
 	data_blob_free(&secblob);
 	data_blob_free(&sess_key);
