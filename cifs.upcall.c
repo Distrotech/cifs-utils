@@ -1,7 +1,7 @@
 /*
 * CIFS user-space helper.
 * Copyright (C) Igor Mammedov (niallain@gmail.com) 2007
-* Copyright (C) Jeff Layton (jlayton@redhat.com) 2009
+* Copyright (C) Jeff Layton (jlayton@samba.org) 2010
 *
 * Used by /sbin/request-key for handling
 * cifs upcall for kerberos authorization of access to share and
@@ -9,8 +9,8 @@
 * You should have keyutils installed and add something like the
 * following lines to /etc/request-key.conf file:
 
-create cifs.spnego * * /usr/local/sbin/cifs.upcall %k
-create dns_resolver * * /usr/local/sbin/cifs.upcall %k
+    create cifs.spnego * * /usr/local/sbin/cifs.upcall %k
+    create dns_resolver * * /usr/local/sbin/cifs.upcall %k
 
 * This program is free software; you can redistribute it and/or modify
 * it under the terms of the GNU General Public License as published by

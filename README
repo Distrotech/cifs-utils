@@ -5,9 +5,9 @@ separate package.
 
 0. PROJECT RESOURCES
 
-    Home page: http://linux-cifs.samba.org/
+    Home page: http://linux-cifs.samba.org/cifs-utils/
     Mailing list: linux-cifs-client@lists.samba.org
-    Maintainer: Jeff Layton <jlayton@samba.org>
+    Maintainer: cifs-utils@samba.org
     Git Repository: git://git.samba.org/cifs-utils.git
 
 1. COMPILING

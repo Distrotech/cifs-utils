@@ -2,6 +2,7 @@
  * Mount helper utility for Linux CIFS VFS (virtual filesystem) client
  * Copyright (C) 2003,2008 Steve French  (sfrench@us.ibm.com)
  * Copyright (C) 2008 Jeremy Allison (jra@samba.org)
+ * Copyright (C) 2010 Jeff Layton (jlayton@samba.org)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
