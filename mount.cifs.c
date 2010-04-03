@@ -395,13 +395,6 @@ toggle_cap_dac_override(int enable)
 		return EX_SYSERR;
 	}
 
-	if (cap_clear(caps) == -1) {
-		fprintf(stderr, "Unable to clear capability set: %s\n",
-			strerror(errno));
-		rc = EX_SYSERR;
-		goto free_caps;
-	}
-
 	cap_list = CAP_DAC_OVERRIDE;
 	if (cap_set_flag(caps, CAP_EFFECTIVE, 1, &cap_list,
 			 enable ? CAP_SET : CAP_CLEAR) == -1) {
@@ -409,6 +402,12 @@ toggle_cap_dac_override(int enable)
 			enable ? "set" : "clear", strerror(errno));
 		rc = EX_SYSERR;
 		goto free_caps;
+	}
+
+	if (cap_set_proc(caps) != 0) {
+		fprintf(stderr, "Unable to set current process capabilities: %s\n",
+			strerror(errno));
+		rc = EX_SYSERR;
 	}
 free_caps:
 	cap_free(caps);
