@@ -322,21 +322,142 @@ static int parse_username(char *rawuser, struct parsed_mount_info *parsed_info)
 	return 0;
 }
 
+#ifdef HAVE_LIBCAP
+static int
+drop_capabilities(int parent)
+{
+	int rc = 0, ncaps;
+	cap_t caps;
+	cap_value_t cap_list[2];
+
+	caps = cap_get_proc();
+	if (caps == NULL) {
+		fprintf(stderr, "Unable to get current capability set: %s\n",
+			strerror(errno));
+		return EX_SYSERR;
+	}
+
+	if (cap_clear(caps) == -1) {
+		fprintf(stderr, "Unable to clear capability set: %s\n",
+			strerror(errno));
+		rc = EX_SYSERR;
+		goto free_caps;
+	}
+
+	if (parent || getuid() == 0) {
+		ncaps = 1;
+		cap_list[0] = CAP_DAC_OVERRIDE;
+		if (parent) {
+			cap_list[1] = CAP_SYS_ADMIN;
+			++ncaps;
+		}
+		if (cap_set_flag(caps, CAP_PERMITTED, ncaps, cap_list, CAP_SET) == -1) {
+			fprintf(stderr, "Unable to set permitted capabilities: %s\n",
+				strerror(errno));
+			rc = EX_SYSERR;
+			goto free_caps;
+		}
+		if (parent) {
+			cap_list[0] = CAP_SYS_ADMIN;
+			if (cap_set_flag(caps, CAP_EFFECTIVE, 1, cap_list, CAP_SET) == -1) {
+				fprintf(stderr, "Unable to set effective capabilities: %s\n",
+					strerror(errno));
+				rc = EX_SYSERR;
+				goto free_caps;
+			}
+		}
+	}
+
+	if (cap_set_proc(caps) != 0) {
+		fprintf(stderr, "Unable to set current process capabilities: %s\n",
+			strerror(errno));
+		rc = EX_SYSERR;
+	}
+free_caps:
+	cap_free(caps);
+	return rc;
+}
+
+static int
+toggle_cap_dac_override(int enable)
+{
+	int rc;
+	cap_t caps;
+	cap_value_t cap_list;
+
+	if (getuid() != 0)
+		return 0;
+
+	caps = cap_get_proc();
+	if (caps == NULL) {
+		fprintf(stderr, "Unable to get current capability set: %s\n",
+			strerror(errno));
+		return EX_SYSERR;
+	}
+
+	if (cap_clear(caps) == -1) {
+		fprintf(stderr, "Unable to clear capability set: %s\n",
+			strerror(errno));
+		rc = EX_SYSERR;
+		goto free_caps;
+	}
+
+	cap_list = CAP_DAC_OVERRIDE;
+	if (cap_set_flag(caps, CAP_EFFECTIVE, 1, &cap_list,
+			 enable ? CAP_SET : CAP_CLEAR) == -1) {
+		fprintf(stderr, "Unable to %s effective capabilities: %s\n",
+			enable ? "set" : "clear", strerror(errno));
+		rc = EX_SYSERR;
+		goto free_caps;
+	}
+free_caps:
+	cap_free(caps);
+	return 0;
+}
+#else /* HAVE_LIBCAP */
+static int
+drop_capabilities(int parent)
+{
+	return 0;
+}
+
+static int
+toggle_cap_dac_override(int enable)
+{
+	return 0;
+}
+#endif /* HAVE_LIBCAP */
+
 static int open_cred_file(char *file_name,
 			  struct parsed_mount_info *parsed_info)
 {
 	char *line_buf;
 	char *temp_val, *newline;
-	FILE *fs;
+	FILE *fs = NULL;
 	int i, length;
 
-	i = access(file_name, R_OK);
+	i = toggle_cap_dac_override(1);
 	if (i)
 		return i;
 
+	i = access(file_name, R_OK);
+	if (i) {
+		toggle_cap_dac_override(0);
+		return i;
+	}
+
 	fs = fopen(file_name, "r");
-	if (fs == NULL)
+	if (fs == NULL) {
+		toggle_cap_dac_override(0);
 		return errno;
+	}
+
+	i = toggle_cap_dac_override(0);
+	if (i) {
+		fclose(fs);
+		return i;
+	}
+
 	line_buf = (char *)malloc(4096);
 	if (line_buf == NULL) {
 		fclose(fs);
@@ -431,19 +552,32 @@ get_password_from_file(int file_descript, char *filename,
 	char buf[sizeof(parsed_info->password) + 1];
 
 	if (filename != NULL) {
+		rc = toggle_cap_dac_override(1);
+		if (rc)
+			return rc;
+
 		rc = access(filename, R_OK);
 		if (rc) {
 			fprintf(stderr,
 				"mount.cifs failed: access check of %s failed: %s\n",
 				filename, strerror(errno));
+			toggle_cap_dac_override(0);
 			return EX_SYSERR;
 		}
+
 		file_descript = open(filename, O_RDONLY);
 		if (file_descript < 0) {
 			fprintf(stderr,
 				"mount.cifs failed. %s attempting to open password file %s\n",
 				strerror(errno), filename);
+			toggle_cap_dac_override(0);
 			return EX_SYSERR;
+		}
+
+		rc = toggle_cap_dac_override(0);
+		if (rc) {
+			rc = EX_SYSERR;
+			goto get_pw_exit;
 		}
 	}
 
@@ -460,9 +594,8 @@ get_password_from_file(int file_descript, char *filename,
 	rc = set_password(parsed_info, buf);
 
 get_pw_exit:
-	if (filename != NULL) {
+	if (filename != NULL)
 		close(file_descript);
-	}
 	return rc;
 }
 
@@ -1073,7 +1206,7 @@ add_mtab(char *devname, char *mountpoint, unsigned long flags)
 	if (rc != 0) {
 		fprintf(stderr, "Unable to set real uid to effective uid: %s\n",
 				strerror(errno));
-		rc = EX_FILEIO;
+		return EX_FILEIO;
 	}
 
 	rc = sigfillset(&mask);
@@ -1087,6 +1220,10 @@ add_mtab(char *devname, char *mountpoint, unsigned long flags)
 		fprintf(stderr, "Unable to make process ignore signals\n");
 		return EX_FILEIO;
 	}
+
+	rc = toggle_cap_dac_override(1);
+	if (rc)
+		return EX_FILEIO;
 
 	atexit(unlock_mtab);
 	rc = lock_mtab();
@@ -1137,6 +1274,7 @@ add_mtab(char *devname, char *mountpoint, unsigned long flags)
 	unlock_mtab();
 	SAFE_FREE(mountent.mnt_opts);
 add_mtab_exit:
+	toggle_cap_dac_override(0);
 	sigprocmask(SIG_SETMASK, &oldmask, NULL);
 	if (rc) {
 		fprintf(stderr, "unable to add mount entry to mtab\n");
@@ -1145,66 +1283,6 @@ add_mtab_exit:
 
 	return rc;
 }
-
-#ifdef HAVE_LIBCAP
-static int
-drop_capabilities(int parent)
-{
-	int rc = 0, ncap;
-	cap_t caps;
-	cap_value_t cap_list[2];
-
-	caps = cap_get_proc();
-	if (caps == NULL) {
-		fprintf(stderr, "Unable to get current capability set: %s\n",
-			strerror(errno));
-		return EX_SYSERR;
-	}
-
-	if (cap_clear(caps) == -1) {
-		fprintf(stderr, "Unable to clear capability set: %s\n",
-			strerror(errno));
-		rc = EX_SYSERR;
-		goto free_caps;
-	}
-
-	if (parent || getuid() == 0) {
-		ncap = 1;
-		cap_list[0] = CAP_DAC_OVERRIDE;
-		if (parent) {
-			cap_list[1] = CAP_SYS_ADMIN;
-			++ncap;
-		}
-		if (cap_set_flag(caps, CAP_PERMITTED, ncap, cap_list, CAP_SET) == -1) {
-			fprintf(stderr, "Unable to set permitted capabilities: %s\n",
-				strerror(errno));
-			rc = EX_SYSERR;
-			goto free_caps;
-		}
-		if (cap_set_flag(caps, CAP_EFFECTIVE, ncap, cap_list, CAP_SET) == -1) {
-			fprintf(stderr, "Unable to set effective capabilities: %s\n",
-				strerror(errno));
-			rc = EX_SYSERR;
-			goto free_caps;
-		}
-	}
-
-	if (cap_set_proc(caps) != 0) {
-		fprintf(stderr, "Unable to set current process capabilities: %s\n",
-			strerror(errno));
-		rc = EX_SYSERR;
-	}
-free_caps:
-	cap_free(caps);
-	return rc;
-}
-#else /* HAVE_LIBCAP */
-static int
-drop_capabilities(int parent)
-{
-	return 0;
-}
-#endif /* HAVE_LIBCAP */
 
 /* have the child drop root privileges */
 static int
