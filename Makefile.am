@@ -11,7 +11,7 @@ man_MANS = mount.cifs.8
 if CONFIG_CIFSUPCALL
 sbin_PROGRAMS = cifs.upcall
 cifs_upcall_SOURCES = cifs.upcall.c data_blob.c asn1.c spnego.c util.c
-cifs_upcall_LDADD = -ltalloc -lkrb5 -lkeyutils
+cifs_upcall_LDADD = -ltalloc -lkeyutils @KRB5_LDADD@
 man_MANS += cifs.upcall.8
 endif
 

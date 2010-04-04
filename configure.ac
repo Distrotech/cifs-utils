@@ -76,7 +76,10 @@ if test $enable_cifsupcall != "no"; then
 			])
 fi
 if test $enable_cifsupcall != "no"; then
-	AC_CHECK_LIB([krb5], [krb5_init_context])
+	AC_CHECK_LIB([krb5], [krb5_init_context],
+			[ KRB5_LDADD='-lkrb5' ],
+			AC_MSG_ERROR([no functioning krb5 library found!]))
+	AC_SUBST(KRB5_LDADD)
 fi
 
 # Checks for typedefs, structures, and compiler characteristics.
@@ -97,6 +100,10 @@ AC_FUNC_STRNLEN
 # check for required functions
 AC_CHECK_FUNCS([alarm atexit endpwent getmntent getpass gettimeofday inet_ntop memset realpath setenv strchr strdup strerror strncasecmp strndup strpbrk strrchr strstr strtol strtoul uname], , [AC_MSG_ERROR([necessary functions(s) not found])])
 
+# ugly, but I'm not sure how to check for functions in a library that's not in $LIBS
+cu_saved_libs=$LIBS
+LIBS="$LIBS $KRB5_LDADD"
+
 # determine whether we can use MIT's new 'krb5_auth_con_getsendsubkey' to extract the signing key
 if test $enable_cifsupcall != "no"; then
 	AC_CHECK_FUNCS([krb5_auth_con_getsendsubkey])
@@ -106,6 +113,8 @@ fi
 if test $enable_cifsupcall != "no"; then
 	AC_CHECK_FUNCS([krb5_principal_get_realm krb5_free_unparsed_name])
 fi
+
+LIBS=$cu_saved_libs
 
 AM_CONDITIONAL(CONFIG_CIFSUPCALL, [test "$enable_cifsupcall" != "no"])
 
