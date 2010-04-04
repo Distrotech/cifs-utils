@@ -118,6 +118,9 @@ LIBS=$cu_saved_libs
 
 AM_CONDITIONAL(CONFIG_CIFSUPCALL, [test "$enable_cifsupcall" != "no"])
 
-AC_LIBCAP
+LIBCAP_NG_PATH
 
+if test "x$CAPNG_LDADD" = "x"; then
+	AC_LIBCAP
+fi
 AC_OUTPUT

@@ -44,9 +44,13 @@
 #include <fstab.h>
 #include <sys/mman.h>
 #include <sys/wait.h>
+#ifdef HAVE_LIBCAP_NG
+#include <cap-ng.h>
+#else /* HAVE_LIBCAP_NG */
 #ifdef HAVE_LIBCAP
 #include <sys/capability.h>
 #endif /* HAVE_LIBCAP */
+#endif /* HAVE_LIBCAP_NG */
 #include "mount.h"
 #include "util.h"
 
@@ -322,6 +326,44 @@ static int parse_username(char *rawuser, struct parsed_mount_info *parsed_info)
 	return 0;
 }
 
+#ifdef HAVE_LIBCAP_NG
+static int
+drop_capabilities(int parent)
+{
+	capng_setpid(getpid());
+	capng_clear(CAPNG_SELECT_BOTH);
+	if (capng_update(CAPNG_ADD, CAPNG_PERMITTED, CAP_DAC_OVERRIDE)) {
+		fprintf(stderr, "Unable to update capability set.\n");
+		return EX_SYSERR;
+	}
+
+	if (parent) {
+		if (capng_update(CAPNG_ADD, CAPNG_PERMITTED|CAPNG_EFFECTIVE, CAP_SYS_ADMIN)) {
+			fprintf(stderr, "Unable to update capability set.\n");
+			return EX_SYSERR;
+		}
+	}
+	if (capng_apply(CAPNG_SELECT_BOTH)) {
+		fprintf(stderr, "Unable to apply new capability set.\n");
+		return EX_SYSERR;
+	}
+	return 0;
+}
+
+static int
+toggle_cap_dac_override(int enable)
+{
+	if (capng_update(enable ? CAPNG_ADD : CAPNG_DROP, CAPNG_EFFECTIVE, CAP_DAC_OVERRIDE)) {
+		fprintf(stderr, "Unable to update capability set.\n");
+		return EX_SYSERR;
+	}
+	if (capng_apply(CAPNG_SELECT_CAPS)) {
+		fprintf(stderr, "Unable to apply new capability set.\n");
+		return EX_SYSERR;
+	}
+	return 0;
+}
+#else /* HAVE_LIBCAP_NG */
 #ifdef HAVE_LIBCAP
 static int
 drop_capabilities(int parent)
@@ -426,6 +468,7 @@ toggle_cap_dac_override(int enable)
 	return 0;
 }
 #endif /* HAVE_LIBCAP */
+#endif /* HAVE_LIBCAP_NG */
 
 static int open_cred_file(char *file_name,
 			  struct parsed_mount_info *parsed_info)
