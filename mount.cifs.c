@@ -47,6 +47,9 @@
 #ifdef HAVE_LIBCAP_NG
 #include <cap-ng.h>
 #else /* HAVE_LIBCAP_NG */
+#ifdef HAVE_PRCTL
+#include <sys/prctl.h>
+#endif /* HAVE_PRCTL */
 #ifdef HAVE_LIBCAP
 #include <sys/capability.h>
 #endif /* HAVE_LIBCAP */
@@ -364,13 +367,45 @@ toggle_cap_dac_override(int enable)
 	return 0;
 }
 #else /* HAVE_LIBCAP_NG */
+#ifdef HAVE_PRCTL
+static int
+prune_bounding_set(void)
+{
+	int i, rc = 0;
+	static int bounding_set_cleared;
+
+	if (bounding_set_cleared)
+		return 0;
+
+	for (i = 0; i <= CAP_LAST_CAP && rc == 0; ++i)
+		rc = prctl(PR_CAPBSET_DROP, i);
+
+	if (rc != 0) {
+		fprintf(stderr, "Unable to clear capability bounding set: %d\n", rc);
+		return EX_SYSERR;
+	}
+
+	++bounding_set_cleared;
+	return 0;
+}
+#else /* HAVE_PRCTL */
+static int
+prune_bounding_set(void)
+{
+	return 0;
+}
+#endif /* HAVE_PRCTL */
 #ifdef HAVE_LIBCAP
 static int
 drop_capabilities(int parent)
 {
-	int rc = 0, ncaps;
+	int rc, ncaps;
 	cap_t caps;
 	cap_value_t cap_list[2];
+
+	rc = prune_bounding_set();
+	if (rc)
+		return rc;
 
 	caps = cap_get_proc();
 	if (caps == NULL) {
