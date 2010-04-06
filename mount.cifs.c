@@ -559,7 +559,7 @@ static int open_cred_file(char *file_name,
 		if (newline)
 			*newline = '\0';
 
-		if (strncasecmp("username", line_buf + i, 8) == 0) {
+		if (strncasecmp("user", line_buf + i, 4) == 0) {
 			temp_val = strchr(line_buf + i, '=');
 			if (temp_val) {
 				/* go past equals sign */
@@ -581,7 +581,7 @@ static int open_cred_file(char *file_name,
 				strlcpy(parsed_info->username, temp_val,
 					sizeof(parsed_info->username));
 			}
-		} else if (strncasecmp("password", line_buf + i, 8) == 0) {
+		} else if (strncasecmp("pass", line_buf + i, 4) == 0) {
 			temp_val = strchr(line_buf + i, '=');
 			if (!temp_val)
 				continue;
@@ -589,7 +589,7 @@ static int open_cred_file(char *file_name,
 			i = set_password(parsed_info, temp_val);
 			if (i)
 				return i;
-		} else if (strncasecmp("domain", line_buf + i, 6) == 0) {
+		} else if (strncasecmp("dom", line_buf + i, 3) == 0) {
 			temp_val = strchr(line_buf + i, '=');
 			if (temp_val) {
 				/* go past equals sign */
