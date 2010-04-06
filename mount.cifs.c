@@ -358,8 +358,10 @@ drop_capabilities(int parent)
 }
 
 static int
-toggle_capability(cap_value_t capability, int enable)
+toggle_dac_capability(int writable, int enable)
 {
+	unsigned int capability = writable ? CAP_DAC_OVERRIDE : CAP_DAC_READ_SEARCH;
+
 	if (capng_update(enable ? CAPNG_ADD : CAPNG_DROP, CAPNG_EFFECTIVE, capability)) {
 		fprintf(stderr, "Unable to update capability set.\n");
 		return EX_SYSERR;
@@ -371,6 +373,7 @@ toggle_capability(cap_value_t capability, int enable)
 	return 0;
 }
 #else /* HAVE_LIBCAP_NG */
+#ifdef HAVE_LIBCAP
 #ifdef HAVE_PRCTL
 static int
 prune_bounding_set(void)
@@ -399,7 +402,6 @@ prune_bounding_set(void)
 	return 0;
 }
 #endif /* HAVE_PRCTL */
-#ifdef HAVE_LIBCAP
 static int
 drop_capabilities(int parent)
 {
@@ -461,10 +463,11 @@ free_caps:
 }
 
 static int
-toggle_capability(cap_value_t capability, int enable)
+toggle_dac_capability(int writable, int enable)
 {
 	int rc;
 	cap_t caps;
+	cap_value_t capability = writable ? CAP_DAC_OVERRIDE : CAP_DAC_READ_SEARCH;
 
 	if (getuid() != 0)
 		return 0;
@@ -501,7 +504,7 @@ drop_capabilities(int parent)
 }
 
 static int
-toggle_capability(cap_value_t capability, int enable)
+toggle_dac_capability(int writable, int enable)
 {
 	return 0;
 }
@@ -516,23 +519,23 @@ static int open_cred_file(char *file_name,
 	FILE *fs = NULL;
 	int i, length;
 
-	i = toggle_capability(CAP_DAC_READ_SEARCH, 1);
+	i = toggle_dac_capability(0, 1);
 	if (i)
 		return i;
 
 	i = access(file_name, R_OK);
 	if (i) {
-		toggle_capability(CAP_DAC_READ_SEARCH, 0);
+		toggle_dac_capability(0, 0);
 		return i;
 	}
 
 	fs = fopen(file_name, "r");
 	if (fs == NULL) {
-		toggle_capability(CAP_DAC_READ_SEARCH, 0);
+		toggle_dac_capability(0, 0);
 		return errno;
 	}
 
-	i = toggle_capability(CAP_DAC_READ_SEARCH, 0);
+	i = toggle_dac_capability(0, 0);
 	if (i) {
 		fclose(fs);
 		return i;
@@ -632,7 +635,7 @@ get_password_from_file(int file_descript, char *filename,
 	char buf[sizeof(parsed_info->password) + 1];
 
 	if (filename != NULL) {
-		rc = toggle_capability(CAP_DAC_READ_SEARCH, 1);
+		rc = toggle_dac_capability(0, 1);
 		if (rc)
 			return rc;
 
@@ -641,7 +644,7 @@ get_password_from_file(int file_descript, char *filename,
 			fprintf(stderr,
 				"mount.cifs failed: access check of %s failed: %s\n",
 				filename, strerror(errno));
-			toggle_capability(CAP_DAC_READ_SEARCH, 0);
+			toggle_dac_capability(0, 0);
 			return EX_SYSERR;
 		}
 
@@ -650,11 +653,11 @@ get_password_from_file(int file_descript, char *filename,
 			fprintf(stderr,
 				"mount.cifs failed. %s attempting to open password file %s\n",
 				strerror(errno), filename);
-			toggle_capability(CAP_DAC_READ_SEARCH, 0);
+			toggle_dac_capability(0, 0);
 			return EX_SYSERR;
 		}
 
-		rc = toggle_capability(CAP_DAC_READ_SEARCH, 0);
+		rc = toggle_dac_capability(0, 0);
 		if (rc) {
 			rc = EX_SYSERR;
 			goto get_pw_exit;
@@ -1301,7 +1304,7 @@ add_mtab(char *devname, char *mountpoint, unsigned long flags)
 		return EX_FILEIO;
 	}
 
-	rc = toggle_capability(CAP_DAC_OVERRIDE, 1);
+	rc = toggle_dac_capability(1, 1);
 	if (rc)
 		return EX_FILEIO;
 
@@ -1354,7 +1357,7 @@ add_mtab(char *devname, char *mountpoint, unsigned long flags)
 	unlock_mtab();
 	SAFE_FREE(mountent.mnt_opts);
 add_mtab_exit:
-	toggle_capability(CAP_DAC_OVERRIDE, 0);
+	toggle_dac_capability(1, 0);
 	sigprocmask(SIG_SETMASK, &oldmask, NULL);
 	if (rc) {
 		fprintf(stderr, "unable to add mount entry to mtab\n");
