@@ -100,9 +100,6 @@ AC_FUNC_STRNLEN
 # check for required functions
 AC_CHECK_FUNCS([alarm atexit endpwent getmntent getpass gettimeofday inet_ntop memset realpath setenv strchr strdup strerror strncasecmp strndup strpbrk strrchr strstr strtol strtoul uname], , [AC_MSG_ERROR([necessary functions(s) not found])])
 
-# check for prctl
-AC_CHECK_FUNCS([prctl])
-
 # ugly, but I'm not sure how to check for functions in a library that's not in $LIBS
 cu_saved_libs=$LIBS
 LIBS="$LIBS $KRB5_LDADD"
