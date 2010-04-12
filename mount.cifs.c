@@ -1596,6 +1596,9 @@ int main(int argc, char **argv)
 	mountpoint = argv[optind + 1];
 
 	/* chdir into mountpoint as soon as possible */
+	rc = toggle_dac_capability(0, 1);
+	if (rc)
+		return rc;
 	rc = chdir(mountpoint);
 	if (rc) {
 		fprintf(stderr, "Couldn't chdir to %s: %s\n", mountpoint,
@@ -1611,6 +1614,9 @@ int main(int argc, char **argv)
 		rc = EX_SYSERR;
 		goto mount_exit;
 	}
+	rc = toggle_dac_capability(0, 0);
+	if (rc)
+		return rc;
 
 	/*
 	 * mount.cifs does privilege separation. Most of the code to handle
