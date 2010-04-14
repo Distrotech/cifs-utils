@@ -1730,9 +1730,11 @@ mount_retry:
 		case ECONNREFUSED:
 		case EHOSTUNREACH:
 			currentaddress = nextaddress;
-			nextaddress = strchr(currentaddress, ',');
-			if (nextaddress)
-				*nextaddress++ = '\0';
+			if (currentaddress) {
+				nextaddress = strchr(currentaddress, ',');
+				if (nextaddress)
+					*nextaddress++ = '\0';
+			}
 			goto mount_retry;
 		case ENODEV:
 			fprintf(stderr,
