@@ -1703,7 +1703,7 @@ mount_retry:
 	}
 
 	if (parsed_info->verboseflag)
-		fprintf(stderr, "mount.cifs kernel mount options: %s\n",
+		fprintf(stderr, "mount.cifs kernel mount options: %s",
 			options);
 
 	if (parsed_info->got_password) {
