@@ -98,7 +98,7 @@
 #endif
 
 #define MOUNT_PASSWD_SIZE 128
-#define DOMAIN_SIZE 64
+#define MAX_DOMAIN_SIZE 64
 
 /*
  * value of the ver= option that gets passed to the kernel. Used to indicate
@@ -128,7 +128,7 @@ struct parsed_mount_info {
 	char share[MAX_SHARE_LEN + 1];
 	char prefix[PATH_MAX + 1];
 	char options[MAX_OPTIONS_LEN];
-	char domain[DOMAIN_SIZE + 1];
+	char domain[MAX_DOMAIN_SIZE + 1];
 	char username[MAX_USERNAME_SIZE + 1];
 	char password[MOUNT_PASSWD_SIZE + 1];
 	char addrlist[MAX_ADDR_LIST_LEN];
@@ -511,13 +511,27 @@ toggle_dac_capability(int writable, int enable)
 #endif /* HAVE_LIBCAP */
 #endif /* HAVE_LIBCAP_NG */
 
+/*
+ * Null terminate string at first '\n'
+ */
+static void null_terminate_endl(char* source)
+{
+	char* newline = strchr(source, '\n');
+	if (newline)
+		*newline = '\0';
+}
+
+
+
 static int open_cred_file(char *file_name,
 			  struct parsed_mount_info *parsed_info)
 {
 	char *line_buf;
-	char *temp_val, *newline;
+	char *temp_val;
 	FILE *fs = NULL;
-	int i, length;
+	int i;
+	const int line_buf_size = 4096;
+	const int min_non_white = 10;
 
 	i = toggle_dac_capability(0, 1);
 	if (i)
@@ -541,50 +555,35 @@ static int open_cred_file(char *file_name,
 		return i;
 	}
 
-	line_buf = (char *)malloc(4096);
+	line_buf = (char *)malloc(line_buf_size);
 	if (line_buf == NULL) {
 		fclose(fs);
 		return EX_SYSERR;
 	}
 
-	while (fgets(line_buf, 4096, fs)) {
-		/* parse line from credential file */
-
+	/* parse line from credentials file */
+	while (fgets(line_buf, line_buf_size, fs)) {
 		/* eat leading white space */
-		for (i = 0; i < 4086; i++) {
+		for (i = 0; i < line_buf_size - min_non_white + 1; i++) {
 			if ((line_buf[i] != ' ') && (line_buf[i] != '\t'))
 				break;
-			/* if whitespace - skip past it */
 		}
+		null_terminate_endl(line_buf);
 
-		/* NULL terminate at newline */
-		newline = strchr(line_buf + i, '\n');
-		if (newline)
-			*newline = '\0';
-
+		/* parse user */
 		if (strncasecmp("user", line_buf + i, 4) == 0) {
 			temp_val = strchr(line_buf + i, '=');
 			if (temp_val) {
 				/* go past equals sign */
 				temp_val++;
-				for (length = 0; length < 4087; length++) {
-					if ((temp_val[length] == '\n')
-					    || (temp_val[length] == '\0')) {
-						temp_val[length] = '\0';
-						break;
-					}
-				}
-				if (length > 4086) {
-					fprintf(stderr,
-						"mount.cifs failed due to malformed username in credentials file\n");
-					memset(line_buf, 0, 4096);
-					return EX_USAGE;
-				}
 				parsed_info->got_user = 1;
 				strlcpy(parsed_info->username, temp_val,
 					sizeof(parsed_info->username));
 			}
-		} else if (strncasecmp("pass", line_buf + i, 4) == 0) {
+		}
+
+		/* parse password */
+		else if (strncasecmp("pass", line_buf + i, 4) == 0) {
 			temp_val = strchr(line_buf + i, '=');
 			if (!temp_val)
 				continue;
@@ -592,7 +591,10 @@ static int open_cred_file(char *file_name,
 			i = set_password(parsed_info, temp_val);
 			if (i)
 				return i;
-		} else if (strncasecmp("dom", line_buf + i, 3) == 0) {
+		}
+
+		/* parse domain */
+		else if (strncasecmp("dom", line_buf + i, 3) == 0) {
 			temp_val = strchr(line_buf + i, '=');
 			if (temp_val) {
 				/* go past equals sign */
@@ -600,22 +602,6 @@ static int open_cred_file(char *file_name,
 				if (parsed_info->verboseflag)
 					fprintf(stderr, "\nDomain %s\n",
 						temp_val);
-
-				for (length = 0; length < DOMAIN_SIZE + 1;
-				     length++) {
-					if ((temp_val[length] == '\n')
-					    || (temp_val[length] == '\0')) {
-						temp_val[length] = '\0';
-						break;
-					}
-				}
-
-				if (length > DOMAIN_SIZE) {
-					fprintf(stderr,
-						"mount.cifs failed: domain in credentials file too long\n");
-					return EX_USAGE;
-				}
-
 				strlcpy(parsed_info->domain, temp_val,
 					sizeof(parsed_info->domain));
 			}
