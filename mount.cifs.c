@@ -121,6 +121,14 @@
  */
 #define CIFS_SETUID_FLAGS (MS_NOSUID|MS_NODEV)
 
+/*
+ * Values for parsing a credentials file.
+ */
+#define CRED_UNPARSEABLE 0
+#define CRED_USER 1
+#define CRED_PASS 2
+#define CRED_DOM 4
+
 /* struct for holding parsed mount info for use by privleged process */
 struct parsed_mount_info {
 	unsigned long flags;
@@ -511,20 +519,43 @@ toggle_dac_capability(int writable, int enable)
 #endif /* HAVE_LIBCAP */
 #endif /* HAVE_LIBCAP_NG */
 
-/*
- * Null terminate string at first '\n'
- */
-static void null_terminate_endl(char* source)
+static void null_terminate_endl(char *source)
 {
-	char* newline = strchr(source, '\n');
+	char *newline = strchr(source, '\n');
 	if (newline)
 		*newline = '\0';
 }
 
+/*
+ * Parse a line from the credentials file.  Changes target to first
+ * character after '=' on 'line' and returns the value type of the line
+ * Returns CRED_UNPARSEABLE on failure or if either parameter is NULL.
+ */
+static int parse_cred_line(char *line, char **target)
+{
+	if (line == NULL || target == NULL)
+		goto parsing_err;
 
+	/* position target at first char of value */
+	*target = strchr(line, '=');
+	if (!*target)
+		goto parsing_err;
+	*target += 1;
+
+	/* tell the caller which value target points to */
+	if (strncasecmp("user", line, 4) == 0)
+		return CRED_USER;
+	if (strncasecmp("pass", line, 4) == 0)
+		return CRED_PASS;
+	if (strncasecmp("dom", line, 3) == 0)
+		return CRED_DOM;
+
+parsing_err:
+	return CRED_UNPARSEABLE;
+}
 
 static int open_cred_file(char *file_name,
-			  struct parsed_mount_info *parsed_info)
+			struct parsed_mount_info *parsed_info)
 {
 	char *line_buf;
 	char *temp_val;
@@ -535,30 +566,29 @@ static int open_cred_file(char *file_name,
 
 	i = toggle_dac_capability(0, 1);
 	if (i)
-		return i;
+		goto return_i;
 
 	i = access(file_name, R_OK);
 	if (i) {
 		toggle_dac_capability(0, 0);
-		return i;
+		goto return_i;
 	}
 
 	fs = fopen(file_name, "r");
 	if (fs == NULL) {
 		toggle_dac_capability(0, 0);
-		return errno;
+		i = errno;
+		goto return_i;
 	}
 
 	i = toggle_dac_capability(0, 0);
-	if (i) {
-		fclose(fs);
-		return i;
-	}
+	if (i)
+		goto return_i;
 
 	line_buf = (char *)malloc(line_buf_size);
 	if (line_buf == NULL) {
-		fclose(fs);
-		return EX_SYSERR;
+		i = EX_SYSERR;
+		goto return_i;
 	}
 
 	/* parse line from credentials file */
@@ -570,47 +600,43 @@ static int open_cred_file(char *file_name,
 		}
 		null_terminate_endl(line_buf);
 
-		/* parse user */
-		if (strncasecmp("user", line_buf + i, 4) == 0) {
-			temp_val = strchr(line_buf + i, '=');
-			if (temp_val) {
-				/* go past equals sign */
-				temp_val++;
-				parsed_info->got_user = 1;
-				strlcpy(parsed_info->username, temp_val,
-					sizeof(parsed_info->username));
-			}
-		}
-
-		/* parse password */
-		else if (strncasecmp("pass", line_buf + i, 4) == 0) {
-			temp_val = strchr(line_buf + i, '=');
-			if (!temp_val)
-				continue;
-			++temp_val;
+		/* parse next token */
+		switch (parse_cred_line(line_buf + i, &temp_val)) {
+		case CRED_USER:
+			i = parse_username(temp_val, parsed_info);
+			if (i)
+				goto return_i;
+			break;
+		case CRED_PASS:
 			i = set_password(parsed_info, temp_val);
 			if (i)
-				return i;
+				goto return_i;
+			break;
+		case CRED_DOM:
+			if (parsed_info->verboseflag)
+				fprintf(stderr, "domain=%s\n",
+					temp_val);
+			strlcpy(parsed_info->domain, temp_val,
+				sizeof(parsed_info->domain));
+			break;
+		case CRED_UNPARSEABLE:
+			if (parsed_info->verboseflag)
+				fprintf(stderr,
+					"Credential formatted incorrectly: %s",
+					temp_val);
+			break;
 		}
-
-		/* parse domain */
-		else if (strncasecmp("dom", line_buf + i, 3) == 0) {
-			temp_val = strchr(line_buf + i, '=');
-			if (temp_val) {
-				/* go past equals sign */
-				temp_val++;
-				if (parsed_info->verboseflag)
-					fprintf(stderr, "\nDomain %s\n",
-						temp_val);
-				strlcpy(parsed_info->domain, temp_val,
-					sizeof(parsed_info->domain));
-			}
-		}
-
 	}
-	fclose(fs);
+	i = 0;
+return_i:
+	if (fs != NULL)
+		fclose(fs);
+
+	/* make sure passwords are scrubbed from memory */
+	if (line_buf != NULL)
+		memset(line_buf, 0, line_buf_size);
 	SAFE_FREE(line_buf);
-	return 0;
+	return i;
 }
 
 static int
