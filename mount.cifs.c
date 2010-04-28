@@ -308,9 +308,10 @@ static int parse_username(char *rawuser, struct parsed_mount_info *parsed_info)
 	/* everything after first % sign is a password */
 	password = strchr(rawuser, '%');
 	if (password) {
-		rc = set_password(parsed_info, password);
+		rc = set_password(parsed_info, password + 1);
 		if (rc)
 			return rc;
+		*password = '\0';
 	}
 
 	/* everything after first '/' or '\' is a username */
