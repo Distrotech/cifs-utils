@@ -1169,6 +1169,9 @@ static int parse_unc(const char *unc_name, struct parsed_mount_info *parsed_info
 	}
 
 	prepath = share + sharelen;
+	if (*prepath != '\0')
+		prepath++;
+
 	prepathlen = strlen(prepath);
 
 	if (prepathlen + 1 > sizeof(parsed_info->prefix)) {
@@ -1669,6 +1672,7 @@ int main(int argc, char **argv)
 		goto mount_exit;
 	}
 
+	/* lengths of different strings + slashes + trailing \0 */
 	dev_len = strnlen(parsed_info->host, sizeof(parsed_info->host)) +
 	    strnlen(parsed_info->share, sizeof(parsed_info->share)) +
 	    strnlen(parsed_info->prefix, sizeof(parsed_info->prefix)) +
@@ -1684,6 +1688,7 @@ int main(int argc, char **argv)
 	strlcat(dev_name, parsed_info->host, dev_len);
 	strlcat(dev_name, "/", dev_len);
 	strlcat(dev_name, parsed_info->share, dev_len);
+	strlcat(dev_name, "/", dev_len);
 	strlcat(dev_name, parsed_info->prefix, dev_len);
 
 	currentaddress = parsed_info->addrlist;
