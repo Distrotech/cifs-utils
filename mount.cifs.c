@@ -761,7 +761,11 @@ parse_options(const char *data, struct parsed_mount_info *parsed_info)
 					return EX_USAGE;
 				}
 			} else {
-				if (strnlen(value, 260) >= 260) {
+				/* domain/username%password */
+				const int max = MAX_DOMAIN_SIZE +
+						MAX_USERNAME_SIZE +
+						MOUNT_PASSWD_SIZE + 2;
+				if (strnlen(value, max + 1) >= max + 1) {
 					fprintf(stderr, "username too long\n");
 					return EX_USAGE;
 				}
