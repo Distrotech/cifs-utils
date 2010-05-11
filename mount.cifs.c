@@ -1,6 +1,6 @@
 /*
  * Mount helper utility for Linux CIFS VFS (virtual filesystem) client
- * Copyright (C) 2003,2008 Steve French  (sfrench@us.ibm.com)
+ * Copyright (C) 2003,2010 Steve French  (sfrench@us.ibm.com)
  * Copyright (C) 2008 Jeremy Allison (jra@samba.org)
  * Copyright (C) 2010 Jeff Layton (jlayton@samba.org)
  *
@@ -149,6 +149,7 @@ struct parsed_mount_info {
 
 const char *thisprogram;
 const char *cifs_fstype = "cifs";
+const char *smb2_fstype = "smb2";
 
 static int parse_unc(const char *unc_name, struct parsed_mount_info *parsed_info);
 
@@ -255,6 +256,52 @@ static int mount_cifs_usage(FILE * stream)
 	if (stream == stderr)
 		return EX_USAGE;
 	return 0;
+}
+
+static int mount_smb2_usage(FILE *stream)
+{
+	fprintf(stream, "\nUsage:  %s <remotetarget> <dir> -o <options>\n",
+		thisprogram);
+	fprintf(stream, "\nMount the remote target, specified as a UNC name,");
+	fprintf(stream, " to a local directory.\n\nOptions:\n");
+	fprintf(stream, "\tuser=<arg>\n\tpass=<arg>\n\tdom=<arg>\n");
+	fprintf(stream, "\nLess commonly used options:");
+	fprintf(stream,
+		"\n\tcredentials=<filename>,guest,perm,noperm,rw,ro,");
+	fprintf(stream,
+		"\n\tsep=<char>,iocharset=<codepage>,exec,noexec");
+	fprintf(stream,
+		"\n\tnolock,directio,sec=<authentication mechanism>,sign");
+	fprintf(stream,
+		"\n\tuid=<uid>,gid=<gid>,dir_mode=<mode>,file_mode=<mode>");
+	fprintf(stream, "\n\nRarely used options:");
+	fprintf(stream,
+		"\n\tport=<tcpport>,rsize=<size>,wsize=<size>,unc=<unc_name>,ip=<ip_address>,");
+	fprintf(stream,
+		"\n\tdev,nodev,hard,soft,intr,");
+	fprintf(stream,
+		"\n\tnointr,ignorecase,noacl,prefixpath=<path>,nobrl");
+	fprintf(stream,
+		"\n\nOptions are described in more detail in the manual page");
+	fprintf(stream, "\n\tman 8 mount.smb2\n");
+	fprintf(stream, "\nTo display the version number of the mount helper:");
+	fprintf(stream, "\n\tmount.smb2 -V\n");
+
+	if (stream == stderr)
+		return EX_USAGE;
+	return 0;
+}
+
+static int mount_usage(FILE *stream)
+{
+	int rc;
+
+	if (strcmp(thisprogram, "mount.smb2") == 0)
+		rc = mount_smb2_usage(stream);
+	else
+		rc = mount_cifs_usage(stream);
+
+	return rc;
 }
 
 /*
@@ -1287,7 +1334,7 @@ static int check_mtab(const char *progname, const char *devname,
 }
 
 static int
-add_mtab(char *devname, char *mountpoint, unsigned long flags)
+add_mtab(char *devname, char *mountpoint, unsigned long flags, const char *fstype)
 {
 	int rc = 0;
 	uid_t uid;
@@ -1346,7 +1393,7 @@ add_mtab(char *devname, char *mountpoint, unsigned long flags)
 
 	mountent.mnt_fsname = devname;
 	mountent.mnt_dir = mountpoint;
-	mountent.mnt_type = (char *)(void *)cifs_fstype;
+	mountent.mnt_type = (char *)(void *)fstype;
 	mountent.mnt_opts = (char *)calloc(MTAB_OPTIONS_LEN, 1);
 	if (mountent.mnt_opts) {
 		if (flags & MS_RDONLY)
@@ -1533,6 +1580,7 @@ int main(int argc, char **argv)
 	size_t dev_len;
 	struct parsed_mount_info *parsed_info = NULL;
 	pid_t pid;
+	const char *fstype;
 
 	rc = check_setuid();
 	if (rc)
@@ -1547,11 +1595,11 @@ int main(int argc, char **argv)
 	   textdomain(PACKAGE); */
 
 	if (!argc || !argv) {
-		rc = mount_cifs_usage(stderr);
+		rc = mount_usage(stderr);
 		goto mount_exit;
 	}
 
-	thisprogram = argv[0];
+	thisprogram = basename(argv[0]);
 	if (thisprogram == NULL)
 		thisprogram = "mount.cifs";
 
@@ -1573,7 +1621,7 @@ int main(int argc, char **argv)
 		switch (c) {
 		case '?':
 		case 'h':	/* help */
-			rc = mount_cifs_usage(stdout);
+			rc = mount_usage(stdout);
 			goto mount_exit;
 		case 'n':
 			++parsed_info->nomtab;
@@ -1602,13 +1650,13 @@ int main(int argc, char **argv)
 			break;
 		default:
 			fprintf(stderr, "unknown command-line option: %c\n", c);
-			rc = mount_cifs_usage(stderr);
+			rc = mount_usage(stderr);
 			goto mount_exit;
 		}
 	}
 
 	if (argc < 3 || argv[optind] == NULL || argv[optind + 1] == NULL) {
-		rc = mount_cifs_usage(stderr);
+		rc = mount_usage(stderr);
 		goto mount_exit;
 	}
 
@@ -1725,8 +1773,8 @@ mount_retry:
 	}
 
 	if (parsed_info->verboseflag)
-		fprintf(stderr, "mount.cifs kernel mount options: %s",
-			options);
+		fprintf(stderr, "%s kernel mount options: %s",
+			thisprogram, options);
 
 	if (parsed_info->got_password) {
 		/*
@@ -1746,8 +1794,13 @@ mount_retry:
 	if (rc)
 		goto mount_exit;
 
+	if (strcmp(thisprogram, "mount.smb2") == 0)
+		fstype = smb2_fstype;
+	else
+		fstype = cifs_fstype;
+
 	if (!parsed_info->fakemnt
-	    && mount(dev_name, ".", cifs_fstype, parsed_info->flags, options)) {
+	    && mount(dev_name, ".", fstype, parsed_info->flags, options)) {
 		switch (errno) {
 		case ECONNREFUSED:
 		case EHOSTUNREACH:
@@ -1760,7 +1813,7 @@ mount_retry:
 			goto mount_retry;
 		case ENODEV:
 			fprintf(stderr,
-				"mount error: cifs filesystem not supported by the system\n");
+				"mount error: %s filesystem not supported by the system\n", fstype);
 			break;
 		case ENXIO:
 			if (!already_uppercased &&
@@ -1776,14 +1829,14 @@ mount_retry:
 		fprintf(stderr, "mount error(%d): %s\n", errno,
 			strerror(errno));
 		fprintf(stderr,
-			"Refer to the mount.cifs(8) manual page (e.g. man "
-			"mount.cifs)\n");
+			"Refer to the %s(8) manual page (e.g. man "
+			"%s)\n", thisprogram, thisprogram);
 		rc = EX_FAIL;
 		goto mount_exit;
 	}
 
 	if (!parsed_info->nomtab)
-		rc = add_mtab(dev_name, mountpoint, parsed_info->flags);
+		rc = add_mtab(dev_name, mountpoint, parsed_info->flags, fstype);
 
 mount_exit:
 	if (parsed_info) {
