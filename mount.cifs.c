@@ -129,6 +129,38 @@
 #define CRED_PASS 2
 #define CRED_DOM 4
 
+/*
+ * Values for parsing command line options.
+ */
+#define OPT_ERROR       -1
+#define OPT_USERS       1
+#define OPT_USER        2
+#define OPT_USER_XATTR  3
+#define OPT_PASS        4
+#define OPT_SEC         5
+#define OPT_IP          6
+#define OPT_UNC         7
+#define OPT_CRED        8
+#define OPT_UID         9
+#define OPT_GID        10
+#define OPT_FMASK      11
+#define OPT_FILE_MODE  12
+#define OPT_DMASK      13
+#define OPT_DIR_MODE   14
+#define OPT_DOM        15
+#define OPT_NO_SUID    16
+#define OPT_SUID       17
+#define OPT_NO_DEV     18
+#define OPT_DEV        19
+#define OPT_NO_LOCK    20
+#define OPT_NO_EXEC    21
+#define OPT_EXEC       22
+#define OPT_GUEST      23
+#define OPT_RO         24
+#define OPT_RW         25
+#define OPT_REMOUNT    26
+
+
 /* struct for holding parsed mount info for use by privleged process */
 struct parsed_mount_info {
 	unsigned long flags;
@@ -742,17 +774,83 @@ get_pw_exit:
 	return rc;
 }
 
+/*
+ * Returns OPT_ERROR on unparsable token.
+ */
+static int parse_opt_token(const char *token)
+{
+	if (token == NULL)
+		return OPT_ERROR;
+
+	if (strncmp(token, "users", 5) == 0)
+		return OPT_USERS;
+	if (strncmp(token, "user_xattr", 10) == 0)
+		return OPT_USER_XATTR;
+	if (strncmp(token, "user", 4) == 0)
+		return OPT_USER;
+	if (strncmp(token, "pass", 4) == 0)
+		return OPT_PASS;
+	if (strncmp(token, "sec", 3) == 0)
+		return OPT_SEC;
+	if (strncmp(token, "ip", 2) == 0)
+		return OPT_IP;
+	if (strncmp(token, "unc", 3) == 0 ||
+		strncmp(token, "target", 6) == 0 ||
+		strncmp(token, "path", 4) == 0)
+		return OPT_UNC;
+	if (strncmp(token, "dom", 3) == 0 || strncmp(token, "workg", 5) == 0)
+		return OPT_DOM;
+	if (strncmp(token, "uid", 3) == 0)
+		return OPT_UID;
+	if (strncmp(token, "gid", 3) == 0)
+		return OPT_GID;
+	if (strncmp(token, "fmask", 5) == 0)
+		return OPT_FMASK;
+	if (strncmp(token, "file_mode", 9) == 0)
+		return OPT_FILE_MODE;
+	if (strncmp(token, "dmask", 5) == 0)
+		return OPT_DMASK;
+	if (strncmp(token, "dir_mode", 8) == 0)
+		return OPT_DIR_MODE;
+	if (strncmp(token, "nosuid", 6) == 0)
+		return OPT_NO_SUID;
+	if (strncmp(token, "suid", 4) == 0)
+		return OPT_SUID;
+	if (strncmp(token, "nodev", 5) == 0)
+		return OPT_NO_DEV;
+	if (strncmp(token, "nobrl", 5) == 0 || strncmp(token, "nolock", 6) == 0)
+		return OPT_NO_LOCK;
+	if (strncmp(token, "dev", 3) == 0)
+		return OPT_DEV;
+	if (strncmp(token, "noexec", 6) == 0)
+		return OPT_NO_EXEC;
+	if (strncmp(token, "exec", 4) == 0)
+		return OPT_EXEC;
+	if (strncmp(token, "guest", 5) == 0)
+		return OPT_GUEST;
+	if (strncmp(token, "ro", 2) == 0)
+		return OPT_RO;
+	if (strncmp(token, "rw", 2) == 0)
+		return OPT_RW;
+	if (strncmp(token, "remount", 7) == 0)
+		return OPT_REMOUNT;
+
+	return OPT_ERROR;
+}
+
 static int
 parse_options(const char *data, struct parsed_mount_info *parsed_info)
 {
-	char *value = NULL, *equals = NULL;
+	char *value = NULL;
+	char *equals = NULL;
 	char *next_keyword = NULL;
 	char *out = parsed_info->options;
 	unsigned long *filesys_flags = &parsed_info->flags;
 	int out_len = 0;
 	int word_len;
 	int rc = 0;
-	int got_uid = 0, got_gid = 0;
+	int got_uid = 0;
+	int got_gid = 0;
 	char user[32];
 	char group[32];
 
@@ -789,15 +887,15 @@ parse_options(const char *data, struct parsed_mount_info *parsed_info)
 			value = equals + 1;
 		}
 
-		/* FIXME: turn into a token parser? */
-		if (strncmp(data, "users", 5) == 0) {
+		switch(parse_opt_token(data)) {
+		case OPT_USERS:
 			if (!value || !*value) {
 				*filesys_flags |= MS_USERS;
 				goto nocopy;
 			}
-		} else if (strncmp(data, "user_xattr", 10) == 0) {
-			/* do nothing - need to skip so not parsed as user name */
-		} else if (strncmp(data, "user", 4) == 0) {
+			break;
+
+		case OPT_USER:
 			if (!value || !*value) {
 				if (data[4] == '\0') {
 					*filesys_flags |= MS_USER;
@@ -824,7 +922,8 @@ parse_options(const char *data, struct parsed_mount_info *parsed_info)
 				}
 				goto nocopy;
 			}
-		} else if (strncmp(data, "pass", 4) == 0) {
+
+		case OPT_PASS:
 			if (parsed_info->got_password) {
 				fprintf(stderr,
 					"password specified twice, ignoring second\n");
@@ -838,18 +937,21 @@ parse_options(const char *data, struct parsed_mount_info *parsed_info)
 			if (rc)
 				return rc;
 			goto nocopy;
-		} else if (strncmp(data, "sec", 3) == 0) {
+
+		case OPT_SEC:
 			if (value) {
 				if (!strncmp(value, "none", 4) ||
 				    !strncmp(value, "krb5", 4))
 					parsed_info->got_password = 1;
 			}
-		} else if (strncmp(data, "ip", 2) == 0) {
+			break;
+
+		case OPT_IP:
 			if (!value || !*value) {
 				fprintf(stderr,
-					"target ip address argument missing");
+					"target ip address argument missing\n");
 			} else if (strnlen(value, MAX_ADDRESS_LEN) <=
-				   MAX_ADDRESS_LEN) {
+				MAX_ADDRESS_LEN) {
 				if (parsed_info->verboseflag)
 					fprintf(stderr,
 						"ip address %s override specified\n",
@@ -857,23 +959,24 @@ parse_options(const char *data, struct parsed_mount_info *parsed_info)
 			} else {
 				fprintf(stderr, "ip address too long\n");
 				return EX_USAGE;
+
 			}
-		} else if ((strncmp(data, "unc", 3) == 0)
-			   || (strncmp(data, "target", 6) == 0)
-			   || (strncmp(data, "path", 4) == 0)) {
+			break;
+
+		/* unc || target || path */
+		case OPT_UNC:
 			if (!value || !*value) {
 				fprintf(stderr,
 					"invalid path to network resource\n");
-				return EX_USAGE;	/* needs_arg; */
+				return EX_USAGE;
 			}
 			rc = parse_unc(value, parsed_info);
 			if (rc)
 				return rc;
-		} else if ((strncmp(data, "dom" /* domain */ , 3) == 0)
-			   || (strncmp(data, "workg", 5) == 0)) {
-			/* note this allows for synonyms of "domain"
-			   such as "DOM" and "dom" and "workgroup"
-			   and "WORKGRP" etc. */
+			break;
+
+		/* dom || workgroup */
+		case OPT_DOM:
 			if (!value || !*value) {
 				fprintf(stderr, "CIFS: invalid domain name\n");
 				return EX_USAGE;
@@ -886,21 +989,23 @@ parse_options(const char *data, struct parsed_mount_info *parsed_info)
 			strlcpy(parsed_info->domain, value,
 				sizeof(parsed_info->domain));
 			goto nocopy;
-		} else if (strncmp(data, "cred", 4) == 0) {
-			if (value && *value) {
-				rc = open_cred_file(value, parsed_info);
-				if (rc) {
-					fprintf(stderr,
-						"error %d (%s) opening credential file %s\n",
-						rc, strerror(rc), value);
-					return rc;
-				}
-			} else {
+
+		case OPT_CRED:
+			if (!value || !*value) {
 				fprintf(stderr,
 					"invalid credential file name specified\n");
 				return EX_USAGE;
 			}
-		} else if (strncmp(data, "uid", 3) == 0) {
+			rc = open_cred_file(value, parsed_info);
+			if (rc) {
+				fprintf(stderr,
+					"error %d (%s) opening credential file %s\n",
+					rc, strerror(rc), value);
+				return rc;
+			}
+			break;
+
+		case OPT_UID:
 			if (value && *value) {
 				got_uid = 1;
 				if (!isdigit(*value)) {
@@ -914,12 +1019,13 @@ parse_options(const char *data, struct parsed_mount_info *parsed_info)
 					}
 					snprintf(user, sizeof(user), "%u",
 						 pw->pw_uid);
-				} else {
-					strlcpy(user, value, sizeof(user));
 				}
+				else
+					strlcpy(user, value, sizeof(user));
 			}
 			goto nocopy;
-		} else if (strncmp(data, "gid", 3) == 0) {
+
+		case OPT_GID:
 			if (value && *value) {
 				got_gid = 1;
 				if (!isdigit(*value)) {
@@ -933,14 +1039,19 @@ parse_options(const char *data, struct parsed_mount_info *parsed_info)
 					}
 					snprintf(group, sizeof(group), "%u",
 						 gr->gr_gid);
-				} else {
-					strlcpy(group, value, sizeof(group));
 				}
+				else
+					strlcpy(group, value, sizeof(group));
 			}
 			goto nocopy;
-			/* fmask and dmask synonyms for people used to smbfs syntax */
-		} else if (strcmp(data, "file_mode") == 0
-			   || strcmp(data, "fmask") == 0) {
+
+		/* fmask fall through to file_mode */
+		case OPT_FMASK:
+			fprintf(stderr,
+				"WARNING: CIFS mount option 'fmask' is\
+				 deprecated. Use 'file_mode' instead.\n");
+			data = "file_mode";	/* BB fix this */
+		case OPT_FILE_MODE:
 			if (!value || !*value) {
 				fprintf(stderr,
 					"Option '%s' requires a numerical argument\n",
@@ -948,19 +1059,19 @@ parse_options(const char *data, struct parsed_mount_info *parsed_info)
 				return EX_USAGE;
 			}
 
-			if (value[0] != '0') {
+			if (value[0] != '0')
 				fprintf(stderr,
 					"WARNING: '%s' not expressed in octal.\n",
 					data);
-			}
+			break;
 
-			if (strcmp(data, "fmask") == 0) {
-				fprintf(stderr,
-					"WARNING: CIFS mount option 'fmask' is deprecated. Use 'file_mode' instead.\n");
-				data = "file_mode";	/* BB fix this */
-			}
-		} else if (strcmp(data, "dir_mode") == 0
-			   || strcmp(data, "dmask") == 0) {
+		/* dmask falls through to dir_mode */
+		case OPT_DMASK:
+			fprintf(stderr,
+				"WARNING: CIFS mount option 'dmask' is\
+				 deprecated. Use 'dir_mode' instead.\n");
+			data = "dir_mode";
+		case OPT_DIR_MODE:
 			if (!value || !*value) {
 				fprintf(stderr,
 					"Option '%s' requires a numerical argument\n",
@@ -968,49 +1079,53 @@ parse_options(const char *data, struct parsed_mount_info *parsed_info)
 				return EX_USAGE;
 			}
 
-			if (value[0] != '0') {
+			if (value[0] != '0')
 				fprintf(stderr,
 					"WARNING: '%s' not expressed in octal.\n",
 					data);
-			}
+			break;
 
-			if (strcmp(data, "dmask") == 0) {
-				fprintf(stderr,
-					"WARNING: CIFS mount option 'dmask' is deprecated. Use 'dir_mode' instead.\n");
-				data = "dir_mode";
-			}
-			/* the following eight mount options should be
-			   stripped out from what is passed into the kernel
-			   since these eight options are best passed as the
-			   mount flags rather than redundantly to the kernel 
-			   and could generate spurious warnings depending on the
-			   level of the corresponding cifs vfs kernel code */
-		} else if (strncmp(data, "nosuid", 6) == 0) {
+		/* the following mount options should be
+		   stripped out from what is passed into the kernel
+		   since these options are best passed as the
+		   mount flags rather than redundantly to the kernel
+		   and could generate spurious warnings depending on the
+		   level of the corresponding cifs vfs kernel code */
+		case OPT_NO_SUID:
 			*filesys_flags |= MS_NOSUID;
-		} else if (strncmp(data, "suid", 4) == 0) {
+			break;
+		case OPT_SUID:
 			*filesys_flags &= ~MS_NOSUID;
-		} else if (strncmp(data, "nodev", 5) == 0) {
+			break;
+		case OPT_NO_DEV:
 			*filesys_flags |= MS_NODEV;
-		} else if ((strncmp(data, "nobrl", 5) == 0) ||
-			   (strncmp(data, "nolock", 6) == 0)) {
+			break;
+		/* nolock || nobrl */
+		case OPT_NO_LOCK:
 			*filesys_flags &= ~MS_MANDLOCK;
-		} else if (strncmp(data, "dev", 3) == 0) {
+			break;
+		case OPT_DEV:
 			*filesys_flags &= ~MS_NODEV;
-		} else if (strncmp(data, "noexec", 6) == 0) {
+			break;
+		case OPT_NO_EXEC:
 			*filesys_flags |= MS_NOEXEC;
-		} else if (strncmp(data, "exec", 4) == 0) {
+			break;
+		case OPT_EXEC:
 			*filesys_flags &= ~MS_NOEXEC;
-		} else if (strncmp(data, "guest", 5) == 0) {
+			break;
+		case OPT_GUEST:
 			parsed_info->got_user = 1;
 			parsed_info->got_password = 1;
-		} else if (strncmp(data, "ro", 2) == 0) {
+			break;
+		case OPT_RO:
 			*filesys_flags |= MS_RDONLY;
 			goto nocopy;
-		} else if (strncmp(data, "rw", 2) == 0) {
+		case OPT_RW:
 			*filesys_flags &= ~MS_RDONLY;
 			goto nocopy;
-		} else if (strncmp(data, "remount", 7) == 0) {
+		case OPT_REMOUNT:
 			*filesys_flags |= MS_REMOUNT;
+			break;
 		}
 
 		/* check size before copying option to buffer */
