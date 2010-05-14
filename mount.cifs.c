@@ -125,9 +125,9 @@
  * Values for parsing a credentials file.
  */
 #define CRED_UNPARSEABLE 0
-#define CRED_USER 1
-#define CRED_PASS 2
-#define CRED_DOM 4
+#define CRED_USER        1
+#define CRED_PASS        2
+#define CRED_DOM         4
 
 /*
  * Values for parsing command line options.
