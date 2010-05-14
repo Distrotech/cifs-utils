@@ -606,7 +606,7 @@ static int open_cred_file(char *file_name,
 			struct parsed_mount_info *parsed_info)
 {
 	char *line_buf;
-	char *temp_val;
+	char *temp_val = NULL;
 	FILE *fs = NULL;
 	int i;
 	const int line_buf_size = 4096;
@@ -669,9 +669,9 @@ static int open_cred_file(char *file_name,
 			break;
 		case CRED_UNPARSEABLE:
 			if (parsed_info->verboseflag)
-				fprintf(stderr,
-					"Credential formatted incorrectly: %s",
-					temp_val);
+				fprintf(stderr, "Credential formatted "
+					"incorrectly: %s\n",
+					temp_val ? temp_val : "(null)");
 			break;
 		}
 	}
