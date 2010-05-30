@@ -800,6 +800,8 @@ static int parse_opt_token(const char *token)
 		return OPT_UNC;
 	if (strncmp(token, "dom", 3) == 0 || strncmp(token, "workg", 5) == 0)
 		return OPT_DOM;
+	if (strncmp(token, "cred", 4) == 0)
+		return OPT_CRED;
 	if (strncmp(token, "uid", 3) == 0)
 		return OPT_UID;
 	if (strncmp(token, "gid", 3) == 0)
