@@ -812,7 +812,7 @@ static int parse_opt_token(const char *token)
 		return OPT_FILE_MODE;
 	if (strncmp(token, "dmask", 5) == 0)
 		return OPT_DMASK;
-	if (strncmp(token, "dir_mode", 8) == 0)
+	if (strncmp(token, "dir_mode", 4) == 0 || strncmp(token, "dirm", 4) == 0)
 		return OPT_DIR_MODE;
 	if (strncmp(token, "nosuid", 6) == 0)
 		return OPT_NO_SUID;
