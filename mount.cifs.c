@@ -1953,7 +1953,7 @@ mount_retry:
 	}
 
 	if (!parsed_info->nomtab)
-		rc = add_mtab(dev_name, mountpoint, parsed_info->flags, fstype);
+		rc = add_mtab(orig_dev, mountpoint, parsed_info->flags, fstype);
 
 mount_exit:
 	if (parsed_info) {
