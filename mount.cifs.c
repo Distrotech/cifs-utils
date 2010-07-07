@@ -41,7 +41,7 @@
 #include <mntent.h>
 #include <fcntl.h>
 #include <limits.h>
-#include <fstab.h>
+#include <paths.h>
 #include <sys/mman.h>
 #include <sys/wait.h>
 #ifdef HAVE_LIBCAP_NG
@@ -212,9 +212,9 @@ check_fstab(const char *progname, const char *mountpoint, const char *devname,
 	struct mntent *mnt;
 
 	/* make sure this mount is listed in /etc/fstab */
-	fstab = setmntent(_PATH_FSTAB, "r");
+	fstab = setmntent(_PATH_MNTTAB, "r");
 	if (!fstab) {
-		fprintf(stderr, "Couldn't open %s for reading!\n", _PATH_FSTAB);
+		fprintf(stderr, "Couldn't open %s for reading!\n", _PATH_MNTTAB);
 		return EX_FILEIO;
 	}
 
@@ -226,7 +226,7 @@ check_fstab(const char *progname, const char *mountpoint, const char *devname,
 
 	if (mnt == NULL || strcmp(mnt->mnt_fsname, devname)) {
 		fprintf(stderr, "%s: permission denied: no match for "
-			"%s found in %s\n", progname, mountpoint, _PATH_FSTAB);
+			"%s found in %s\n", progname, mountpoint, _PATH_MNTTAB);
 		return EX_USAGE;
 	}
 
