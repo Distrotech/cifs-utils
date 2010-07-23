@@ -22,7 +22,7 @@
 cifs.upcall \- Userspace upcall helper for Common Internet File System (CIFS)
 .SH "SYNOPSIS"
 .HP \w'\ 'u
-cifs\&.upcall [\-\-trust\-dns|\-t] [\-\-version|\-v] {keyid}
+cifs\&.upcall [\-\-trust\-dns|\-t] [\-\-version|\-v] [\-\-legacy\-uid|\-l] {keyid}
 .SH "DESCRIPTION"
 .PP
 This tool is part of the cifs-utils suite\&.
@@ -43,6 +43,13 @@ This option is deprecated and is currently ignored\&.
 With krb5 upcalls, the name used as the host portion of the service principal defaults to the hostname portion of the UNC\&. This option allows the upcall program to reverse resolve the network address of the server in order to get the hostname\&.
 .sp
 This is less secure than not trusting DNS\&. When using this option, it\'s possible that an attacker could get control of DNS and trick the client into mounting a different server altogether\&. It\'s preferable to instead add server principals to the KDC for every possible hostname, but this option exists for cases where that isn\'t possible\&. The default is to not trust reverse hostname lookups in this fashion\&.
+.RE
+.PP
+\-\-legacy\-uid|\-l
+.RS 4
+Traditionally, the kernel has sent only a single uid= parameter to the upcall for the SPNEGO upcall that\'s used to determine what user's credential cache to use. This parameter is affected by the uid= mount option, which also governs the ownership of files on the mount\&.
+.sp
+Newer kernels send a creduid= option as well, which contains what uid it thinks actually owns the credentials that it\'s looking for\&. At mount time, this is generally set to the real uid of the user doing the mount. For multisession mounts, it's set to the fsuid of the mount user. Set this option if you want cifs.upcall to use the older uid= parameter instead of the creduid= parameter\&.
 .RE
 .PP
 \-\-version|\-v

@@ -389,6 +389,7 @@ handle_krb5_mech(const char *oid, const char *principal, DATA_BLOB * secblob,
 #define DKD_HAVE_IP		0x8
 #define DKD_HAVE_UID		0x10
 #define DKD_HAVE_PID		0x20
+#define DKD_HAVE_CREDUID	0x40
 #define DKD_MUSTHAVE_SET (DKD_HAVE_HOSTNAME|DKD_HAVE_VERSION|DKD_HAVE_SEC)
 
 struct decoded_args {
@@ -396,6 +397,7 @@ struct decoded_args {
 	char *hostname;
 	char *ip;
 	uid_t uid;
+	uid_t creduid;
 	pid_t pid;
 	sectype_t sec;
 };
@@ -460,6 +462,16 @@ decode_key_description(const char *desc, struct decoded_args *arg)
 				return 1;
 			} else {
 				retval |= DKD_HAVE_UID;
+			}
+		} else if (strncmp(tkn, "creduid=", 8) == 0) {
+			errno = 0;
+			arg->creduid = strtol(tkn + 8, NULL, 16);
+			if (errno != 0) {
+				syslog(LOG_ERR, "Invalid creduid format: %s",
+				       strerror(errno));
+				return 1;
+			} else {
+				retval |= DKD_HAVE_CREDUID;
 			}
 		} else if (strncmp(tkn, "ver=", 4) == 0) {	/* if version */
 			errno = 0;
@@ -584,12 +596,13 @@ static int ip_to_fqdn(const char *addrstr, char *host, size_t hostlen)
 
 static void usage(void)
 {
-	syslog(LOG_INFO, "Usage: %s [-t] [-v] key_serial", prog);
-	fprintf(stderr, "Usage: %s [-t] [-v] key_serial\n", prog);
+	syslog(LOG_INFO, "Usage: %s [-t] [-v] [-l] key_serial", prog);
+	fprintf(stderr, "Usage: %s [-t] [-v] [-l] key_serial\n", prog);
 }
 
 const struct option long_options[] = {
 	{"trust-dns", 0, NULL, 't'},
+	{"legacy-uid", 0, NULL, 'l'},
 	{"version", 0, NULL, 'v'},
 	{NULL, 0, NULL, 0}
 };
@@ -603,7 +616,7 @@ int main(const int argc, char *const argv[])
 	size_t datalen;
 	unsigned int have;
 	long rc = 1;
-	int c, try_dns = 0;
+	int c, try_dns = 0, legacy_uid = 0;
 	char *buf, *princ = NULL, *ccname = NULL;
 	char hostbuf[NI_MAXHOST], *host;
 	struct decoded_args arg = { };
@@ -620,6 +633,9 @@ int main(const int argc, char *const argv[])
 			break;
 		case 't':
 			try_dns++;
+			break;
+		case 'l':
+			legacy_uid++;
 			break;
 		case 'v':
 			printf("version: %s\n", VERSION);
@@ -677,13 +693,19 @@ int main(const int argc, char *const argv[])
 		goto out;
 	}
 
-	if (have & DKD_HAVE_UID) {
+	if (!legacy_uid && (have & DKD_HAVE_CREDUID)) {
+		rc = setuid(arg.creduid);
+		if (rc == -1) {
+			syslog(LOG_ERR, "setuid: %s", strerror(errno));
+			goto out;
+		}
+		ccname = find_krb5_cc(CIFS_DEFAULT_KRB5_DIR, arg.creduid);
+	} else if (have & DKD_HAVE_UID) {
 		rc = setuid(arg.uid);
 		if (rc == -1) {
 			syslog(LOG_ERR, "setuid: %s", strerror(errno));
 			goto out;
 		}
-
 		ccname = find_krb5_cc(CIFS_DEFAULT_KRB5_DIR, arg.uid);
 	}
 
