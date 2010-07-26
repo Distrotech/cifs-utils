@@ -707,6 +707,11 @@ int main(const int argc, char *const argv[])
 			goto out;
 		}
 		ccname = find_krb5_cc(CIFS_DEFAULT_KRB5_DIR, arg.uid);
+	} else {
+		/* no uid= or creduid= parm -- something is wrong */
+		syslog(LOG_ERR, "No uid= or creduid= parm specified");
+		rc = 1;
+		goto out;
 	}
 
 	host = arg.hostname;
