@@ -1,4 +1,4 @@
-AM_CFLAGS = -Wall
+AM_CFLAGS = -Wall -Wextra
 ACLOCAL_AMFLAGS = -I aclocal
 
 root_sbindir = "/sbin"
