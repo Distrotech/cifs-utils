@@ -258,7 +258,7 @@ cifs_krb5_get_req(const char *principal, const char *ccname,
 	krb5_keyblock *tokb;
 	krb5_context context;
 	krb5_ccache ccache;
-	krb5_creds in_creds = { }, *out_creds;
+	krb5_creds in_creds, *out_creds;
 	krb5_data apreq_pkt, in_data;
 	krb5_auth_context auth_context = NULL;
 
@@ -274,6 +274,8 @@ cifs_krb5_get_req(const char *principal, const char *ccname,
 		       __func__, ccname);
 		goto out_free_context;
 	}
+
+	memset(&in_creds, 0, sizeof(in_creds));
 
 	ret = krb5_cc_get_principal(context, ccache, &in_creds.client);
 	if (ret) {
@@ -619,7 +621,7 @@ int main(const int argc, char *const argv[])
 	int c, try_dns = 0, legacy_uid = 0;
 	char *buf, *princ = NULL, *ccname = NULL;
 	char hostbuf[NI_MAXHOST], *host;
-	struct decoded_args arg = { };
+	struct decoded_args arg;
 	const char *oid;
 
 	hostbuf[0] = '\0';
@@ -676,6 +678,8 @@ int main(const int argc, char *const argv[])
 		rc = cifs_resolver(key, buf);
 		goto out;
 	}
+
+	memset(&arg, 0, sizeof(arg));
 
 	have = decode_key_description(buf, &arg);
 	SAFE_FREE(buf);
