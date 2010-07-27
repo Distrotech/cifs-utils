@@ -389,6 +389,13 @@ wsize=\fIarg\fR
 default network write size (default 57344) maximum wsize currently allowed by CIFS is 57344 (fourteen 4096 byte pages)
 .RE
 .PP
+fsc
+.RS 4
+Enable local disk caching using FS-Cache for CIFS\&. This option could be useful to improve performance on a slow link, heavily loaded server and/or network where reading from the disk is faster than reading from the server (over the network)\&. This could also impact the scalability positively as the number of calls to the server are reduced\&. But, be warned that local caching is not suitable for all workloads, for e.g., read-once type workloads\&. So, you need to consider carefully the situation/workload before using this option\&. Currently, local disk caching is enabled for CIFS files opened as read-only\&.
+.sp
+NOTE: This feature is available only in the recent kernels that have been built with the kernel config option CONFIG_CIFS_FSCACHE. You also need to have cachefilesd daemon installed and running to make the cache operational\&.
+.RE
+.PP
 \-\-verbose
 .RS 4
 Print additional debugging information for the mount\&. Note that this parameter must be specified before the \-o\&. For example:
