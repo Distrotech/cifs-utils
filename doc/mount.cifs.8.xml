@@ -546,9 +546,12 @@ permissions in memory that can't be stored on the server. This information can d
 		are reduced. But, be warned that local caching is not suitable
 		for all workloads, for e.g., read-once type workloads. So
 		you need to consider carefully the situation/workload before
-		using this option.
-		NOTE: You also need to have cachefilesd daemon installed and
-		running to make the cache operational.
+		using this option. Currently, local disk caching is enabled
+		for CIFS files opened as read-only.
+		NOTE: This feature is available only in the recent kernels
+		that have been built with the kernel config option
+		CONFIG_CIFS_FSCACHE. You also need to have cachefilesd daemon
+		installed and running to make the cache operational.
                 </para></listitem>
 	</varlistentry>
 	 <varlistentry>
