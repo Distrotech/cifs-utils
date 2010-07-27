@@ -133,6 +133,7 @@
  * Values for parsing command line options.
  */
 #define OPT_ERROR       -1
+#define OPT_IGNORE      0
 #define OPT_USERS       1
 #define OPT_USER        2
 #define OPT_USER_XATTR  3
@@ -836,6 +837,8 @@ static int parse_opt_token(const char *token)
 		return OPT_RW;
 	if (strncmp(token, "remount", 7) == 0)
 		return OPT_REMOUNT;
+	if (strncmp(token, "_netdev", 7) == 0)
+		return OPT_IGNORE;
 
 	return OPT_ERROR;
 }
@@ -1128,6 +1131,8 @@ parse_options(const char *data, struct parsed_mount_info *parsed_info)
 		case OPT_REMOUNT:
 			*filesys_flags |= MS_REMOUNT;
 			break;
+		case OPT_IGNORE:
+			goto nocopy;
 		}
 
 		/* check size before copying option to buffer */
