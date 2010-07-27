@@ -141,7 +141,7 @@ print the data_blob as hex string
 **/
 _PUBLIC_ char *data_blob_hex_string_lower(TALLOC_CTX *mem_ctx, const DATA_BLOB *blob)
 {
-	int i;
+	unsigned int i;
 	char *hex_string;
 
 	hex_string = talloc_array(mem_ctx, char, (blob->length*2)+1);
@@ -161,7 +161,7 @@ _PUBLIC_ char *data_blob_hex_string_lower(TALLOC_CTX *mem_ctx, const DATA_BLOB *
 
 _PUBLIC_ char *data_blob_hex_string_upper(TALLOC_CTX *mem_ctx, const DATA_BLOB *blob)
 {
-	int i;
+	unsigned int i;
 	char *hex_string;
 
 	hex_string = talloc_array(mem_ctx, char, (blob->length*2)+1);
