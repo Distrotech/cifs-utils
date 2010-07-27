@@ -160,6 +160,8 @@
 #define OPT_RO         24
 #define OPT_RW         25
 #define OPT_REMOUNT    26
+#define OPT_MAND       27
+#define OPT_NOMAND     28
 
 
 /* struct for holding parsed mount info for use by privleged process */
@@ -823,6 +825,10 @@ static int parse_opt_token(const char *token)
 		return OPT_NO_DEV;
 	if (strncmp(token, "nobrl", 5) == 0 || strncmp(token, "nolock", 6) == 0)
 		return OPT_NO_LOCK;
+	if (strncmp(token, "mand", 4) == 0)
+		return OPT_MAND;
+	if (strncmp(token, "nomand", 6) == 0)
+		return OPT_NOMAND;
 	if (strncmp(token, "dev", 3) == 0)
 		return OPT_DEV;
 	if (strncmp(token, "noexec", 6) == 0)
@@ -1109,6 +1115,12 @@ parse_options(const char *data, struct parsed_mount_info *parsed_info)
 		case OPT_NO_LOCK:
 			*filesys_flags &= ~MS_MANDLOCK;
 			break;
+		case OPT_MAND:
+			*filesys_flags |= MS_MANDLOCK;
+			goto nocopy;
+		case OPT_NOMAND:
+			*filesys_flags &= ~MS_MANDLOCK;
+			goto nocopy;
 		case OPT_DEV:
 			*filesys_flags &= ~MS_NODEV;
 			break;
@@ -1734,8 +1746,6 @@ int main(int argc, char **argv)
 				strerror(errno));
 		return EX_SYSERR;
 	}
-
-	parsed_info->flags = MS_MANDLOCK;
 
 	/* add sharename in opts string as unc= parm */
 	while ((c = getopt_long(argc, argv, "?fhno:rvVw",
