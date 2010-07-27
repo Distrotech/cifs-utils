@@ -51,12 +51,12 @@ static int lockfile_fd = -1;
 static int signals_have_been_setup = 0;
 
 static void
-handler (int sig) {
+handler (int sig __attribute__((unused))) {
      exit(EX_USER);
 }
 
 static void
-setlkw_timeout (int sig) {
+setlkw_timeout (int sig __attribute__((unused))) {
      /* nothing, fcntl will fail anyway */
 }
 
