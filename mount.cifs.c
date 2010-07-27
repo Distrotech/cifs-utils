@@ -268,7 +268,7 @@ static int mount_cifs_usage(FILE * stream)
 	fprintf(stream,
 		"\n\tmapchars,nomapchars,nolock,servernetbiosname=<SRV_RFC1001NAME>");
 	fprintf(stream,
-		"\n\tdirectio,nounix,cifsacl,sec=<authentication mechanism>,sign");
+		"\n\tdirectio,nounix,cifsacl,sec=<authentication mechanism>,sign,fsc");
 	fprintf(stream,
 		"\n\nOptions not needed for servers supporting CIFS Unix extensions");
 	fprintf(stream,
