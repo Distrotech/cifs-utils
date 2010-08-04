@@ -1554,16 +1554,16 @@ add_mtab(char *devname, char *mountpoint, unsigned long flags, const char *fstyp
 	mountent.mnt_freq = 0;
 	mountent.mnt_passno = 0;
 	rc = addmntent(pmntfile, &mountent);
+	if (rc) {
+		fprintf(stderr, "unable to add mount entry to mtab\n");
+		rc = EX_FILEIO;
+	}
 	endmntent(pmntfile);
 	unlock_mtab();
 	SAFE_FREE(mountent.mnt_opts);
 add_mtab_exit:
 	toggle_dac_capability(1, 0);
 	sigprocmask(SIG_SETMASK, &oldmask, NULL);
-	if (rc) {
-		fprintf(stderr, "unable to add mount entry to mtab\n");
-		rc = EX_FILEIO;
-	}
 
 	return rc;
 }
