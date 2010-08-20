@@ -56,6 +56,7 @@
 #endif /* HAVE_LIBCAP_NG */
 #include "mount.h"
 #include "util.h"
+#include "resolve_host.h"
 
 #ifndef MS_MOVE 
 #define MS_MOVE 8192 
@@ -86,12 +87,6 @@
 
 /* max length of username (somewhat made up here) */
 #define MAX_USERNAME_SIZE 32
-
-/* currently maximum length of IPv6 address string */
-#define MAX_ADDRESS_LEN INET6_ADDRSTRLEN
-
-/* limit list of addresses to 16 max-size addrs */
-#define MAX_ADDR_LIST_LEN ((MAX_ADDRESS_LEN + 1) * 16)
 
 #ifndef SAFE_FREE
 #define SAFE_FREE(x) do { if ((x) != NULL) {free(x); x = NULL; } } while (0)
@@ -1207,90 +1202,6 @@ nocopy:
 	return 0;
 }
 
-/*
- * resolve "host" portion of parsed info to comma-separated list of
- * address(es)
- */
-static int resolve_host(struct parsed_mount_info *parsed_info)
-{
-	int rc;
-	/* 10 for max width of decimal scopeid */
-	char tmpbuf[NI_MAXHOST + 1 + 10 + 1];
-	const char *ipaddr;
-	size_t len;
-	struct addrinfo *addrlist, *addr;
-	struct sockaddr_in *sin;
-	struct sockaddr_in6 *sin6;
-
-	rc = getaddrinfo(parsed_info->host, NULL, NULL, &addrlist);
-	if (rc != 0) {
-		fprintf(stderr, "mount error: could not resolve address for "
-			"%s: %s\n", parsed_info->host,
-			rc == EAI_SYSTEM ? strerror(errno) : gai_strerror(rc));
-		/* FIXME: return better error based on rc? */
-		return EX_USAGE;
-	}
-
-	addr = addrlist;
-	while (addr) {
-		/* skip non-TCP entries */
-		if (addr->ai_socktype != SOCK_STREAM ||
-		    addr->ai_protocol != IPPROTO_TCP) {
-			addr = addr->ai_next;
-			continue;
-		}
-
-		switch (addr->ai_addr->sa_family) {
-		case AF_INET6:
-			sin6 = (struct sockaddr_in6 *)addr->ai_addr;
-			ipaddr = inet_ntop(AF_INET6, &sin6->sin6_addr, tmpbuf,
-					   sizeof(tmpbuf));
-			if (!ipaddr) {
-				rc = EX_SYSERR;
-				fprintf(stderr,
-					"mount error: problem parsing address "
-					"list: %s\n", strerror(errno));
-				goto resolve_host_out;
-			}
-
-			if (sin6->sin6_scope_id) {
-				len = strnlen(tmpbuf, sizeof(tmpbuf));
-				ipaddr = tmpbuf + len;
-				snprintf(tmpbuf, sizeof(tmpbuf) - len, "%%%u",
-					 sin6->sin6_scope_id);
-			}
-			break;
-		case AF_INET:
-			sin = (struct sockaddr_in *)addr->ai_addr;
-			ipaddr = inet_ntop(AF_INET, &sin->sin_addr, tmpbuf,
-					   sizeof(tmpbuf));
-			if (!ipaddr) {
-				rc = EX_SYSERR;
-				fprintf(stderr,
-					"mount error: problem parsing address "
-					"list: %s\n", strerror(errno));
-				goto resolve_host_out;
-			}
-
-			break;
-		default:
-			addr = addr->ai_next;
-			continue;
-		}
-
-		if (parsed_info->addrlist[0] != '\0')
-			strlcat(parsed_info->addrlist, ",",
-				sizeof(parsed_info->addrlist));
-		strlcat(parsed_info->addrlist, tmpbuf,
-			sizeof(parsed_info->addrlist));
-		addr = addr->ai_next;
-	}
-
-resolve_host_out:
-	freeaddrinfo(addrlist);
-	return rc;
-}
-
 static int parse_unc(const char *unc_name, struct parsed_mount_info *parsed_info)
 {
 	int length = strnlen(unc_name, MAX_UNC_LEN);
@@ -1645,9 +1556,19 @@ assemble_mountinfo(struct parsed_mount_info *parsed_info,
 	if (rc)
 		goto assemble_exit;
 
-	rc = resolve_host(parsed_info);
-	if (rc)
+	rc = resolve_host(parsed_info->host, parsed_info->addrlist);
+	switch (rc) {
+	case EX_USAGE:
+		fprintf(stderr, "mount error: could not resolve address for "
+			"%s: %s\n", parsed_info->host,
+			rc == EAI_SYSTEM ? strerror(errno) : gai_strerror(rc));
 		goto assemble_exit;
+
+	case EX_SYSERR:
+		fprintf(stderr, "mount error: problem parsing address "
+			"list: %s\n", strerror(errno));
+		goto assemble_exit;
+	}
 
 	if (!parsed_info->got_user) {
 		/*

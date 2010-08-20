@@ -3,7 +3,7 @@ ACLOCAL_AMFLAGS = -I aclocal
 
 root_sbindir = "/sbin"
 root_sbin_PROGRAMS = mount.cifs
-mount_cifs_SOURCES = mount.cifs.c mtab.c util.c
+mount_cifs_SOURCES = mount.cifs.c mtab.c resolve_host.c util.c
 mount_cifs_LDADD = $(LIBCAP) $(CAPNG_LDADD)
 
 man_MANS = mount.cifs.8
