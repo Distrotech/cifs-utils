@@ -16,12 +16,18 @@ AC_ARG_ENABLE(cifsupcall,
 	enable_cifsupcall=$enableval,
 	enable_cifsupcall="maybe")
 
+AC_ARG_ENABLE(cifscreds,
+	[AC_HELP_STRING([--enable-cifscreds],
+			[Create cifscreds utility @<:@default=no@:>@])],
+	enable_cifscreds=$enableval,
+	enable_cifscreds="no")
+
 # Checks for programs.
 AC_PROG_CC
 AC_GNU_SOURCE
 
 # Checks for header files.
-AC_CHECK_HEADERS([arpa/inet.h fcntl.h inttypes.h limits.h mntent.h netdb.h stddef.h stdint.h stdlib.h string.h strings.h sys/mount.h sys/param.h sys/socket.h sys/time.h syslog.h unistd.h], , [AC_MSG_ERROR([necessary header(s) not found])])
+AC_CHECK_HEADERS([arpa/inet.h ctype.h fcntl.h inttypes.h limits.h mntent.h netdb.h stddef.h stdint.h stdlib.h string.h strings.h sys/mount.h sys/param.h sys/socket.h sys/time.h syslog.h unistd.h], , [AC_MSG_ERROR([necessary header(s) not found])])
 
 if test $enable_cifsupcall != "no"; then
 	AC_CHECK_HEADERS([krb5.h krb5/krb5.h])
@@ -82,6 +88,10 @@ if test $enable_cifsupcall != "no"; then
 	AC_SUBST(KRB5_LDADD)
 fi
 
+if test $enable_cifscreds = "yes"; then
+	AC_CHECK_HEADERS([keyutils.h], , [AC_MSG_ERROR([keyutils.h not found, consider installing keyutils-libs-devel.])])
+fi
+
 # Checks for typedefs, structures, and compiler characteristics.
 AC_HEADER_STDBOOL
 AC_TYPE_UID_T
@@ -98,7 +108,7 @@ AC_FUNC_REALLOC
 AC_FUNC_STRNLEN
 
 # check for required functions
-AC_CHECK_FUNCS([alarm atexit endpwent getmntent getpass gettimeofday inet_ntop memset realpath setenv strchr strdup strerror strncasecmp strndup strpbrk strrchr strstr strtol strtoul uname], , [AC_MSG_ERROR([necessary functions(s) not found])])
+AC_CHECK_FUNCS([alarm atexit endpwent getmntent getpass gettimeofday inet_ntop memset realpath setenv strchr strcmp strdup strerror strncasecmp strndup strpbrk strrchr strstr strtol strtoul tolower uname], , [AC_MSG_ERROR([necessary functions(s) not found])])
 
 # ugly, but I'm not sure how to check for functions in a library that's not in $LIBS
 cu_saved_libs=$LIBS
@@ -117,6 +127,7 @@ fi
 LIBS=$cu_saved_libs
 
 AM_CONDITIONAL(CONFIG_CIFSUPCALL, [test "$enable_cifsupcall" != "no"])
+AM_CONDITIONAL(CONFIG_CIFSCREDS, [test "$enable_cifscreds" = "yes"])
 
 LIBCAP_NG_PATH
 

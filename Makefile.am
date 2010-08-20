@@ -15,3 +15,8 @@ cifs_upcall_LDADD = -ltalloc -lkeyutils $(KRB5_LDADD)
 man_MANS += cifs.upcall.8
 endif
 
+if CONFIG_CIFSCREDS
+bin_PROGRAMS = cifscreds
+cifscreds_SOURCES = cifscreds.c resolve_host.c util.c
+cifscreds_LDADD = -lkeyutils
+endif
