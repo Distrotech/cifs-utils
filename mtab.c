@@ -39,6 +39,7 @@
 #include <stdlib.h>
 #include <signal.h>
 #include "mount.h"
+#include "config.h"
 
 
 /* Updating mtab ----------------------------------------------*/
@@ -58,6 +59,22 @@ handler (int sig __attribute__((unused))) {
 static void
 setlkw_timeout (int sig __attribute__((unused))) {
      /* nothing, fcntl will fail anyway */
+}
+
+/* use monotonic time for timeouts */
+struct timeval
+mono_time(void) {
+	struct timeval ret;
+#if defined(HAVE_CLOCK_GETTIME) && defined(CLOCK_MONOTONIC)
+	struct timespec ts;
+	if (clock_gettime(CLOCK_MONOTONIC, &ts) == 0) {
+		ret.tv_sec = ts.tv_sec;
+		ret.tv_usec = ts.tv_nsec/1000;
+		return ret;
+	}
+#endif
+	gettimeofday(&ret,NULL);
+	return ret;
 }
 
 /* Remove lock file.  */
@@ -150,7 +167,7 @@ lock_mtab (void) {
 	}
 	close(i);
 
-	gettimeofday(&maxtime, NULL);
+	maxtime = mono_time();
 	maxtime.tv_sec += MOUNTLOCK_MAXTIME;
 
 	waittime.tv_sec = 0;
@@ -177,7 +194,7 @@ lock_mtab (void) {
 
 		if (lockfile_fd < 0) {
 			/* Strange... Maybe the file was just deleted? */
-			gettimeofday(&now, NULL);
+			now = mono_time();
 			if (errno == ENOENT && now.tv_sec < maxtime.tv_sec) {
 				we_created_lockfile = 0;
 				continue;
@@ -199,7 +216,7 @@ lock_mtab (void) {
 			(void) unlink(linktargetfile);
 		} else {
 			/* Someone else made the link. Wait. */
-			gettimeofday(&now, NULL);
+			now = mono_time();
 			if (now.tv_sec < maxtime.tv_sec) {
 				alarm(maxtime.tv_sec - now.tv_sec);
 				if (fcntl (lockfile_fd, F_SETLKW, &flock) == -1) {
