@@ -110,6 +110,16 @@ AC_FUNC_STRNLEN
 # check for required functions
 AC_CHECK_FUNCS([alarm atexit endpwent getmntent getpass gettimeofday inet_ntop memset realpath setenv strchr strcmp strdup strerror strncasecmp strndup strpbrk strrchr strstr strtol strtoul tolower uname], , [AC_MSG_ERROR([necessary functions(s) not found])])
 
+AC_CHECK_FUNCS(clock_gettime, [], [
+  AC_CHECK_LIB(rt, clock_gettime, [
+      AC_DEFINE(HAVE_CLOCK_GETTIME, 1)
+	AC_DEFINE(HAVE_CLOCK_GETTIME,1,
+		[Whether the clock_gettime func is there])
+      LIBS="$LIBS -lrt"
+        ])
+  ])
+
+
 # ugly, but I'm not sure how to check for functions in a library that's not in $LIBS
 cu_saved_libs=$LIBS
 LIBS="$LIBS $KRB5_LDADD"
