@@ -396,6 +396,13 @@ Enable local disk caching using FS-Cache for CIFS\&. This option could be useful
 NOTE: This feature is available only in the recent kernels that have been built with the kernel config option CONFIG_CIFS_FSCACHE. You also need to have cachefilesd daemon installed and running to make the cache operational\&.
 .RE
 .PP
+multiuser
+.RS 4
+Map user accesses to individual credentials when accessing the server\&. By default, CIFS mounts only use a single set of user credentials (the mount credentials) when accessing a share\&. With this option, the client instead creates a new session with the server using the user's credentials whenever a new user accesses the mount. Further accesses by that user will also use those credentials\&. Because the kernel cannot prompt for passwords, multiuser mounts are limited to mounts using sec= options that don't require passwords.
+.sp
+With this change, it's feasible for the server to handle permissions enforcement, so this option also implies "noperm"\&. Furthermore, when unix extensions aren't in use and the administrator has not overriden ownership using the uid= or gid= options, ownership of files is presented as the current user accessing the share\&.
+.RE
+.PP
 \-\-verbose
 .RS 4
 Print additional debugging information for the mount\&. Note that this parameter must be specified before the \-o\&. For example:
