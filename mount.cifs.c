@@ -958,10 +958,12 @@ parse_options(const char *data, struct parsed_mount_info *parsed_info)
 					"target ip address argument missing\n");
 			} else if (strnlen(value, MAX_ADDRESS_LEN) <=
 				MAX_ADDRESS_LEN) {
+				strcpy(parsed_info->addrlist, value);
 				if (parsed_info->verboseflag)
 					fprintf(stderr,
 						"ip address %s override specified\n",
 						value);
+				goto nocopy;
 			} else {
 				fprintf(stderr, "ip address too long\n");
 				return EX_USAGE;
@@ -1556,7 +1558,9 @@ assemble_mountinfo(struct parsed_mount_info *parsed_info,
 	if (rc)
 		goto assemble_exit;
 
-	rc = resolve_host(parsed_info->host, parsed_info->addrlist);
+	if (parsed_info->addrlist[0] == '\0')
+		rc = resolve_host(parsed_info->host, parsed_info->addrlist);
+
 	switch (rc) {
 	case EX_USAGE:
 		fprintf(stderr, "mount error: could not resolve address for "
