@@ -403,6 +403,24 @@ Map user accesses to individual credentials when accessing the server\&. By defa
 With this change, it's feasible for the server to handle permissions enforcement, so this option also implies "noperm"\&. Furthermore, when unix extensions aren't in use and the administrator has not overriden ownership using the uid= or gid= options, ownership of files is presented as the current user accessing the share\&.
 .RE
 .PP
+actimeo=\fIarg\fR
+.RS 4
+The time (in seconds) that the CIFS client caches attributes of a file or
+directory before it requests attribute information from a server. During this
+period the changes that occur on the server remain undetected until the client
+checks the server again.
+.sp
+By default, the attribute cache timeout is set to 1 second. This means more
+frequent on-the-wire calls to the server to check whether attributes have
+changed which could impact performance. With this option users can make a
+tradeoff between performance and cache metadata correctness, depending on
+workload needs. Shorter timeouts mean better cache coherency, but frequent
+increased number of calls to the server. Longer timeouts mean a reduced number
+of calls to the server but looser cache coherency\&. The actimeo value is a
+positive integer that can hold values between 0 and a maximum value of
+2^30 * HZ (frequency of timer interrupt) setting\&.
+.RE
+.PP
 \-\-verbose
 .RS 4
 Print additional debugging information for the mount\&. Note that this parameter must be specified before the \-o\&. For example:
