@@ -78,8 +78,8 @@ To make this program useful for CIFS, you\'ll need to set up entries for them in
 .nf
 #OPERATION  TYPE           D C PROGRAM ARG1 ARG2\&.\&.\&.
 #=========  =============  = = ================================
-create      cifs\&.spnego    * * /usr/local/sbin/cifs\&.upcall %k
-create      dns_resolver   * * /usr/local/sbin/cifs\&.upcall %k
+create      cifs\&.spnego    * * @sbindir@/cifs\&.upcall %k
+create      dns_resolver   * * @sbindir@/cifs\&.upcall %k
 .fi
 .if n \{\
 .RE

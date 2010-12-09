@@ -13,6 +13,12 @@ sbin_PROGRAMS = cifs.upcall
 cifs_upcall_SOURCES = cifs.upcall.c data_blob.c asn1.c spnego.c util.c
 cifs_upcall_LDADD = -ltalloc -lkeyutils $(KRB5_LDADD)
 man_MANS += cifs.upcall.8
+
+cifs.upcall.8: cifs.upcall.8.in
+	sed 's,\@sbindir\@,$(sbindir),' < $(srcdir)/cifs.upcall.8.in > cifs.upcall.8
+
+clean-local:
+	rm -f cifs.upcall.8
 endif
 
 if CONFIG_CIFSCREDS

@@ -24,6 +24,7 @@ AC_ARG_ENABLE(cifscreds,
 
 # Checks for programs.
 AC_PROG_CC
+AC_PROG_SED
 AC_GNU_SOURCE
 
 # Checks for header files.
