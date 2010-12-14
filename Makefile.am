@@ -14,11 +14,15 @@ cifs_upcall_SOURCES = cifs.upcall.c data_blob.c asn1.c spnego.c util.c
 cifs_upcall_LDADD = -ltalloc -lkeyutils $(KRB5_LDADD)
 man_MANS += cifs.upcall.8
 
+#
+# Fix the pathnames in manpages. To prevent @label@ being replaced by m4, we
+# need to obfuscate the LHS of the regex (hence the trivial one character set).
+#
 cifs.upcall.8: cifs.upcall.8.in
-	sed 's,\@sbindir\@,$(sbindir),' < $(srcdir)/cifs.upcall.8.in > cifs.upcall.8
+	$(SED) 's,[@]sbindir@,$(sbindir),' $(srcdir)/$@.in > $@-t && mv $@-t $@
 
 clean-local:
-	rm -f cifs.upcall.8
+	rm -f cifs.upcall.8 cifs.upcall.8-t
 endif
 
 if CONFIG_CIFSCREDS
