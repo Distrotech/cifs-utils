@@ -133,6 +133,7 @@ fi
 # non-critical functions (we have workarounds for these)
 if test $enable_cifsupcall != "no"; then
 	AC_CHECK_FUNCS([krb5_principal_get_realm krb5_free_unparsed_name])
+	AC_CHECK_FUNCS([krb5_auth_con_setaddrs krb5_auth_con_set_req_cksumtype])
 fi
 
 LIBS=$cu_saved_libs

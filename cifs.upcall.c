@@ -261,6 +261,9 @@ cifs_krb5_get_req(const char *principal, const char *ccname,
 	krb5_creds in_creds, *out_creds;
 	krb5_data apreq_pkt, in_data;
 	krb5_auth_context auth_context = NULL;
+#if defined(HAVE_KRB5_AUTH_CON_SETADDRS) && defined(HAVE_KRB5_AUTH_CON_SET_REQ_CKSUMTYPE)
+	static const uint8_t gss_cksum[24] = { 0x10, 0x00, /* ... */};
+#endif
 
 	ret = krb5_init_context(&context);
 	if (ret) {
@@ -308,6 +311,43 @@ cifs_krb5_get_req(const char *principal, const char *ccname,
 		       __func__, ret);
 		goto out_free_creds;
 	}
+
+#if defined(HAVE_KRB5_AUTH_CON_SETADDRS) && defined(HAVE_KRB5_AUTH_CON_SET_REQ_CKSUMTYPE)
+	/* Ensure we will get an addressless ticket. */
+	ret = krb5_auth_con_setaddrs(context, auth_context, NULL, NULL);
+	if (ret) {
+		syslog(LOG_DEBUG, "%s: unable to set NULL addrs: %d",
+		       __func__, ret);
+		goto out_free_auth;
+	}
+
+	/*
+	 * Create a GSSAPI checksum (0x8003), see RFC 4121.
+	 *
+	 * The current layout is
+	 *
+	 * 0x10, 0x00, 0x00, 0x00 - length = 16
+	 * 0x00, 0x00, 0x00, 0x00 - channel binding info - 16 zero bytes
+	 * 0x00, 0x00, 0x00, 0x00
+	 * 0x00, 0x00, 0x00, 0x00
+	 * 0x00, 0x00, 0x00, 0x00
+	 * 0x00, 0x00, 0x00, 0x00 - flags
+	 *
+	 * GSS_C_NO_CHANNEL_BINDINGS means 16 zero bytes,
+	 * this is needed to work against some closed source
+	 * SMB servers.
+	 *
+	 * See https://bugzilla.samba.org/show_bug.cgi?id=7890
+	 */
+	in_data.data = discard_const_p(char, gss_cksum);
+	in_data.length = 24;
+	ret = krb5_auth_con_set_req_cksumtype(context, auth_context, 0x8003);
+	if (ret) {
+		syslog(LOG_DEBUG, "%s: unable to set 0x8003 checksum",
+		       __func__);
+		goto out_free_auth;
+	}
+#endif
 
 	apreq_pkt.length = 0;
 	apreq_pkt.data = NULL;
