@@ -299,14 +299,24 @@ cifs_krb5_get_req(const char *principal, const char *ccname,
 		goto out_free_principal;
 	}
 
-	apreq_pkt.data = NULL;
 	in_data.length = 0;
+	in_data.data = NULL;
+
+	ret = krb5_auth_con_init(context, &auth_context);
+	if (ret) {
+		syslog(LOG_DEBUG, "%s: unable to create auth_context: %d",
+		       __func__, ret);
+		goto out_free_creds;
+	}
+
+	apreq_pkt.length = 0;
+	apreq_pkt.data = NULL;
 	ret = krb5_mk_req_extended(context, &auth_context, AP_OPTS_USE_SUBKEY,
 				   &in_data, out_creds, &apreq_pkt);
 	if (ret) {
 		syslog(LOG_DEBUG, "%s: unable to make AP-REQ for %s",
 		       __func__, principal);
-		goto out_free_creds;
+		goto out_free_auth;
 	}
 
 	ret = krb5_auth_con_getsendsubkey(context, auth_context, &tokb);
