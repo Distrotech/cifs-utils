@@ -313,13 +313,15 @@ cifs_krb5_get_req(const char *principal, const char *ccname,
 	if (ret) {
 		syslog(LOG_DEBUG, "%s: unable to get session key for %s",
 		       __func__, principal);
-		goto out_free_creds;
+		goto out_free_auth;
 	}
 
 	*mechtoken = data_blob(apreq_pkt.data, apreq_pkt.length);
 	*sess_key = data_blob(KRB5_KEY_DATA(tokb), KRB5_KEY_LENGTH(tokb));
 
 	krb5_free_keyblock(context, tokb);
+out_free_auth:
+	krb5_auth_con_free(context, auth_context);
 out_free_creds:
 	krb5_free_creds(context, out_creds);
 out_free_principal:
