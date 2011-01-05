@@ -680,7 +680,7 @@ int main(const int argc, char *const argv[])
 
 	openlog(prog, 0, LOG_DAEMON);
 
-	while ((c = getopt_long(argc, argv, "ctv", long_options, NULL)) != -1) {
+	while ((c = getopt_long(argc, argv, "cltv", long_options, NULL)) != -1) {
 		switch (c) {
 		case 'c':
 			/* legacy option -- skip it */
