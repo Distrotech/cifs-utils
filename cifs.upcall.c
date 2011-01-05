@@ -677,6 +677,7 @@ int main(const int argc, char *const argv[])
 	const char *oid;
 
 	hostbuf[0] = '\0';
+	memset(&arg, 0, sizeof(arg));
 
 	openlog(prog, 0, LOG_DAEMON);
 
@@ -730,8 +731,6 @@ int main(const int argc, char *const argv[])
 		rc = cifs_resolver(key, buf);
 		goto out;
 	}
-
-	memset(&arg, 0, sizeof(arg));
 
 	have = decode_key_description(buf, &arg);
 	SAFE_FREE(buf);
