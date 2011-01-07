@@ -675,6 +675,7 @@ int main(const int argc, char *const argv[])
 	char hostbuf[NI_MAXHOST], *host;
 	struct decoded_args arg;
 	const char *oid;
+	uid_t uid;
 
 	hostbuf[0] = '\0';
 	memset(&arg, 0, sizeof(arg));
@@ -748,26 +749,23 @@ int main(const int argc, char *const argv[])
 		goto out;
 	}
 
-	if (!legacy_uid && (have & DKD_HAVE_CREDUID)) {
-		rc = setuid(arg.creduid);
-		if (rc == -1) {
-			syslog(LOG_ERR, "setuid: %s", strerror(errno));
-			goto out;
-		}
-		ccname = find_krb5_cc(CIFS_DEFAULT_KRB5_DIR, arg.creduid);
-	} else if (have & DKD_HAVE_UID) {
-		rc = setuid(arg.uid);
-		if (rc == -1) {
-			syslog(LOG_ERR, "setuid: %s", strerror(errno));
-			goto out;
-		}
-		ccname = find_krb5_cc(CIFS_DEFAULT_KRB5_DIR, arg.uid);
-	} else {
+	if (!legacy_uid && (have & DKD_HAVE_CREDUID))
+		uid = arg.creduid;
+	else if (have & DKD_HAVE_UID)
+		uid = arg.uid;
+	else {
 		/* no uid= or creduid= parm -- something is wrong */
 		syslog(LOG_ERR, "No uid= or creduid= parm specified");
 		rc = 1;
 		goto out;
 	}
+
+	rc = setuid(uid);
+	if (rc == -1) {
+		syslog(LOG_ERR, "setuid: %s", strerror(errno));
+		goto out;
+	}
+	ccname = find_krb5_cc(CIFS_DEFAULT_KRB5_DIR, uid);
 
 	host = arg.hostname;
 
