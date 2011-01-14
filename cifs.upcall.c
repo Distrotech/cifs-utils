@@ -444,12 +444,14 @@ handle_krb5_mech(const char *oid, const char *principal, DATA_BLOB * secblob,
 #define DKD_HAVE_UID		0x10
 #define DKD_HAVE_PID		0x20
 #define DKD_HAVE_CREDUID	0x40
+#define DKD_HAVE_USERNAME	0x80
 #define DKD_MUSTHAVE_SET (DKD_HAVE_HOSTNAME|DKD_HAVE_VERSION|DKD_HAVE_SEC)
 
 struct decoded_args {
 	int ver;
 	char *hostname;
 	char *ip;
+	char *username;
 	uid_t uid;
 	uid_t creduid;
 	pid_t pid;
@@ -495,6 +497,20 @@ decode_key_description(const char *desc, struct decoded_args *arg)
 				return 1;
 			}
 			retval |= DKD_HAVE_IP;
+		} else if (strncmp(tkn, "user=", 5) == 0) {
+			if (pos == NULL)
+				len = strlen(tkn);
+			else
+				len = pos - tkn;
+
+			len -= 5;
+			SAFE_FREE(arg->username);
+			arg->username = strndup(tkn + 5, len);
+			if (arg->username == NULL) {
+				syslog(LOG_ERR, "Unable to allocate memory");
+				return 1;
+			}
+			retval |= DKD_HAVE_USERNAME;
 		} else if (strncmp(tkn, "pid=", 4) == 0) {
 			errno = 0;
 			arg->pid = strtol(tkn + 4, NULL, 0);
@@ -865,6 +881,7 @@ out:
 	SAFE_FREE(ccname);
 	SAFE_FREE(arg.hostname);
 	SAFE_FREE(arg.ip);
+	SAFE_FREE(arg.username);
 	SAFE_FREE(keydata);
 	return rc;
 }
