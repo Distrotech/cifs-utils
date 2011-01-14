@@ -857,19 +857,28 @@ parse_options(const char *data, struct parsed_mount_info *parsed_info)
 	int rc = 0;
 	int got_uid = 0;
 	int got_gid = 0;
-	char user[32];
-	char group[32];
+	uid_t uid;
+	gid_t gid;
+	char *ep;
+	struct passwd *pw;
+	struct group *gr;
+	/*
+	 * max 32-bit uint in decimal is 4294967295 which is 10 chars wide
+	 * +1 for NULL, and +1 for good measure
+	 */
+	char txtbuf[12];
 
 	/* make sure we're starting from beginning */
 	out[0] = '\0';
 
 	/* BB fixme check for separator override BB */
-	if (getuid()) {
+	uid = getuid();
+	if (uid != 0)
 		got_uid = 1;
-		snprintf(user, sizeof(user), "%u", getuid());
+
+	gid = getgid();
+	if (gid != 0)
 		got_gid = 1;
-		snprintf(group, sizeof(group), "%u", getgid());
-	}
 
 	if (!data)
 		return EX_USAGE;
@@ -1014,43 +1023,39 @@ parse_options(const char *data, struct parsed_mount_info *parsed_info)
 			break;
 
 		case OPT_UID:
-			if (value && *value) {
-				got_uid = 1;
-				if (!isdigit(*value)) {
-					struct passwd *pw;
+			if (!value || !*value)
+				goto nocopy;
 
-					if (!(pw = getpwnam(value))) {
-						fprintf(stderr,
-							"bad user name \"%s\"\n",
-							value);
-						return EX_USAGE;
-					}
-					snprintf(user, sizeof(user), "%u",
-						 pw->pw_uid);
-				}
-				else
-					strlcpy(user, value, sizeof(user));
+			got_uid = 1;
+			uid = strtoul(value, &ep, 10);
+			if (errno != EINVAL && *ep == '\0')
+				goto nocopy;
+
+			pw = getpwnam(value);
+			if (pw == NULL) {
+				fprintf(stderr, "bad user name \"%s\"\n", value);
+				return EX_USAGE;
 			}
+
+			uid = pw->pw_uid;
 			goto nocopy;
 
 		case OPT_GID:
-			if (value && *value) {
-				got_gid = 1;
-				if (!isdigit(*value)) {
-					struct group *gr;
+			if (!value || !*value)
+				goto nocopy;
 
-					if (!(gr = getgrnam(value))) {
-						fprintf(stderr,
-							"bad group name \"%s\"\n",
-							value);
-						return EX_USAGE;
-					}
-					snprintf(group, sizeof(group), "%u",
-						 gr->gr_gid);
-				}
-				else
-					strlcpy(group, value, sizeof(group));
+			got_gid = 1;
+			gid = strtoul(value, &ep, 10);
+			if (errno != EINVAL && *ep == '\0')
+				goto nocopy;
+
+			gr = getgrnam(value);
+			if (gr == NULL) {
+				fprintf(stderr, "bad group name \"%s\"\n", value);
+				return EX_USAGE;
 			}
+
+			gid = gr->gr_gid;
 			goto nocopy;
 
 		/* fmask fall through to file_mode */
@@ -1171,34 +1176,35 @@ nocopy:
 
 	/* special-case the uid and gid */
 	if (got_uid) {
-		word_len = strlen(user);
+		word_len = snprintf(txtbuf, sizeof(txtbuf), "%u", uid);
 
+		/* comma + "uid=" + terminating NULL == 6 */
 		if (out_len + word_len + 6 > MAX_OPTIONS_LEN) {
 			fprintf(stderr, "Options string too long\n");
 			return EX_USAGE;
 		}
 
 		if (out_len) {
-			strlcat(out, ",", out_len + word_len + 6);
+			strlcat(out, ",", MAX_OPTIONS_LEN);
 			out_len++;
 		}
-		snprintf(out + out_len, word_len + 5, "uid=%s", user);
+		snprintf(out + out_len, word_len + 5, "uid=%s", txtbuf);
 		out_len = strlen(out);
 	}
 	if (got_gid) {
-		word_len = strlen(group);
+		word_len = snprintf(txtbuf, sizeof(txtbuf), "%u", gid);
 
-		if (out_len + 1 + word_len + 6 > MAX_OPTIONS_LEN) {
+		/* comma + "gid=" + terminating NULL == 6 */
+		if (out_len + word_len + 6 > MAX_OPTIONS_LEN) {
 			fprintf(stderr, "Options string too long\n");
 			return EX_USAGE;
 		}
 
 		if (out_len) {
-			strlcat(out, ",", out_len + word_len + 6);
+			strlcat(out, ",", MAX_OPTIONS_LEN);
 			out_len++;
 		}
-		snprintf(out + out_len, word_len + 5, "gid=%s", group);
-		out_len = strlen(out);
+		snprintf(out + out_len, word_len + 5, "gid=%s", txtbuf);
 	}
 
 	return 0;
