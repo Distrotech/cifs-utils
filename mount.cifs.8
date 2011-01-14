@@ -120,6 +120,11 @@ forceuid
 instructs the client to ignore any uid provided by the server for files and directories and to always assign the owner to be the value of the uid= option\&. See the section on FILE AND DIRECTORY OWNERSHIP AND PERMISSIONS below for more information\&.
 .RE
 .PP
+cruid=\fIarg\fR
+.RS 4
+sets the uid of the owner of the credentials cache\&. This is primarily useful with sec=krb5\&. The default is the real uid of the process performing the mount\&. Setting this parameter directs the upcall to look for a credentials cache owned by that user\&.
+.RE
+.PP
 gid=\fIarg\fR
 .RS 4
 sets the gid that will own all files or directories on the mounted filesystem when the server does not provide ownership information\&. It may be specified as either a groupname or a numeric gid\&. When not specified, the default is gid 0\&. The mount\&.cifs helper must be at version 1\&.10 or higher to support specifying the gid in non\-numeric form\&. See the section on FILE AND DIRECTORY OWNERSHIP AND PERMISSIONS below for more information\&.

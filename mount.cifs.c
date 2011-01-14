@@ -157,6 +157,7 @@
 #define OPT_REMOUNT    26
 #define OPT_MAND       27
 #define OPT_NOMAND     28
+#define OPT_CRUID      29
 
 
 /* struct for holding parsed mount info for use by privleged process */
@@ -802,6 +803,8 @@ static int parse_opt_token(const char *token)
 		return OPT_CRED;
 	if (strncmp(token, "uid", 3) == 0)
 		return OPT_UID;
+	if (strncmp(token, "cruid", 5) == 0)
+		return OPT_CRUID;
 	if (strncmp(token, "gid", 3) == 0)
 		return OPT_GID;
 	if (strncmp(token, "fmask", 5) == 0)
@@ -856,8 +859,9 @@ parse_options(const char *data, struct parsed_mount_info *parsed_info)
 	int word_len;
 	int rc = 0;
 	int got_uid = 0;
+	int got_cruid = 0;
 	int got_gid = 0;
-	uid_t uid;
+	uid_t uid, cruid;
 	gid_t gid;
 	char *ep;
 	struct passwd *pw;
@@ -1040,6 +1044,23 @@ parse_options(const char *data, struct parsed_mount_info *parsed_info)
 			uid = pw->pw_uid;
 			goto nocopy;
 
+		case OPT_CRUID:
+			if (!value || !*value)
+				goto nocopy;
+
+			got_cruid = 1;
+			cruid = strtoul(value, &ep, 10);
+			if (errno != EINVAL && *ep == '\0')
+				goto nocopy;
+
+			pw = getpwnam(value);
+			if (pw == NULL) {
+				fprintf(stderr, "bad user name \"%s\"\n", value);
+				return EX_USAGE;
+			}
+			cruid = pw->pw_uid;
+			goto nocopy;
+
 		case OPT_GID:
 			if (!value || !*value)
 				goto nocopy;
@@ -1191,6 +1212,22 @@ nocopy:
 		snprintf(out + out_len, word_len + 5, "uid=%s", txtbuf);
 		out_len = strlen(out);
 	}
+	if (got_cruid) {
+		word_len = snprintf(txtbuf, sizeof(txtbuf), "%u", cruid);
+
+		/* comma + "cruid=" + terminating NULL == 6 */
+		if (out_len + word_len + 8 > MAX_OPTIONS_LEN) {
+			fprintf(stderr, "Options string too long\n");
+			return EX_USAGE;
+		}
+
+		if (out_len) {
+			strlcat(out, ",", MAX_OPTIONS_LEN);
+			out_len++;
+		}
+		snprintf(out + out_len, word_len + 7, "cruid=%s", txtbuf);
+		out_len = strlen(out);
+	}
 	if (got_gid) {
 		word_len = snprintf(txtbuf, sizeof(txtbuf), "%u", gid);
 
@@ -1206,7 +1243,6 @@ nocopy:
 		}
 		snprintf(out + out_len, word_len + 5, "gid=%s", txtbuf);
 	}
-
 	return 0;
 }
 
