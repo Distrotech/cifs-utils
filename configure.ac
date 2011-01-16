@@ -1,7 +1,7 @@
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
-AC_INIT([cifs-utils], [4.7.1], [cifs-utils@samba.org], [cifs-utils], [http://linux-cifs.samba.org/cifs-utils/])
+AC_INIT([cifs-utils], [4.8], [cifs-utils@samba.org], [cifs-utils], [http://linux-cifs.samba.org/cifs-utils/])
 AC_CONFIG_SRCDIR([replace.h])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_FILES([Makefile])
