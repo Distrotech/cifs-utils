@@ -1934,7 +1934,7 @@ mount_retry:
 		goto mount_exit;
 	}
 
-	if (!parsed_info->nomtab)
+	if (!parsed_info->nomtab && !mtab_unusable())
 		rc = add_mtab(orig_dev, mountpoint, parsed_info->flags, fstype);
 
 mount_exit:

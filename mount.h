@@ -32,6 +32,7 @@
 #define _PATH_MOUNTED_LOCK	_PATH_MOUNTED "~"
 #define _PATH_MOUNTED_TMP	_PATH_MOUNTED ".tmp"
 
+extern int mtab_unusable(void);
 extern int lock_mtab(void);
 extern void unlock_mtab(void);
 

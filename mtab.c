@@ -77,6 +77,22 @@ mono_time(void) {
 	return ret;
 }
 
+/*
+ * See if mtab is present and whether it's a symlink. Returns errno from stat()
+ * call or EMLINK if it's a symlink.
+ */
+int
+mtab_unusable(void)
+{
+	struct stat mstat;
+
+	if(lstat(_PATH_MOUNTED, &mstat))
+		return errno;
+	else if (S_ISLNK(mstat.st_mode))
+		return EMLINK;
+	return 0;
+}
+
 /* Remove lock file.  */
 void
 unlock_mtab (void) {
