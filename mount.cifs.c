@@ -636,7 +636,7 @@ parsing_err:
 static int open_cred_file(char *file_name,
 			struct parsed_mount_info *parsed_info)
 {
-	char *line_buf;
+	char *line_buf = NULL;
 	char *temp_val = NULL;
 	FILE *fs = NULL;
 	int i;
