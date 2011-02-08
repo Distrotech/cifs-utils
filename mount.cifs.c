@@ -1898,8 +1898,13 @@ mount_retry:
 	else
 		fstype = cifs_fstype;
 
-	if (!parsed_info->fakemnt
-	    && mount(dev_name, ".", fstype, parsed_info->flags, options)) {
+	if (!parsed_info->fakemnt) {
+		toggle_dac_capability(0, 1);
+		rc = mount(dev_name, ".", fstype, parsed_info->flags, options);
+		toggle_dac_capability(0, 0);
+		if (rc == 0)
+			goto do_mtab;
+
 		switch (errno) {
 		case ECONNREFUSED:
 		case EHOSTUNREACH:
@@ -1934,6 +1939,7 @@ mount_retry:
 		goto mount_exit;
 	}
 
+do_mtab:
 	if (!parsed_info->nomtab && !mtab_unusable())
 		rc = add_mtab(orig_dev, mountpoint, parsed_info->flags, fstype);
 
