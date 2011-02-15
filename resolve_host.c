@@ -71,7 +71,7 @@ int resolve_host(const char *host, char *addrstr)
 			if (sin6->sin6_scope_id) {
 				len = strnlen(tmpbuf, sizeof(tmpbuf));
 				ipaddr = tmpbuf + len;
-				snprintf(tmpbuf, sizeof(tmpbuf) - len, "%%%u",
+				snprintf(ipaddr, sizeof(tmpbuf) - len, "%%%u",
 					 sin6->sin6_scope_id);
 			}
 			break;
