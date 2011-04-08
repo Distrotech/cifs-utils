@@ -1673,12 +1673,11 @@ int main(int argc, char **argv)
 	char *orgoptions = NULL;
 	char *mountpoint = NULL;
 	char *options = NULL;
-	char *dev_name = NULL, *orig_dev = NULL;
+	char *orig_dev = NULL;
 	char *currentaddress, *nextaddress;
 	int rc = 0;
 	int already_uppercased = 0;
 	size_t options_size = MAX_OPTIONS_LEN;
-	size_t dev_len;
 	struct parsed_mount_info *parsed_info = NULL;
 	pid_t pid;
 	const char *fstype;
@@ -1823,25 +1822,6 @@ int main(int argc, char **argv)
 		goto mount_exit;
 	}
 
-	/* lengths of different strings + slashes + trailing \0 */
-	dev_len = strnlen(parsed_info->host, sizeof(parsed_info->host)) +
-	    strnlen(parsed_info->share, sizeof(parsed_info->share)) +
-	    strnlen(parsed_info->prefix, sizeof(parsed_info->prefix)) +
-	    2 + 1 + 1 + 1;
-	dev_name = calloc(dev_len, 1);
-	if (!dev_name) {
-		rc = EX_SYSERR;
-		goto mount_exit;
-	}
-
-	/* rebuild device name with forward slashes */
-	strlcpy(dev_name, "//", dev_len);
-	strlcat(dev_name, parsed_info->host, dev_len);
-	strlcat(dev_name, "/", dev_len);
-	strlcat(dev_name, parsed_info->share, dev_len);
-	strlcat(dev_name, "/", dev_len);
-	strlcat(dev_name, parsed_info->prefix, dev_len);
-
 	currentaddress = parsed_info->addrlist;
 	nextaddress = strchr(currentaddress, ',');
 	if (nextaddress)
@@ -1889,7 +1869,7 @@ mount_retry:
 	if (parsed_info->verboseflag)
 		fprintf(stderr, "\n");
 
-	rc = check_mtab(thisprogram, dev_name, mountpoint);
+	rc = check_mtab(thisprogram, orig_dev, mountpoint);
 	if (rc)
 		goto mount_exit;
 
@@ -1900,7 +1880,7 @@ mount_retry:
 
 	if (!parsed_info->fakemnt) {
 		toggle_dac_capability(0, 1);
-		rc = mount(dev_name, ".", fstype, parsed_info->flags, options);
+		rc = mount(orig_dev, ".", fstype, parsed_info->flags, options);
 		toggle_dac_capability(0, 0);
 		if (rc == 0)
 			goto do_mtab;
@@ -1948,7 +1928,6 @@ mount_exit:
 		memset(parsed_info->password, 0, sizeof(parsed_info->password));
 		munmap(parsed_info, sizeof(*parsed_info));
 	}
-	SAFE_FREE(dev_name);
 	SAFE_FREE(options);
 	SAFE_FREE(orgoptions);
 	return rc;
