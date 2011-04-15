@@ -861,7 +861,7 @@ parse_options(const char *data, struct parsed_mount_info *parsed_info)
 	int got_uid = 0;
 	int got_cruid = 0;
 	int got_gid = 0;
-	uid_t uid, cruid;
+	uid_t uid, cruid = 0;
 	gid_t gid;
 	char *ep;
 	struct passwd *pw;
@@ -1031,8 +1031,9 @@ parse_options(const char *data, struct parsed_mount_info *parsed_info)
 				goto nocopy;
 
 			got_uid = 1;
+			errno = 0;
 			uid = strtoul(value, &ep, 10);
-			if (errno != EINVAL && *ep == '\0')
+			if (errno == 0)
 				goto nocopy;
 
 			pw = getpwnam(value);
@@ -1049,8 +1050,9 @@ parse_options(const char *data, struct parsed_mount_info *parsed_info)
 				goto nocopy;
 
 			got_cruid = 1;
+			errno = 0;
 			cruid = strtoul(value, &ep, 10);
-			if (errno != EINVAL && *ep == '\0')
+			if (errno == 0)
 				goto nocopy;
 
 			pw = getpwnam(value);
@@ -1066,8 +1068,9 @@ parse_options(const char *data, struct parsed_mount_info *parsed_info)
 				goto nocopy;
 
 			got_gid = 1;
+			errno = 0;
 			gid = strtoul(value, &ep, 10);
-			if (errno != EINVAL && *ep == '\0')
+			if (errno == 0)
 				goto nocopy;
 
 			gr = getgrnam(value);
