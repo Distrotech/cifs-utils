@@ -363,12 +363,12 @@ When the CIFS Unix Extensions are not negotiated, attempt to create device files
 .PP
 serverino
 .RS 4
-Use inode numbers (unique persistent file identifiers) returned by the server instead of automatically generating temporary inode numbers on the client\&. Although server inode numbers make it easier to spot hardlinked files (as they will have the same inode numbers) and inode numbers may be persistent (which is userful for some sofware), the server does not guarantee that the inode numbers are unique if multiple server side mounts are exported under a single share (since inode numbers on the servers might not be unique if multiple filesystems are mounted under the same shared higher level directory)\&. Note that not all servers support returning server inode numbers, although those that support the CIFS Unix Extensions, and Windows 2000 and later servers typically do support this (although not necessarily on every local server filesystem)\&. Parameter has no effect if the server lacks support for returning inode numbers or equivalent\&.
+Use inode numbers (unique persistent file identifiers) returned by the server instead of automatically generating temporary inode numbers on the client\&. Although server inode numbers make it easier to spot hardlinked files (as they will have the same inode numbers) and inode numbers may be persistent (which is userful for some sofware), the server does not guarantee that the inode numbers are unique if multiple server side mounts are exported under a single share (since inode numbers on the servers might not be unique if multiple filesystems are mounted under the same shared higher level directory)\&. Note that not all servers support returning server inode numbers, although those that support the CIFS Unix Extensions, and Windows 2000 and later servers typically do support this (although not necessarily on every local server filesystem)\&. Parameter has no effect if the server lacks support for returning inode numbers or equivalent\&. This behavior is enabled by default\&.
 .RE
 .PP
 noserverino
 .RS 4
-Client generates inode numbers (rather than using the actual one from the server) by default\&.
+Client generates inode numbers itself rather than using the actual ones from the server\&.
 .sp
 See section
 \fIINODE NUMBERS\fR
