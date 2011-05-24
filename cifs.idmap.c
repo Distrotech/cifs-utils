@@ -81,8 +81,6 @@ cifs_idmap(const key_serial_t key, const char *key_descr)
 	wbcErr rc = 1;
 	char *sidstr = NULL;
 	struct wbcDomainSid sid;
-	struct passwd *pw;
-	struct group *gr;
 
 	/*
 	 * Use winbind to convert received string to a SID and lookup
