@@ -749,7 +749,6 @@ static int ip_to_fqdn(const char *addrstr, char *host, size_t hostlen)
 
 static void usage(void)
 {
-	syslog(LOG_INFO, "Usage: %s [-t] [-v] [-l] key_serial", prog);
 	fprintf(stderr, "Usage: %s [-t] [-v] [-l] key_serial\n", prog);
 }
 
