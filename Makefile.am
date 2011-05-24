@@ -8,8 +8,10 @@ mount_cifs_LDADD = $(LIBCAP) $(CAPNG_LDADD)
 
 man_MANS = mount.cifs.8
 
+sbin_PROGRAMS =
+
 if CONFIG_CIFSUPCALL
-sbin_PROGRAMS = cifs.upcall
+sbin_PROGRAMS += cifs.upcall
 cifs_upcall_SOURCES = cifs.upcall.c data_blob.c asn1.c spnego.c util.c
 cifs_upcall_LDADD = -ltalloc -lkeyutils $(KRB5_LDADD)
 man_MANS += cifs.upcall.8
@@ -29,4 +31,10 @@ if CONFIG_CIFSCREDS
 bin_PROGRAMS = cifscreds
 cifscreds_SOURCES = cifscreds.c resolve_host.c util.c
 cifscreds_LDADD = -lkeyutils
+endif
+
+if CONFIG_CIFSIDMAP
+sbin_PROGRAMS += cifs.idmap
+cifs_idmap_SOURCES = cifs.idmap.c
+cifs_idmap_LDADD = -lkeyutils $(WINB_LDADD)
 endif

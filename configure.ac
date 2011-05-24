@@ -22,13 +22,19 @@ AC_ARG_ENABLE(cifscreds,
 	enable_cifscreds=$enableval,
 	enable_cifscreds="no")
 
+AC_ARG_ENABLE(cifsidmap,
+	[AC_HELP_STRING([--enable-cifsidmap],
+			[Create cifs.idmap binary @<:@default=no@:>@])],
+	enable_cifsidmap=$enableval,
+	enable_cifsidmap="no")
+
 # Checks for programs.
 AC_PROG_CC
 AC_PROG_SED
 AC_GNU_SOURCE
 
 # Checks for header files.
-AC_CHECK_HEADERS([arpa/inet.h ctype.h fcntl.h inttypes.h limits.h mntent.h netdb.h stddef.h stdint.h stdlib.h string.h strings.h sys/mount.h sys/param.h sys/socket.h sys/time.h syslog.h unistd.h], , [AC_MSG_ERROR([necessary header(s) not found])])
+AC_CHECK_HEADERS([arpa/inet.h ctype.h fcntl.h inttypes.h limits.h mntent.h netdb.h stddef.h stdint.h stdbool.h stdlib.h stdio.h errno.h string.h strings.h sys/mount.h sys/param.h sys/socket.h sys/time.h syslog.h unistd.h], , [AC_MSG_ERROR([necessary header(s) not found])])
 
 if test $enable_cifsupcall != "no"; then
 	AC_CHECK_HEADERS([krb5.h krb5/krb5.h])
@@ -72,13 +78,16 @@ if test $enable_cifsupcall != "no"; then
 				fi
 			])
 fi
-if test $enable_cifsupcall != "no"; then
+if test $enable_cifsupcall != "no" -o $enable_cifsidmap != "no"; then
 	AC_CHECK_HEADERS([keyutils.h], , [
 				if test "$enable_cifsupcall" = "yes"; then
 					AC_MSG_ERROR([keyutils.h not found, consider installing keyutils-libs-devel.])
 				else
 					AC_MSG_WARN([keyutils.h not found, consider installing keyutils-libs-devel. Disabling cifs.upcall.])
 					enable_cifsupcall="no"
+				fi
+				if test "$enable_cifsidmap" = "yes"; then
+					AC_MSG_ERROR([keyutils.h not found, consider installing keyutils-libs-devel.])
 				fi
 			])
 fi
@@ -88,6 +97,9 @@ if test $enable_cifsupcall != "no"; then
 			AC_MSG_ERROR([no functioning krb5 library found!]))
 	AC_SUBST(KRB5_LDADD)
 fi
+
+# checks for wbclient.h and libwbclient.so library
+AC_TEST_WBCHL
 
 if test $enable_cifscreds = "yes"; then
 	AC_CHECK_HEADERS([keyutils.h], , [AC_MSG_ERROR([keyutils.h not found, consider installing keyutils-libs-devel.])])
@@ -140,6 +152,7 @@ LIBS=$cu_saved_libs
 
 AM_CONDITIONAL(CONFIG_CIFSUPCALL, [test "$enable_cifsupcall" != "no"])
 AM_CONDITIONAL(CONFIG_CIFSCREDS, [test "$enable_cifscreds" = "yes"])
+AM_CONDITIONAL(CONFIG_CIFSIDMAP, [test "$enable_cifsidmap" = "yes"])
 
 LIBCAP_NG_PATH
 
