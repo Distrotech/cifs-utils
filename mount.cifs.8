@@ -225,6 +225,11 @@ strictcache
 Use for switching on strict cache mode\&. In this mode the client reads from the cache all the time it has Oplock Level II, otherwise - read from the server\&. As for write - the client stores a data in the cache in Exclusive Oplock case, otherwise - write directly to the server\&.
 .RE
 .PP
+rwpidforward
+.RS 4
+Forward pid of a process who opened a file to any read or write operation on that file\&. This prevent applications like WINE from failing on read and write if we use mandatory brlock style\&.
+.RE
+.PP
 mapchars
 .RS 4
 Translate six of the seven reserved characters (not backslash, but including the colon, question mark, pipe, asterik, greater than and less than characters) to the remap range (above 0xF000), which also allows the CIFS client to recognize files created with such characters by Windows\'s POSIX emulation\&. This can also be useful when mounting to most versions of Samba (which also forbids creating and opening files whose names contain any of these seven characters)\&. This has no effect if the server does not support Unicode on the wire\&. Please note that the files created with mapchars mount option may not be accessible if the share is mounted without that option\&.
