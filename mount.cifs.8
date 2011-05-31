@@ -401,7 +401,7 @@ default network read size (usually 16K)\&. The client currently can not use rsiz
 .PP
 wsize=\fIbytes\fR
 .RS 4
-Maximum amount of data that the kernel will send in a write request in bytes\&. Prior to kernel 2\&.6\&.40, the default and maximum was 57344 (14 * 4096 pages)\&. As of 2\&.6\&.40, the default is 1M, and the maximum allowed is 16M\&. Note that this value is just a starting point for negotiation in 2\&.6\&.40 and up\&. The client and server may negotiate this size downward according to the server's capabilities\&. In kernels prior to 2\&.6\&.40, no negotiation is performed\&. It can end up with an existing superblock if this value isn't specified or it's greater or equal than the existing one\&.
+Maximum amount of data that the kernel will send in a write request in bytes\&. Prior to kernel 3\&.0\&.0, the default and maximum was 57344 (14 * 4096 pages)\&. As of 3\&.0\&.0, the default is 1M, and the maximum allowed is 16M\&. Note that this value is just a starting point for negotiation in 3\&.0\&.0 and up\&. The client and server may negotiate this size downward according to the server's capabilities\&. In kernels prior to 3\&.0\&.0, no negotiation is performed\&. It can end up with an existing superblock if this value isn't specified or it's greater or equal than the existing one\&.
 .RE
 .PP
 fsc
