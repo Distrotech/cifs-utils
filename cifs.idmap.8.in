@@ -32,18 +32,18 @@ cifs\&.idmap is a userspace helper program for the linux CIFS client filesystem\
 cifs\&.idmap is generally intended to be run when the kernel calls request\-key(8)
 for a particular key type\&. While it can be run directly from the command\-line, it is not generally intended to be run that way\&.
 .PP
-cifs\&.idmap works in conjuction with winbind facility of Samba suite to map owner and group SIDs to uids and gids respectively.  It is best utilized when
+cifs\&.idmap works in conjuction with winbind facility of Samba suite to map owner and group SIDs to uids and gids respectively\&.  It is best utilized when
 .br
 \t\- a mount option of cifsacl is specified when mounting a cifs share
 .br
-\t\- winbind is specified as one of the search entries for passwd and group databases in file /etc/nsswitch.conf
+\t\- winbind is specified as one of the search entries for passwd and group databases in file /etc/nsswitch\&.conf
 .br
 \t\- file smb.conf has winbind specific entries
 .br
 \t\- winbind daemon program is running
 .br
 .sp
-In case winbind and cifs.idmap facilities are unavailable, file objects in a mounted share are assigned uid and gid of the credentials of the process that mounted the share.  So it is strongly recomemended to use mount options of uid and gid to specify a default uid and gid to map owner SIDs and group SIDs respectively in case services of winbind and cifs.idmap facility are unavailable.  
+In case winbind and cifs.idmap facilities are unavailable, file objects in a mounted share are assigned uid and gid of the credentials of the process that mounted the share\&. So it is strongly recomemended to use mount options of uid and gid to specify a default uid and gid to map owner SIDs and group SIDs respectively in case services of winbind and cifs.idmap facility are unavailable\&.
 .SH "OPTIONS"
 .PP
 \-\-version|\-v
@@ -67,14 +67,14 @@ To make this program useful for CIFS, you will need to set up entry for it in re
 .nf
 #OPERATION  TYPE           D C PROGRAM ARG1 ARG2\&.\&.\&.
 #=========  =============  = = ================================
-create      cifs\&.idmap   * * @sbindir@/cifs\&.idmap %k
+create      cifs\&.idmap     * * @sbindir@/cifs\&.idmap %k
 .fi
 .if n \{\
 .RE
 .\}
 .PP
 See
-\fBrequest-key.conf5\fR()
+\fBrequest-key.conf\fR(5)
 for more info on each field\&.
 .SH "SEE ALSO"
 .PP

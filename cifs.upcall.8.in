@@ -86,7 +86,7 @@ create      dns_resolver   * * @sbindir@/cifs\&.upcall %k
 .\}
 .PP
 See
-\fBrequest-key.conf5\fR()
+\fBrequest-key.conf\fR(5)
 for more info on each field\&.
 .SH "SEE ALSO"
 .PP
