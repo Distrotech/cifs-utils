@@ -16,7 +16,7 @@ If you pulled down the git tree directly, then you'll need to
 generate the autoconf/automake files before you can build. cd to
 the top of the build tree and run:
 
-    $ autoreconf
+    $ autoreconf -i
 
 If you downloaded a release tarball, then just unpack the sources
 and run these commands:
