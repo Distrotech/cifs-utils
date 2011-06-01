@@ -26,7 +26,7 @@ AC_ARG_ENABLE(cifsidmap,
 	[AC_HELP_STRING([--enable-cifsidmap],
 			[Create cifs.idmap binary @<:@default=no@:>@])],
 	enable_cifsidmap=$enableval,
-	enable_cifsidmap="no")
+	enable_cifsidmap="maybe")
 
 # Checks for programs.
 AC_PROG_CC
@@ -88,6 +88,9 @@ if test $enable_cifsupcall != "no" -o $enable_cifsidmap != "no"; then
 				fi
 				if test "$enable_cifsidmap" = "yes"; then
 					AC_MSG_ERROR([keyutils.h not found, consider installing keyutils-libs-devel.])
+				else
+					AC_MSG_WARN([keyutils.h not found, consider installing keyutils-libs-devel. Disabling cifs.idmap.])
+					enable_cifsidmap="no"
 				fi
 			])
 fi
@@ -152,7 +155,7 @@ LIBS=$cu_saved_libs
 
 AM_CONDITIONAL(CONFIG_CIFSUPCALL, [test "$enable_cifsupcall" != "no"])
 AM_CONDITIONAL(CONFIG_CIFSCREDS, [test "$enable_cifscreds" = "yes"])
-AM_CONDITIONAL(CONFIG_CIFSIDMAP, [test "$enable_cifsidmap" = "yes"])
+AM_CONDITIONAL(CONFIG_CIFSIDMAP, [test "$enable_cifsidmap" != "no"])
 
 LIBCAP_NG_PATH
 
