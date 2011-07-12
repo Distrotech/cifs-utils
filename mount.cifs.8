@@ -140,9 +140,14 @@ port=\fIarg\fR
 sets the port number on which the client will attempt to contact the CIFS server\&. If this value is specified, look for an existing connection with this port, and use that if one exists\&. If one doesn't exist, try to create a new connection on that port\&. If that connection fails, return an error\&. If this value isn't specified, look for an existing connection on port 445 or 139\&. If no such connection exists, try to connect on port 445 first and then port 139 if that fails\&. Return an error if both fail\&.
 .RE
 .PP
-servern=\fIarg\fR
+servernetbiosname=\fIarg\fR
 .RS 4
 Specify the server netbios name (RFC1001 name) to use when attempting to setup a session to the server\&. Although rarely needed for mounting to newer servers, this option is needed for mounting to some older servers (such as OS/2 or Windows 98 and Windows ME) since when connecting over port 139 they, unlike most newer servers, do not support a default server name\&. A server name can be up to 15 characters long and is usually uppercased\&.
+.RE
+.PP
+servern=\fIarg\fR
+.RS 4
+Synonym for \fIservernetbiosname\fR.
 .RE
 .PP
 netbiosname=\fIarg\fR
@@ -270,6 +275,11 @@ The CIFS client can get and set POSIX ACLs (getfacl, setfacl) to Samba servers v
 nocase
 .RS 4
 Request case insensitive path name matching (case sensitive is the default if the server suports it)\&.
+.RE
+.PP
+ignorecase
+.RS 4
+Synonym for \fInocase\fR.
 .RE
 .PP
 sec=
@@ -434,6 +444,20 @@ increased number of calls to the server. Longer timeouts mean a reduced number
 of calls to the server but looser cache coherency\&. The actimeo value is a
 positive integer that can hold values between 0 and a maximum value of
 2^30 * HZ (frequency of timer interrupt) setting\&.
+.RE
+.PP
+noposixpaths
+.RS 4
+If unix extensions are enabled on a share, then the client will typically allow
+filenames to include any character besides '/' in a pathname component, and
+will use forward slashes as a pathname delimiter. This option prevents the
+client from attempting to negotiate the use of posix-style pathnames to the
+server.
+.RE
+.PP
+posixpaths
+.RS 4
+Inverse of \fInoposixpaths\fR.
 .RE
 .PP
 \-\-verbose
