@@ -35,5 +35,6 @@
 extern int mtab_unusable(void);
 extern int lock_mtab(void);
 extern void unlock_mtab(void);
+extern int my_endmntent(FILE *stream, off_t size);
 
 #endif /* ! _MOUNT_H_ */

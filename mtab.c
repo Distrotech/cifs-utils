@@ -251,3 +251,30 @@ lock_mtab (void) {
 	return 0;
 }
 
+/*
+ * Call fflush and fsync on the mtab, and then endmntent. If either fflush
+ * or fsync fails, then truncate the file back to "size". endmntent is called
+ * unconditionally, and the errno (if any) from fflush and fsync are returned.
+ */
+int
+my_endmntent(FILE *stream, off_t size)
+{
+	int rc, fd;
+
+	fd = fileno(stream);
+	if (fd < 0)
+		return -EBADF;
+
+	rc = fflush(stream);
+	if (!rc)
+		rc = fsync(fd);
+
+	/* truncate file back to "size" -- best effort here */
+	if (rc) {
+		rc = errno;
+		ftruncate(fd, size);
+	}
+
+	endmntent(stream);
+	return rc;
+}

@@ -1428,10 +1428,11 @@ static int check_mtab(const char *progname, const char *devname,
 static int
 add_mtab(char *devname, char *mountpoint, unsigned long flags, const char *fstype)
 {
-	int rc = 0;
+	int rc = 0, tmprc, fd;
 	uid_t uid;
 	char *mount_user = NULL;
 	struct mntent mountent;
+	struct stat statbuf;
 	FILE *pmntfile;
 	sigset_t mask, oldmask;
 
@@ -1483,6 +1484,23 @@ add_mtab(char *devname, char *mountpoint, unsigned long flags, const char *fstyp
 		goto add_mtab_exit;
 	}
 
+	fd = fileno(pmntfile);
+	if (fd < 0) {
+		fprintf(stderr, "mntent does not appear to be valid\n");
+		unlock_mtab();
+		rc = EX_FILEIO;
+		goto add_mtab_exit;
+	}
+
+	rc = fstat(fd, &statbuf);
+	if (rc != 0) {
+		fprintf(stderr, "unable to fstat open mtab\n");
+		endmntent(pmntfile);
+		unlock_mtab();
+		rc = EX_FILEIO;
+		goto add_mtab_exit;
+	}
+
 	mountent.mnt_fsname = devname;
 	mountent.mnt_dir = mountpoint;
 	mountent.mnt_type = (char *)(void *)fstype;
@@ -1514,9 +1532,14 @@ add_mtab(char *devname, char *mountpoint, unsigned long flags, const char *fstyp
 	rc = addmntent(pmntfile, &mountent);
 	if (rc) {
 		fprintf(stderr, "unable to add mount entry to mtab\n");
+		ftruncate(fd, statbuf.st_size);
 		rc = EX_FILEIO;
 	}
-	endmntent(pmntfile);
+	tmprc = my_endmntent(pmntfile, statbuf.st_size);
+	if (tmprc) {
+		fprintf(stderr, "error %d detected on close of mtab\n", tmprc);
+		rc = EX_FILEIO;
+	}
 	unlock_mtab();
 	SAFE_FREE(mountent.mnt_opts);
 add_mtab_exit:
