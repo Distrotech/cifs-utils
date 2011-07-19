@@ -67,7 +67,7 @@ This keytype is for retrieving kerberos session keys
 .PP
 dns_resolver
 .RS 4
-This key type is for resolving hostnames into IP addresses
+This key type is for resolving hostnames into IP addresses. Support for this key type may eventually be deprecated (see below).
 .RE
 .PP
 To make this program useful for CIFS, you\'ll need to set up entries for them in request\-key\&.conf(5)\&. Here\'s an example of an entry for each key type:
@@ -88,11 +88,14 @@ create      dns_resolver   * * @sbindir@/cifs\&.upcall %k
 See
 \fBrequest-key.conf\fR(5)
 for more info on each field\&.
+
+The keyutils package has also started including a dns_resolver handling program as well that is preferred over the one in cifs.upcall. If you are using a keyutils version equal to or greater than 1.5, you should use key.dns_resolver to handle the dns_resolver keytype instead of cifs.upcall. See \fBkey.dns_resolver\fR(8) for more info.
 .SH "SEE ALSO"
 .PP
 
 \fBrequest-key.conf\fR(5),
-\fBmount.cifs\fR(8)
+\fBmount.cifs\fR(8),
+\fBkey.dns_resolver\fR(8)
 .SH "AUTHOR"
 .PP
 Igor Mammedov wrote the cifs\&.upcall program\&.
