@@ -24,7 +24,7 @@ AC_ARG_ENABLE(cifscreds,
 
 AC_ARG_ENABLE(cifsidmap,
 	[AC_HELP_STRING([--enable-cifsidmap],
-			[Create cifs.idmap binary @<:@default=no@:>@])],
+			[Create cifs.idmap binary @<:@default=yes@:>@])],
 	enable_cifsidmap=$enableval,
 	enable_cifsidmap="maybe")
 
