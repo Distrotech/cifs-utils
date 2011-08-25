@@ -532,7 +532,7 @@ winbind support configured via nsswitch.conf(5) and smb.conf(5)
 .RE
 Please refer to the respective manpages of cifs.idmap(8) and winbindd(8) for more information.
 
-Security descriptors for a file object can be retrieved and set directly using extended attribute named system.cifs_acl. The security descriptors presented via this interface are "raw" blobs of data and need a userspace utility to either parse and format or to assemble it.
+Security descriptors for a file object can be retrieved and set directly using extended attribute named system.cifs_acl. The security descriptors presented via this interface are "raw" blobs of data and need a userspace utility to either parse and format or to assemble it such as getcifsacl(8) and setcifsacl(8) respectively.
 
 Some of the things to consider while using this mount option:
 .sp
