@@ -815,7 +815,7 @@ main(const int argc, char *const argv[])
 		return -1;
 	}
 	filename = argv[3];
-	
+
 	numcaces = get_numcaces(optarg);
 	if (!numcaces) {
 		printf("%s: No valid ACEs specified\n", __func__);
