@@ -57,11 +57,18 @@ getcifsacl_SOURCES = getcifsacl.c
 getcifsacl_LDADD = -lkeyutils $(WINB_LDADD)
 man_MANS += getcifsacl.8
 
+sbin_PROGRAMS += setcifsacl
+setcifsacl_SOURCES = setcifsacl.c
+setcifsacl_LDADD = -lkeyutils $(WINB_LDADD)
+man_MANS += setcifsacl.8
+
 getcifsacl.8: getcifsacl.8.in
+	$(SED) 's,[@]sbindir@,$(sbindir),' $(srcdir)/$@.in > $@-t && mv $@-t $@
+setcifsacl.8: setcifsacl.8.in
 	$(SED) 's,[@]sbindir@,$(sbindir),' $(srcdir)/$@.in > $@-t && mv $@-t $@
 endif
 
 clean-local-aclprogs:
 if CONFIG_CIFSACL
-	rm -f getcifsacl.8 getcifsacl.8-t
+	rm -f getcifsacl.8 getcifsacl.8-t setcifsacl.8 setcifsacl.8-t
 endif
