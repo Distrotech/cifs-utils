@@ -9,7 +9,7 @@ mount_cifs_LDADD = $(LIBCAP) $(CAPNG_LDADD)
 man_MANS = mount.cifs.8
 
 sbin_PROGRAMS =
-clean-local: clean-local-upcall clean-local-idmap
+clean-local: clean-local-upcall clean-local-idmap clean-local-aclprogs
 
 if CONFIG_CIFSUPCALL
 sbin_PROGRAMS += cifs.upcall
@@ -49,4 +49,19 @@ endif
 clean-local-idmap:
 if CONFIG_CIFSIDMAP
 	rm -f cifs.idmap.8 cifs.idmap.8-t
+endif
+
+if CONFIG_CIFSACL
+sbin_PROGRAMS += getcifsacl
+getcifsacl_SOURCES = getcifsacl.c
+getcifsacl_LDADD = -lkeyutils $(WINB_LDADD)
+man_MANS += getcifsacl.8
+
+getcifsacl.8: getcifsacl.8.in
+	$(SED) 's,[@]sbindir@,$(sbindir),' $(srcdir)/$@.in > $@-t && mv $@-t $@
+endif
+
+clean-local-aclprogs:
+if CONFIG_CIFSACL
+	rm -f getcifsacl.8 getcifsacl.8-t
 endif

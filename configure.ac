@@ -28,6 +28,12 @@ AC_ARG_ENABLE(cifsidmap,
 	enable_cifsidmap=$enableval,
 	enable_cifsidmap="maybe")
 
+AC_ARG_ENABLE(cifsacl,
+	[AC_HELP_STRING([--enable-cifsacl],
+			[Create get/set cifsacl binary @<:@default=yes@:>@])],
+	enable_cifsacl=$enableval,
+	enable_cifsacl="maybe")
+
 # Checks for programs.
 AC_PROG_CC
 AC_PROG_SED
@@ -94,6 +100,16 @@ if test $enable_cifsupcall != "no" -o $enable_cifsidmap != "no"; then
 				fi
 			])
 fi
+if test $enable_cifsacl != "no"; then
+	AC_CHECK_HEADERS([wbclient.h], , [
+				if test "$enable_cifsacl" = "yes"; then
+					AC_MSG_ERROR([wbclient.h not found, consider installing libwbclient-devel.])
+				else
+					AC_MSG_WARN([wbclient.h not found, consider installing libwbclient-devel. Disabling getcifsacl.])
+					enable_cifsacl="no"
+				fi
+			])
+fi
 if test $enable_cifsupcall != "no"; then
 	AC_CHECK_LIB([krb5], [krb5_init_context],
 			[ KRB5_LDADD='-lkrb5' ],
@@ -156,6 +172,7 @@ LIBS=$cu_saved_libs
 AM_CONDITIONAL(CONFIG_CIFSUPCALL, [test "$enable_cifsupcall" != "no"])
 AM_CONDITIONAL(CONFIG_CIFSCREDS, [test "$enable_cifscreds" = "yes"])
 AM_CONDITIONAL(CONFIG_CIFSIDMAP, [test "$enable_cifsidmap" != "no"])
+AM_CONDITIONAL(CONFIG_CIFSACL, [test "$enable_cifsacl" != "no"])
 
 LIBCAP_NG_PATH
 
