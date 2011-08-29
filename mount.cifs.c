@@ -837,7 +837,7 @@ static int parse_opt_token(const char *token)
 		return OPT_GUEST;
 	if (strncmp(token, "ro", 2) == 0)
 		return OPT_RO;
-	if (strncmp(token, "rw", 2) == 0)
+	if (strncmp(token, "rw", 2) == 0 && strlen(token) == 2)
 		return OPT_RW;
 	if (strncmp(token, "remount", 7) == 0)
 		return OPT_REMOUNT;
