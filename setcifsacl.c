@@ -579,7 +579,7 @@ verify_ace_mask(char *maskstr, uint32_t *maskval)
 static struct cifs_ace **
 build_cmdline_aces(char **arrptr, int numcaces)
 {
-	int i, rc = 0;
+	int i;
 	char *acesid, *acetype, *aceflag, *acemask;
 	struct cifs_ace **cacesptr;
 
@@ -598,41 +598,35 @@ build_cmdline_aces(char **arrptr, int numcaces)
 
 		if (!acesid || !acetype || !aceflag || !acemask) {
 			printf("%s: Incomplete ACE: %s\n", __func__, arrptr[i]);
-			rc = 1;
 			goto build_cmdline_aces_ret;
 		}
 
 		cacesptr[i] = malloc(sizeof(struct cifs_ace));
 		if (!cacesptr[i]) {
 			printf("%s: ACE alloc error %d\n", __func__, errno);
-			rc = errno;
 			goto build_cmdline_aces_ret;
 		}
 
 		if (verify_ace_sid(acesid, &cacesptr[i]->sid)) {
 			printf("%s: Invalid SID: %s\n", __func__, arrptr[i]);
-			rc = 1;
 			goto build_cmdline_aces_ret;
 		}
 
 		if (verify_ace_type(acetype, &cacesptr[i]->type)) {
 			printf("%s: Invalid ACE type: %s\n",
 					__func__, arrptr[i]);
-			rc = 1;
 			goto build_cmdline_aces_ret;
 		}
 
 		if (verify_ace_flags(aceflag, &cacesptr[i]->flags)) {
 			printf("%s: Invalid ACE flag: %s\n",
 				__func__, arrptr[i]);
-			rc = 1;
 			goto build_cmdline_aces_ret;
 		}
 
 		if (verify_ace_mask(acemask, &cacesptr[i]->access_req)) {
 			printf("%s: Invalid ACE mask: %s\n",
 				__func__, arrptr[i]);
-			rc = 1;
 			goto build_cmdline_aces_ret;
 		}
 
