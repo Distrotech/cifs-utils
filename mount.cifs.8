@@ -326,7 +326,7 @@ krb5 Use Kerberos version 5 authentication
 .sp -1
 .IP \(bu 2.3
 .\}
-krb5i Use Kerberos authentication and packet signing
+krb5i Use Kerberos authentication and forcibly enable packet signing
 .RE
 .sp
 .RS 4
@@ -348,7 +348,7 @@ ntlm Use NTLM password hashing (default)
 .sp -1
 .IP \(bu 2.3
 .\}
-ntlmi Use NTLM password hashing with signing (if /proc/fs/cifs/PacketSigningEnabled on or if server requires signing also can be the default)
+ntlmi Use NTLM password hashing and force packet signing
 .RE
 .sp
 .RS 4
@@ -370,10 +370,32 @@ ntlmv2 Use NTLMv2 password hashing
 .sp -1
 .IP \(bu 2.3
 .\}
-ntlmv2i Use NTLMv2 password hashing with packet signing
-.sp
+ntlmv2i Use NTLMv2 password hashing and force packet signing
 .RE
-[NB This [sec parameter] is under development and expected to be available in cifs kernel module 1\&.40 and later]
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+ntlmssp Use NTLMv2 password hashing encapsulated in Raw NTLMSSP message
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+ntlmsspi Use NTLMv2 password hashing encapsulated in Raw NTLMSSP message, and force packet signing
+.RE
+.sp
+If the server requires signing during protocol negotiation, then it may be enabled automatically. Packet signing may also be enabled automatically if it's enabled in /proc/fs/cifs/SecurityFlags.
 .RE
 .PP
 nobrl
