@@ -7,7 +7,7 @@
 .\"    Source: cifs-utils 4.0
 .\"  Language: English
 .\"
-.TH "CIFS\&.IDMAP" "8" "05/26/2011" "cifs-utils 4\&.0" "System Administration tools"
+.TH "CIFS\&.IDMAP" "8" "05/26/2011" "cifs-utils" "System Administration tools"
 .\" -----------------------------------------------------------------
 .\" * set default formatting
 .\" -----------------------------------------------------------------
