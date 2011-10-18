@@ -68,12 +68,6 @@ type: ALLOWED (0x0), DENIED (0x1), OBJECT_ALLOWED (0x5), OBJECT_DENIED (0x6)
 flags: OBJECT_INHERIT_FLAG (OI or 0x1), CONTAINER_INHERIT_FLAG (CI or 0x2), NO_PROPAGATE_INHERIT_FLAG (NI or 0x4), INHERIT_ONLY_FLAG (IO or 0x8), INHERITED_ACE_FLAG (IA or 0x10) or a combination/OR of these values.
 .PP
 mask: Either one of FULL, CHANGE, READ, a combination of R W X D P O, or a hex value
-.SH "SEE ALSO"
-.PP
-\fBmount.cifs\fR(8),
-\fBwinbindd\fR(8),
-\fBgetcifsacl\fR(1)
-.PP
 .SH "EXAMPLES"
 .PP
 Add an ACE
@@ -94,6 +88,12 @@ Set an ACL
 setcifsacl -S "ACL:CIFSTESTDOM\\Administrator:0x0/0x0/FULL,
 .br
 ACL:CIFSTESTDOM\\user2:0x0/0x0/FULL," <file_name>
+.PP
+.SH "SEE ALSO"
+.PP
+\fBmount.cifs\fR(8),
+\fBwinbindd\fR(8),
+\fBgetcifsacl\fR(1)
 .PP
 .SH "AUTHOR"
 .PP
