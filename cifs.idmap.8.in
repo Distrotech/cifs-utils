@@ -76,6 +76,9 @@ create      cifs\&.idmap     * * @sbindir@/cifs\&.idmap %k
 See
 \fBrequest-key.conf\fR(5)
 for more info on each field\&.
+.SH "NOTES"
+.PP
+Support for upcalls to cifs.idmap was initially introduced in the 3.0 kernel.
 .SH "SEE ALSO"
 .PP
 
