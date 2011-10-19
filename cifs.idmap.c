@@ -134,6 +134,43 @@ cifs_idmap(const key_serial_t key, const char *key_descr)
 		goto cifs_idmap_ret;
 	}
 
+	sidstr = strget(key_descr, "oi:");
+	if (sidstr) {
+		uid = atoi(sidstr);
+		syslog(LOG_DEBUG, "SID: %s, uid: %d", sidstr, uid);
+		rc = wbcUidToSid(uid, &sid);
+		if (rc)
+			syslog(LOG_DEBUG, "uid %d to SID  error: %d", uid, rc);
+		if (!rc) { /* SID has been mapped to a uid */
+			rc = keyctl_instantiate(key, &sid,
+					sizeof(struct wbcDomainSid), 0);
+			if (rc)
+				syslog(LOG_ERR, "%s: key inst: %s",
+					__func__, strerror(errno));
+		}
+
+		goto cifs_idmap_ret;
+	}
+
+	sidstr = strget(key_descr, "gi:");
+	if (sidstr) {
+		gid = atoi(sidstr);
+		syslog(LOG_DEBUG, "SID: %s, gid: %d", sidstr, gid);
+		rc = wbcGidToSid(gid, &sid);
+		if (rc)
+			syslog(LOG_DEBUG, "gid %d to SID error: %d", gid, rc);
+		if (!rc) { /* SID has been mapped to a gid */
+			rc = keyctl_instantiate(key, &sid,
+					sizeof(struct wbcDomainSid), 0);
+			if (rc)
+				syslog(LOG_ERR, "%s: key inst: %s",
+					__func__, strerror(errno));
+		}
+
+		goto cifs_idmap_ret;
+	}
+
+
 	syslog(LOG_DEBUG, "Invalid key: %s", key_descr);
 
 cifs_idmap_ret:
