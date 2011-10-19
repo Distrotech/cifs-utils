@@ -158,6 +158,8 @@
 #define OPT_MAND       27
 #define OPT_NOMAND     28
 #define OPT_CRUID      29
+#define OPT_BKUPUID    30
+#define OPT_BKUPGID    31
 
 
 /* struct for holding parsed mount info for use by privleged process */
@@ -843,6 +845,10 @@ static int parse_opt_token(const char *token)
 		return OPT_REMOUNT;
 	if (strncmp(token, "_netdev", 7) == 0)
 		return OPT_IGNORE;
+	if (strncmp(token, "backupuid", 9) == 0)
+		return OPT_BKUPUID;
+	if (strncmp(token, "backupgid", 9) == 0)
+		return OPT_BKUPGID;
 
 	return OPT_ERROR;
 }
@@ -858,11 +864,13 @@ parse_options(const char *data, struct parsed_mount_info *parsed_info)
 	int out_len = 0;
 	int word_len;
 	int rc = 0;
+	int got_bkupuid = 0;
+	int got_bkupgid = 0;
 	int got_uid = 0;
 	int got_cruid = 0;
 	int got_gid = 0;
-	uid_t uid, cruid = 0;
-	gid_t gid;
+	uid_t uid, cruid = 0, bkupuid;
+	gid_t gid, bkupgid;
 	char *ep;
 	struct passwd *pw;
 	struct group *gr;
@@ -1171,6 +1179,42 @@ parse_options(const char *data, struct parsed_mount_info *parsed_info)
 			break;
 		case OPT_IGNORE:
 			goto nocopy;
+		case OPT_BKUPUID:
+			if (!value || !*value)
+				goto nocopy;
+
+			got_bkupuid = 1;
+			bkupuid = strtoul(value, &ep, 10);
+			if (!strlen(ep))
+				goto nocopy;
+
+			pw = getpwnam(value);
+			if (pw == NULL) {
+				fprintf(stderr,
+					"bad user name \"%s\"\n", value);
+				return EX_USAGE;
+			}
+
+			bkupuid = pw->pw_uid;
+			goto nocopy;
+		case OPT_BKUPGID:
+			if (!value || !*value)
+				goto nocopy;
+
+			got_bkupgid = 1;
+			bkupgid = strtoul(value, &ep, 10);
+			if (!strlen(ep))
+				goto nocopy;
+
+			gr = getgrnam(value);
+			if (gr == NULL) {
+				fprintf(stderr,
+					"bad group name \"%s\"\n", value);
+				return EX_USAGE;
+			}
+
+			bkupgid = gr->gr_gid;
+			goto nocopy;
 		}
 
 		/* check size before copying option to buffer */
@@ -1246,6 +1290,38 @@ nocopy:
 		}
 		snprintf(out + out_len, word_len + 5, "gid=%s", txtbuf);
 	}
+	if (got_bkupuid) {
+		word_len = snprintf(txtbuf, sizeof(txtbuf), "%u", bkupuid);
+
+		/* comma + "backupuid=" + terminating NULL == 12 */
+		if (out_len + word_len + 12 > MAX_OPTIONS_LEN) {
+			fprintf(stderr, "Options string too long\n");
+			return EX_USAGE;
+		}
+
+		if (out_len) {
+			strlcat(out, ",", MAX_OPTIONS_LEN);
+			out_len++;
+		}
+		snprintf(out + out_len, word_len + 11, "backupuid=%s", txtbuf);
+		out_len = strlen(out);
+	}
+	if (got_bkupgid) {
+		word_len = snprintf(txtbuf, sizeof(txtbuf), "%u", bkupgid);
+
+		/* comma + "backkupgid=" + terminating NULL == 12 */
+		if (out_len + word_len + 12 > MAX_OPTIONS_LEN) {
+			fprintf(stderr, "Options string too long\n");
+			return EX_USAGE;
+		}
+
+		if (out_len) {
+			strlcat(out, ",", MAX_OPTIONS_LEN);
+			out_len++;
+		}
+		snprintf(out + out_len, word_len + 11, "backupgid=%s", txtbuf);
+	}
+
 	return 0;
 }
 

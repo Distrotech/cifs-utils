@@ -282,6 +282,20 @@ See sections on
 for more information\&.
 .RE
 .PP
+backupuid=arg
+.RS 4
+Restrict access to files, with the backup intent, to a user.  Either a name or an id must be provided as an argument, there are no default values.
+.sp
+See section \fIACCESSING FILES WITH BACKUP INTENT\fR for more details
+.RE
+.PP
+backupgid=arg
+.RS 4
+Restrict Allow access to files, with the backup intent, to a group.  Either a name or an id must be provided as an argument, there are no default values.
+.sp
+See section \fIACCESSING FILES WITH BACKUP INTENT\fR for more details
+.RE
+.PP
 nocase
 .RS 4
 Request case insensitive path name matching (case sensitive is the default if the server suports it)\&.
@@ -590,6 +604,32 @@ The mapping between a CIFS/NTFS ACL and POSIX file permission bits is imperfect 
 .\}
 If either upcall to cifs.idmap is not setup correctly or winbind is not configured and running, ID mapping will fail. In that case uid and gid will default to either to those values of the share or to the values of uid and/or gid mount options if specified.
 .RE
+.SH "ACCESSING FILES WITH BACKUP INTENT"
+.PP
+For an user on the server, desired access to a file is determined by the permissions and rights associated with that file.  This is typically accomplished using owenrship and ACL.  For a user who does not have access rights to a file, it is still possible to access that file for a specific or a targeted purpose by granting special rights.  One of the specific purposes is to access a file with the intent to either backup or restore i.e. backup intent.  The right to access a file with the backup intent can typically be granted by making that user a part of the built-in group Backup Operators.  Thus, when this user attempts to open a file with the backup intent, open request is sent by setting the bit FILE_OPEN_FOR_BACKUP_INTENT as one of the CreateOptions.
+
+As an example, on a Windows server, a user named testuser, cannot open this file with such a security descriptor.
+.PP
+REVISION:0x1
+.sp 0
+CONTROL:0x9404
+.sp 0
+OWNER:Administrator
+.sp 0
+GROUP:Domain Users
+.sp 0
+ACL:Administrator:ALLOWED/0x0/FULL
+.PP
+But the user testuser, if it becomes part of the group Backup Operators, can open the file with the backup intent.
+
+Any user on the client side who can authenticate as such a user on the server,
+can access the files with the backup intent. But it is desirable and preferable for security reasons amongst many, to restrict this special right.
+
+The mount option backupuid is used to restrict this special right to a user which is specified by either a name or an id.
+.sp 0
+The mount option backupgid is used to restrict this special right to the users in a group which is specified by either a name or an id.
+.sp 0
+These two mount options can be used together.
 .SH "FILE AND DIRECTORY OWNERSHIP AND PERMISSIONS"
 .PP
 The core CIFS protocol does not provide unix ownership information or mode for files and directories\&. Because of this, files and directories will generally appear to be owned by whatever values the uid= or gid= options are set, and will have permissions set to the default file_mode and dir_mode for the mount\&. Attempting to change these values via chmod/chown will return success but have no effect\&.
