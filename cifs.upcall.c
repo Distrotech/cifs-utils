@@ -76,7 +76,7 @@ typedef enum _sectype {
  *
  */
 
-static char *cifs_krb5_principal_get_realm(krb5_context context,
+static char *cifs_krb5_principal_get_realm(krb5_context context __attribute__ ((unused)),
 					   krb5_principal principal)
 {
 #ifdef HAVE_KRB5_PRINCIPAL_GET_REALM	/* Heimdal */
