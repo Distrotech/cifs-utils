@@ -769,8 +769,9 @@ int main(const int argc, char *const argv[])
 	unsigned int have;
 	long rc = 1;
 	int c, try_dns = 0, legacy_uid = 0;
-	char *buf, *princ = NULL, *ccname = NULL;
+	char *buf, *ccname = NULL;
 	char hostbuf[NI_MAXHOST], *host;
+	char princ[NI_MAXHOST + 5]; /* 5 == len of "cifs/" */
 	struct decoded_args arg;
 	const char *oid;
 	uid_t uid;
@@ -848,6 +849,13 @@ int main(const int argc, char *const argv[])
 		goto out;
 	}
 
+	if (strlen(arg.hostname) >= NI_MAXHOST) {
+		syslog(LOG_ERR, "hostname provided by kernel is too long");
+		rc = 1;
+		goto out;
+
+	}
+
 	if (!legacy_uid && (have & DKD_HAVE_CREDUID))
 		uid = arg.creduid;
 	else if (have & DKD_HAVE_UID)
@@ -877,14 +885,6 @@ int main(const int argc, char *const argv[])
 	case MS_KRB5:
 	case KRB5:
 retry_new_hostname:
-		/* for "cifs/" service name + terminating 0 */
-		datalen = strlen(host) + 5 + 1;
-		princ = calloc(sizeof(char), datalen);
-		if (!princ) {
-			rc = -ENOMEM;
-			break;
-		}
-
 		if (arg.sec == MS_KRB5)
 			oid = OID_KERBEROS5_OLD;
 		else
@@ -894,8 +894,8 @@ retry_new_hostname:
 		 * try getting a cifs/ principal first and then fall back to
 		 * getting a host/ principal if that doesn't work.
 		 */
-		strlcpy(princ, "cifs/", datalen);
-		strlcpy(princ + 5, host, datalen - 5);
+		strlcpy(princ, "cifs/", sizeof(princ));
+		strlcpy(princ + 5, host, sizeof(princ) - 5);
 		rc = handle_krb5_mech(oid, princ, &secblob, &sess_key, ccname);
 		if (!rc)
 			break;
@@ -912,7 +912,6 @@ retry_new_hostname:
 		if (rc)
 			break;
 
-		SAFE_FREE(princ);
 		try_dns = 0;
 		host = hostbuf;
 		goto retry_new_hostname;
@@ -921,8 +920,6 @@ retry_new_hostname:
 		rc = 1;
 		break;
 	}
-
-	SAFE_FREE(princ);
 
 	if (rc)
 		goto out;
