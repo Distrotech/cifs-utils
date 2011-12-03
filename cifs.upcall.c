@@ -45,6 +45,7 @@
 #include <time.h>
 #include <netdb.h>
 #include <arpa/inet.h>
+#include <ctype.h>
 
 #include "util.h"
 #include "replace.h"
@@ -747,6 +748,16 @@ static int ip_to_fqdn(const char *addrstr, char *host, size_t hostlen)
 	return 0;
 }
 
+/* walk a string and lowercase it in-place */
+static void
+lowercase_string(char *c)
+{
+	while(*c) {
+		*c = tolower(*c);
+		++c;
+	}
+}
+
 static void usage(void)
 {
 	fprintf(stderr, "Usage: %s [-t] [-v] [-l] key_serial\n", prog);
@@ -894,6 +905,7 @@ retry_new_hostname:
 		 * try getting a cifs/ principal first and then fall back to
 		 * getting a host/ principal if that doesn't work.
 		 */
+		lowercase_string(host);
 		strlcpy(princ, "cifs/", sizeof(princ));
 		strlcpy(princ + 5, host, sizeof(princ) - 5);
 		rc = handle_krb5_mech(oid, princ, &secblob, &sess_key, ccname);
