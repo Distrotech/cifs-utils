@@ -926,12 +926,49 @@ retry_new_hostname:
 			break;
 
 		/*
-		 * FIXME: try to guess the DNS domain name for non-FQDN's.
-		 *
-		 * Use getaddrinfo() to resolve the hostname of the server and
-		 * set ai_canonname. Then use the domainname in ai_canonname
-		 * to turn the unqualified hostname into a FQDN.
+		 * If hostname has a '.', assume it's a FQDN, otherwise we want to
+		 * guess the domainname.
 		 */
+		if (!strchr(host, '.')) {
+			struct addrinfo hints;
+			struct addrinfo *ai;
+			char *domainname;
+
+			/*
+			 * use getaddrinfo() to resolve the hostname of the server
+			 * and set ai_canonname.
+			 */
+			memset(&hints, 0, sizeof(hints));
+			hints.ai_family = AF_UNSPEC;
+			hints.ai_flags = AI_CANONNAME;
+			rc = getaddrinfo(host, NULL, &hints, &ai);
+			if (rc) {
+				syslog(LOG_ERR, "Unable to resolve host address: %s [%s]",
+				       host, gai_strerror(rc));
+				break;
+			}
+
+			/* scan forward to first '.' in ai_canonnname */
+			domainname = strchr(ai->ai_canonname, '.');
+			if (!domainname) {
+				rc = -EINVAL;
+				freeaddrinfo(ai);
+				break;
+			}
+			lowercase_string(domainname);
+			rc = snprintf(princ, sizeof(princ), "cifs/%s%s",
+					host, domainname);
+			freeaddrinfo(ai);
+			if (rc < 0 || (size_t)rc >= sizeof(princ)) {
+				syslog(LOG_ERR, "Problem setting hostname in string: %ld", rc);
+				rc = -EINVAL;
+				break;
+			}
+
+			rc = handle_krb5_mech(oid, princ, &secblob, &sess_key, ccname);
+			if (!rc)
+				break;
+		}
 
 		if (!try_dns || !(have & DKD_HAVE_IP))
 			break;
