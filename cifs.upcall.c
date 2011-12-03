@@ -47,7 +47,6 @@
 #include <arpa/inet.h>
 #include <ctype.h>
 
-#include "util.h"
 #include "replace.h"
 #include "data_blob.h"
 #include "spnego.h"
@@ -895,27 +894,44 @@ int main(const int argc, char *const argv[])
 	switch (arg.sec) {
 	case MS_KRB5:
 	case KRB5:
-retry_new_hostname:
+		/*
+		 * Andrew Bartlett's suggested scheme for picking a principal
+		 * name, based on a supplied hostname.
+		 *
+		 * INPUT: fooo
+		 * TRY in order:
+		 * cifs/fooo@REALM
+		 * cifs/fooo.<guessed domain ?>@REALM
+		 *
+		 * INPUT: bar.example.com
+		 * TRY only:
+		 * cifs/bar.example.com@REALM
+		 */
 		if (arg.sec == MS_KRB5)
 			oid = OID_KERBEROS5_OLD;
 		else
 			oid = OID_KERBEROS5;
 
-		/*
-		 * try getting a cifs/ principal first and then fall back to
-		 * getting a host/ principal if that doesn't work.
-		 */
+retry_new_hostname:
 		lowercase_string(host);
-		strlcpy(princ, "cifs/", sizeof(princ));
-		strlcpy(princ + 5, host, sizeof(princ) - 5);
+		/* try "cifs/hostname" first */
+		rc = snprintf(princ, sizeof(princ), "cifs/%s", host);
+		if (rc < 0 || (size_t)rc >= sizeof(princ)) {
+			syslog(LOG_ERR,"Unable to set hostname %s in buffer.", host);
+			goto out;
+		}
+
 		rc = handle_krb5_mech(oid, princ, &secblob, &sess_key, ccname);
 		if (!rc)
 			break;
 
-		memcpy(princ, "host/", 5);
-		rc = handle_krb5_mech(oid, princ, &secblob, &sess_key, ccname);
-		if (!rc)
-			break;
+		/*
+		 * FIXME: try to guess the DNS domain name for non-FQDN's.
+		 *
+		 * Use getaddrinfo() to resolve the hostname of the server and
+		 * set ai_canonname. Then use the domainname in ai_canonname
+		 * to turn the unqualified hostname into a FQDN.
+		 */
 
 		if (!try_dns || !(have & DKD_HAVE_IP))
 			break;
