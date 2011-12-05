@@ -506,6 +506,11 @@ posixpaths
 Inverse of \fInoposixpaths\fR.
 .RE
 .PP
+prefixpath=
+.RS 4
+It's possible to mount a subdirectory of a share. The preferred way to do this is to append the path to the UNC when mounting. However, it's also possible to do the same by setting this option and providing the path there.
+.RE
+.PP
 \-\-verbose
 .RS 4
 Print additional debugging information for the mount\&. Note that this parameter must be specified before the \-o\&. For example:
