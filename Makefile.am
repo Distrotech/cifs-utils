@@ -69,3 +69,5 @@ clean-local-aclprogs:
 if CONFIG_CIFSACL
 	rm -f getcifsacl.8 getcifsacl.8-t setcifsacl.8 setcifsacl.8-t
 endif
+
+SUBDIRS = contrib

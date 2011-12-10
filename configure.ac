@@ -4,7 +4,7 @@
 AC_INIT([cifs-utils], [5.2.1], [cifs-utils@samba.org], [cifs-utils], [http://linux-cifs.samba.org/cifs-utils/])
 AC_CONFIG_SRCDIR([replace.h])
 AC_CONFIG_HEADERS([config.h])
-AC_CONFIG_FILES([Makefile])
+AC_CONFIG_FILES([Makefile contrib/Makefile contrib/request-key.d/Makefile])
 AC_CONFIG_MACRO_DIR(aclocal)
 
 AM_INIT_AUTOMAKE
