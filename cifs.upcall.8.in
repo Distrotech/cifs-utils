@@ -22,7 +22,7 @@
 cifs.upcall \- Userspace upcall helper for Common Internet File System (CIFS)
 .SH "SYNOPSIS"
 .HP \w'\ 'u
-cifs\&.upcall [\-\-trust\-dns|\-t] [\-\-version|\-v] [\-\-legacy\-uid|\-l] {keyid}
+cifs\&.upcall [\-\-trust\-dns|\-t] [\-\-version|\-v] [\-\-legacy\-uid|\-l] [--krb5conf=/path/to/krb5.conf|-k /path/to/...] {keyid}
 .SH "DESCRIPTION"
 .PP
 This tool is part of the cifs-utils suite\&.
@@ -36,6 +36,12 @@ for a particular key type\&. While it can be run directly from the command\-line
 \-c
 .RS 4
 This option is deprecated and is currently ignored\&.
+.RE
+.PP
+\--krb5conf=/path/to/krb5.conf|-k /path/to/krb5.conf
+.RS 4
+This option allows administrators to set an alternate location for the
+krb5.conf file that cifs.upcall will use.
 .RE
 .PP
 \-\-trust\-dns|\-t

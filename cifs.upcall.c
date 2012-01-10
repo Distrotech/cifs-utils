@@ -759,12 +759,13 @@ lowercase_string(char *c)
 
 static void usage(void)
 {
-	fprintf(stderr, "Usage: %s [-t] [-v] [-l] key_serial\n", prog);
+	fprintf(stderr, "Usage: %s [-k /path/to/krb5.conf] [-t] [-v] [-l] key_serial\n", prog);
 }
 
 const struct option long_options[] = {
-	{"trust-dns", 0, NULL, 't'},
+	{"krb5conf", 1, NULL, 'k'},
 	{"legacy-uid", 0, NULL, 'l'},
+	{"trust-dns", 0, NULL, 't'},
 	{"version", 0, NULL, 'v'},
 	{NULL, 0, NULL, 0}
 };
@@ -792,13 +793,19 @@ int main(const int argc, char *const argv[])
 
 	openlog(prog, 0, LOG_DAEMON);
 
-	while ((c = getopt_long(argc, argv, "cltv", long_options, NULL)) != -1) {
+	while ((c = getopt_long(argc, argv, "ck:ltv", long_options, NULL)) != -1) {
 		switch (c) {
 		case 'c':
 			/* legacy option -- skip it */
 			break;
 		case 't':
 			try_dns++;
+			break;
+		case 'k':
+			if (setenv("KRB5_CONFIG", optarg, 1) != 0) {
+				syslog(LOG_ERR, "unable to set $KRB5_CONFIG: %d", errno);
+				goto out;
+			}
 			break;
 		case 'l':
 			legacy_uid++;
