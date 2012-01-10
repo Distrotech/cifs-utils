@@ -55,12 +55,12 @@ endif
 if CONFIG_CIFSACL
 bin_PROGRAMS += getcifsacl
 getcifsacl_SOURCES = getcifsacl.c
-getcifsacl_LDADD = -lkeyutils $(WINB_LDADD)
+getcifsacl_LDADD = $(WINB_LDADD)
 man_MANS += getcifsacl.1
 
 bin_PROGRAMS += setcifsacl
 setcifsacl_SOURCES = setcifsacl.c
-setcifsacl_LDADD = -lkeyutils $(WINB_LDADD)
+setcifsacl_LDADD = $(WINB_LDADD)
 man_MANS += setcifsacl.1
 
 endif
