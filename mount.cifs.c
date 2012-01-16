@@ -1700,7 +1700,11 @@ del_mtab(char *mountpoint)
 		goto del_mtab_error;
 	}
 
-	rename(mtabtmpfile, MOUNTED);
+	if (rename(mtabtmpfile, MOUNTED)) {
+		fprintf(stderr, "del_mtab: error %d when renaming mtab in place\n", errno);
+		rc = EX_FILEIO;
+		goto del_mtab_error;
+	}
 
 del_mtab_exit:
 	unlock_mtab();
