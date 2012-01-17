@@ -52,6 +52,9 @@
 
 /* destination keyring */
 #define DEST_KEYRING KEY_SPEC_SESSION_KEYRING
+#define CIFS_KEY_TYPE  "logon"
+#define CIFS_KEY_PERMS (KEY_POS_VIEW|KEY_POS_WRITE|KEY_POS_SEARCH| \
+			KEY_USR_VIEW|KEY_USR_WRITE|KEY_USR_SEARCH)
 
 struct cmdarg {
 	char		*host;
@@ -223,7 +226,7 @@ key_add(const char *addr, const char *user, const char *pass, char keytype)
 	/* set payload contents */
 	len = sprintf(val, "%s:%s", user, pass);
 
-	return add_key("user", desc, val, len + 1, DEST_KEYRING);
+	return add_key(CIFS_KEY_TYPE, desc, val, len + 1, DEST_KEYRING);
 }
 
 /* add command handler */
@@ -300,10 +303,7 @@ static int cifscreds_add(struct cmdarg *arg)
 			fprintf(stderr, "error: Add credential key for %s\n",
 				currentaddress);
 		} else {
-			if (keyctl(KEYCTL_SETPERM, key, KEY_POS_VIEW | \
-				KEY_POS_WRITE | KEY_USR_VIEW | \
-				KEY_USR_WRITE) < 0
-			) {
+			if (keyctl(KEYCTL_SETPERM, key, CIFS_KEY_PERMS) < 0) {
 				fprintf(stderr, "error: Setting permissons "
 					"on key, attempt to delete...\n");
 
