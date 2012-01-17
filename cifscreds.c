@@ -42,10 +42,13 @@
 #define MOUNT_PASSWD_SIZE 128
 #define MAX_DOMAIN_SIZE 64
 
-/* allowed and disallowed characters for user and domain name */
-#define USER_DISALLOWED_CHARS "\\/\"[]:|<>+=;,?*@"
-#define DOMAIN_ALLOWED_CHARS "abcdefghijklmnopqrstuvwxyz" \
-			     "ABCDEFGHIJKLMNOPQRSTUVWXYZ-."
+/*
+ * disallowed characters for user and domain names. See:
+ * http://technet.microsoft.com/en-us/library/bb726984.aspx
+ * http://support.microsoft.com/kb/909264
+ */
+#define USER_DISALLOWED_CHARS "\\/\"[]:|<>+=;,?*"
+#define DOMAIN_DISALLOWED_CHARS "\\/:*?\"<>|"
 
 /* destination keyring */
 #define DEST_KEYRING KEY_SPEC_USER_KEYRING
@@ -567,7 +570,7 @@ int main(int argc, char **argv)
 		arg.host = argv[optind + 1];
 
 	if (arg.host && arg.keytype == 'd' &&
-	    strspn(arg.host, DOMAIN_ALLOWED_CHARS) != strnlen(arg.host, MAX_DOMAIN_SIZE)) {
+	    strpbrk(arg.host, DOMAIN_DISALLOWED_CHARS)) {
 		fprintf(stderr, "error: Domain name contains invalid characters\n");
 		return EXIT_FAILURE;
 	}
