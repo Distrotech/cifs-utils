@@ -33,6 +33,7 @@
 #include "util.h"
 
 #define THIS_PROGRAM_NAME "cifscreds"
+#define KEY_PREFIX	  "cifs"
 
 /* max length of appropriate command */
 #define MAX_COMMAND_SIZE 32
@@ -108,9 +109,9 @@ usage(void)
 static key_serial_t
 key_search(const char *addr, char keytype)
 {
-	char desc[INET6_ADDRSTRLEN + sizeof(THIS_PROGRAM_NAME) + 4];
+	char desc[INET6_ADDRSTRLEN + sizeof(KEY_PREFIX) + 4];
 
-	sprintf(desc, "%s:%c:%s", THIS_PROGRAM_NAME, keytype, addr);
+	sprintf(desc, "%s:%c:%s", KEY_PREFIX, keytype, addr);
 
 	return keyctl_search(DEST_KEYRING, CIFS_KEY_TYPE, desc, 0);
 }
@@ -150,7 +151,7 @@ static key_serial_t key_search_all(void)
 			continue;
 		}
 
-		if (strstr(buffer + dpos, THIS_PROGRAM_NAME ":") ==
+		if (strstr(buffer + dpos, KEY_PREFIX ":") ==
 			buffer + dpos
 		) {
 			ret = key;
@@ -173,11 +174,11 @@ static key_serial_t
 key_add(const char *addr, const char *user, const char *pass, char keytype)
 {
 	int len;
-	char desc[INET6_ADDRSTRLEN + sizeof(THIS_PROGRAM_NAME) + 4];
+	char desc[INET6_ADDRSTRLEN + sizeof(KEY_PREFIX) + 4];
 	char val[MOUNT_PASSWD_SIZE +  MAX_USERNAME_SIZE + 2];
 
 	/* set key description */
-	sprintf(desc, "%s:%c:%s", THIS_PROGRAM_NAME, keytype, addr);
+	sprintf(desc, "%s:%c:%s", KEY_PREFIX, keytype, addr);
 
 	/* set payload contents */
 	len = sprintf(val, "%s:%s", user, pass);
@@ -379,7 +380,7 @@ static int cifscreds_clearall(struct cmdarg *arg __attribute__ ((unused)))
 	} while (key > 0);
 
 	if (!count && !errors) {
-		printf("You have no stashed " THIS_PROGRAM_NAME
+		printf("You have no stashed " KEY_PREFIX
 			" credentials\n");
 		printf("If you want to add them use:\n");
 		printf("\t%s add\n", thisprogram);
