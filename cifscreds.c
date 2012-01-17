@@ -51,7 +51,7 @@
 #define DOMAIN_DISALLOWED_CHARS "\\/:*?\"<>|"
 
 /* destination keyring */
-#define DEST_KEYRING KEY_SPEC_USER_KEYRING
+#define DEST_KEYRING KEY_SPEC_SESSION_KEYRING
 
 struct cmdarg {
 	char		*host;
