@@ -109,54 +109,10 @@ static key_serial_t
 key_search(const char *addr, char keytype)
 {
 	char desc[INET6_ADDRSTRLEN + sizeof(THIS_PROGRAM_NAME) + 4];
-	key_serial_t key, *pk;
-	void *keylist;
-	char *buffer;
-	int count, dpos, n, ret;
 
 	sprintf(desc, "%s:%c:%s", THIS_PROGRAM_NAME, keytype, addr);
 
-	/* read the key payload data */
-	count = keyctl_read_alloc(DEST_KEYRING, &keylist);
-	if (count < 0)
-		return 0;
-
-	count /= sizeof(key_serial_t);
-
-	if (count == 0) {
-		ret = 0;
-		goto key_search_out;
-	}
-
-	/* list the keys in the keyring */
-	pk = keylist;
-	do {
-		key = *pk++;
-
-		ret = keyctl_describe_alloc(key, &buffer);
-		if (ret < 0)
-			continue;
-
-		n = sscanf(buffer, "%*[^;];%*d;%*d;%*x;%n", &dpos);
-		if (n) {
-			free(buffer);
-			continue;
-		}
-
-		if (!strcmp(buffer + dpos, desc)) {
-			ret = key;
-			free(buffer);
-			goto key_search_out;
-		}
-		free(buffer);
-
-	} while (--count);
-
-	ret = 0;
-
-key_search_out:
-	free(keylist);
-	return ret;
+	return keyctl_search(DEST_KEYRING, CIFS_KEY_TYPE, desc, 0);
 }
 
 /* search all program's keys in keyring */
