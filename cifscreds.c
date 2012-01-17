@@ -70,7 +70,8 @@ struct command commands[] = {
 };
 
 /* display usage information */
-static void usage(void)
+static int
+usage(void)
 {
 	struct command *cmd;
 
@@ -80,7 +81,7 @@ static void usage(void)
 			cmd->name, cmd->format);
 	fprintf(stderr, "\n");
 
-	exit(EXIT_FAILURE);
+	return EXIT_FAILURE;
 }
 
 /* search a specific key in keyring */
@@ -217,7 +218,7 @@ static int cifscreds_add(int argc, char *argv[])
 	int ret;
 
 	if (argc != 4)
-		usage();
+		return usage();
 
 	ret = resolve_host(argv[2], addrstr);
 	switch (ret) {
@@ -312,7 +313,7 @@ static int cifscreds_clear(int argc, char *argv[])
 	int ret, count = 0, errors = 0;
 
 	if (argc != 4)
-		usage();
+		return usage();
 
 	ret = resolve_host(argv[2], addrstr);
 	switch (ret) {
@@ -380,7 +381,7 @@ static int cifscreds_clearall(int argc, char *argv[] __attribute__ ((unused)))
 	int count = 0, errors = 0;
 
 	if (argc != 2)
-		usage();
+		return usage();
 
 	/*
 	 * search for all program's credentials stashed in session keyring
@@ -420,7 +421,7 @@ static int cifscreds_update(int argc, char *argv[])
 	int ret, id, count = 0;
 
 	if (argc != 4)
-		usage();
+		return usage();
 
 	ret = resolve_host(argv[2], addrstr);
 	switch (ret) {
@@ -491,7 +492,7 @@ int main(int argc, char **argv)
 		thisprogram = THIS_PROGRAM_NAME;
 
 	if (argc == 1)
-		usage();
+		return usage();
 
 	/* find the best fit command */
 	best = NULL;
@@ -510,7 +511,7 @@ int main(int argc, char **argv)
 		/* partial match */
 		if (best) {
 			fprintf(stderr, "Ambiguous command\n");
-			exit(EXIT_FAILURE);
+			return EXIT_FAILURE;
 		}
 
 		best = cmd;
@@ -518,8 +519,8 @@ int main(int argc, char **argv)
 
 	if (!best) {
 		fprintf(stderr, "Unknown command\n");
-		exit(EXIT_FAILURE);
+		return EXIT_FAILURE;
 	}
 
-	exit(best->action(argc, argv));
+	return best->action(argc, argv);
 }
