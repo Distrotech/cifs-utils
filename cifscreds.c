@@ -419,7 +419,7 @@ static int cifscreds_clear(int argc, char *argv[])
 }
 
 /* clearall command handler */
-static int cifscreds_clearall(int argc, char *argv[])
+static int cifscreds_clearall(int argc, char *argv[] __attribute__ ((unused)))
 {
 	key_serial_t key;
 	int count = 0, errors = 0;
