@@ -83,30 +83,17 @@ static void usage(void)
 	exit(EXIT_FAILURE);
 }
 
-/* create key's description string from given credentials */
-static char *
-create_description(const char *addr, char *desc)
-{
-	char *str_end;
-	int str_len;
-
-	sprintf(desc, "%s:a:%s", THIS_PROGRAM_NAME, addr);
-
-	return desc;
-}
-
 /* search a specific key in keyring */
 static key_serial_t
 key_search(const char *addr)
 {
-	char desc[INET6_ADDRSTRLEN + MAX_USERNAME_SIZE + \
-		+ sizeof(THIS_PROGRAM_NAME) + 3];
+	char desc[INET6_ADDRSTRLEN + sizeof(THIS_PROGRAM_NAME) + 4];
 	key_serial_t key, *pk;
 	void *keylist;
 	char *buffer;
 	int count, dpos, n, ret;
 
-	create_description(addr, desc);
+	sprintf(desc, "%s:a:%s", THIS_PROGRAM_NAME, addr);
 
 	/* read the key payload data */
 	count = keyctl_read_alloc(DEST_KEYRING, &keylist);
@@ -208,12 +195,17 @@ key_search_all_out:
 static key_serial_t
 key_add(const char *addr, const char *user, const char *pass)
 {
-	char desc[INET6_ADDRSTRLEN + MAX_USERNAME_SIZE + sizeof(THIS_PROGRAM_NAME) + 3];
+	int len;
+	char desc[INET6_ADDRSTRLEN + sizeof(THIS_PROGRAM_NAME) + 4];
+	char val[MOUNT_PASSWD_SIZE +  MAX_USERNAME_SIZE + 2];
 
-	create_description(addr, desc);
+	/* set key description */
+	sprintf(desc, "%s:a:%s", THIS_PROGRAM_NAME, addr);
 
-	return add_key("user", desc, pass, strnlen(pass, MOUNT_PASSWD_SIZE) + 1,
-		DEST_KEYRING);
+	/* set payload contents */
+	len = sprintf(val, "%s:%s", user, pass);
+
+	return add_key("user", desc, val, len + 1, DEST_KEYRING);
 }
 
 /* add command handler */
