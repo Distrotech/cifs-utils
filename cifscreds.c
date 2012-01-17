@@ -85,19 +85,19 @@ static void usage(void)
 
 /* create key's description string from given credentials */
 static char *
-create_description(const char *addr, const char *user, char *desc)
+create_description(const char *addr, char *desc)
 {
 	char *str_end;
 	int str_len;
 
-	sprintf(desc, "%s:%s:%s:", THIS_PROGRAM_NAME, addr, user);
+	sprintf(desc, "%s:a:%s", THIS_PROGRAM_NAME, addr);
 
 	return desc;
 }
 
 /* search a specific key in keyring */
 static key_serial_t
-key_search(const char *addr, const char *user)
+key_search(const char *addr)
 {
 	char desc[INET6_ADDRSTRLEN + MAX_USERNAME_SIZE + \
 		+ sizeof(THIS_PROGRAM_NAME) + 3];
@@ -106,7 +106,7 @@ key_search(const char *addr, const char *user)
 	char *buffer;
 	int count, dpos, n, ret;
 
-	create_description(addr, user, desc);
+	create_description(addr, desc);
 
 	/* read the key payload data */
 	count = keyctl_read_alloc(DEST_KEYRING, &keylist);
@@ -210,7 +210,7 @@ key_add(const char *addr, const char *user, const char *pass)
 {
 	char desc[INET6_ADDRSTRLEN + MAX_USERNAME_SIZE + sizeof(THIS_PROGRAM_NAME) + 3];
 
-	create_description(addr, user, desc);
+	create_description(addr, desc);
 
 	return add_key("user", desc, pass, strnlen(pass, MOUNT_PASSWD_SIZE) + 1,
 		DEST_KEYRING);
@@ -251,7 +251,7 @@ static int cifscreds_add(int argc, char *argv[])
 		*nextaddress++ = '\0';
 
 	while (currentaddress) {
-		if (key_search(currentaddress, argv[3]) > 0) {
+		if (key_search(currentaddress) > 0) {
 			printf("You already have stashed credentials "
 				"for %s (%s)\n", currentaddress, argv[2]);
 			printf("If you want to update them use:\n");
@@ -349,7 +349,7 @@ static int cifscreds_clear(int argc, char *argv[])
 		*nextaddress++ = '\0';
 
 	while (currentaddress) {
-		key_serial_t key = key_search(currentaddress, argv[3]);
+		key_serial_t key = key_search(currentaddress);
 		if (key > 0) {
 			if (keyctl(KEYCTL_UNLINK, key, DEST_KEYRING) < 0) {
 				fprintf(stderr, "error: Removing key from "
@@ -454,7 +454,7 @@ static int cifscreds_update(int argc, char *argv[])
 		*nextaddress++ = '\0';
 
 	while (currentaddress) {
-		if (key_search(currentaddress, argv[3]) > 0) {
+		if (key_search(currentaddress) > 0) {
 			addrs[count] = currentaddress;
 			count++;
 		}
