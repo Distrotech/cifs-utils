@@ -28,5 +28,6 @@
 size_t strlcpy(char *d, const char *s, size_t bufsize);
 size_t strlcat(char *d, const char *s, size_t bufsize);
 
+char *getusername(uid_t uid);
 #endif /* _LIBUTIL_H */
 

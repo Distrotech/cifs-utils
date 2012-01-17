@@ -363,17 +363,6 @@ static int set_password(struct parsed_mount_info *parsed_info, const char *src)
 	return 0;
 }
 
-/* caller frees username if necessary */
-static char *getusername(uid_t uid)
-{
-	char *username = NULL;
-	struct passwd *password = getpwuid(uid);
-
-	if (password)
-		username = password->pw_name;
-	return username;
-}
-
 /*
  * Parse a username string into parsed_mount_info fields. The format is:
  *

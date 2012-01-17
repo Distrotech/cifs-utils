@@ -24,6 +24,7 @@
 
 #include <sys/types.h>
 #include <string.h>
+#include <pwd.h>
 
 /* glibc doesn't have strlcpy, strlcat. Ensure we do. JRA. We
  * don't link to libreplace so need them here. */
@@ -68,4 +69,16 @@ size_t strlcat(char *d, const char *s, size_t bufsize)
 	return ret;
 }
 #endif
+
+/* caller frees username if necessary */
+char *
+getusername(uid_t uid)
+{
+	char *username = NULL;
+	struct passwd *password = getpwuid(uid);
+
+	if (password)
+		username = password->pw_name;
+	return username;
+}
 
