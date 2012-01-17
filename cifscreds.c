@@ -27,8 +27,10 @@
 #include <string.h>
 #include <ctype.h>
 #include <keyutils.h>
+#include <getopt.h>
 #include "mount.h"
 #include "resolve_host.h"
+#include "util.h"
 
 #define THIS_PROGRAM_NAME "cifscreds"
 
@@ -49,8 +51,8 @@
 #define DEST_KEYRING KEY_SPEC_USER_KEYRING
 
 struct cmdarg {
-	char	*host;
-	char	*user;
+	char		*host;
+	char		*user;
 };
 
 struct command {
@@ -67,11 +69,16 @@ static int cifscreds_update(struct cmdarg *arg);
 const char *thisprogram;
 
 struct command commands[] = {
-	{ cifscreds_add,	"add",		"<host> <user>" },
-	{ cifscreds_clear,	"clear",	"<host> <user>" },
+	{ cifscreds_add,	"add",		"[-u username] <host>" },
+	{ cifscreds_clear,	"clear",	"[-u username] <host>" },
 	{ cifscreds_clearall,	"clearall",	"" },
-	{ cifscreds_update,	"update",	"<host> <user>" },
+	{ cifscreds_update,	"update",	"[-u username] <host>" },
 	{ NULL, "", NULL }
+};
+
+struct option longopts[] = {
+	{"username", 1, NULL, 'u'},
+	{NULL, 0, NULL, 0}
 };
 
 /* display usage information */
@@ -499,12 +506,22 @@ int main(int argc, char **argv)
 	if (argc == 1)
 		return usage();
 
+	while((n = getopt_long(argc, argv, "u:", longopts, NULL)) != -1) {
+		switch (n) {
+		case 'u':
+			arg.user = optarg;
+			break;
+		default:
+			return usage();
+		}
+	}
+
 	/* find the best fit command */
 	best = NULL;
-	n = strnlen(argv[1], MAX_COMMAND_SIZE);
+	n = strnlen(argv[optind], MAX_COMMAND_SIZE);
 
 	for (cmd = commands; cmd->action; cmd++) {
-		if (memcmp(cmd->name, argv[1], n) != 0)
+		if (memcmp(cmd->name, argv[optind], n) != 0)
 			continue;
 
 		if (cmd->name[n] == 0) {
@@ -527,12 +544,12 @@ int main(int argc, char **argv)
 		return EXIT_FAILURE;
 	}
 
-	/* first argument should be host */
+	/* second argument should be host */
 	if (argc >= 3)
-		arg.host = argv[2];
+		arg.host = argv[optind + 1];
 
-	if (argc >= 4)
-		arg.user = argv[3];
+	if (arg.user == NULL)
+		arg.user = getusername(getuid());
 
 	return best->action(&arg);
 }
