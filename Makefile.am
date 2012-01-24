@@ -35,6 +35,7 @@ if CONFIG_CIFSCREDS
 bin_PROGRAMS += cifscreds
 cifscreds_SOURCES = cifscreds.c resolve_host.c util.c
 cifscreds_LDADD = -lkeyutils
+man_MANS += cifscreds.1
 endif
 
 if CONFIG_CIFSIDMAP
