@@ -9,7 +9,7 @@ AC_CONFIG_MACRO_DIR(aclocal)
 
 AM_INIT_AUTOMAKE
 
-# "with" options
+# "enable" options
 AC_ARG_ENABLE(cifsupcall,
 	[AC_HELP_STRING([--enable-cifsupcall],
 			[Create cifs.upcall binary @<:@default=yes@:>@])],
@@ -33,6 +33,14 @@ AC_ARG_ENABLE(cifsacl,
 			[Create get/set cifsacl binary @<:@default=yes@:>@])],
 	enable_cifsacl=$enableval,
 	enable_cifsacl="maybe")
+
+# check for ROOTSBINDIR environment var
+if test -z $ROOTSBINDIR; then
+	ROOTSBINDIR="/sbin"
+	export ROOTSBINDIR
+fi
+
+AC_ARG_VAR(ROOTSBINDIR, [Location where files ordinarily under /sbin should be installed. Note: unaffected by --prefix. @<:@default=/sbin@:>@])
 
 # Checks for programs.
 AC_PROG_CC
