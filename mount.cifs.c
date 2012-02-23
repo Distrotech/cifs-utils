@@ -1032,7 +1032,7 @@ parse_options(const char *data, struct parsed_mount_info *parsed_info)
 			got_uid = 1;
 			errno = 0;
 			uid = strtoul(value, &ep, 10);
-			if (errno == 0)
+			if (errno == 0 && *ep == '\0')
 				goto nocopy;
 
 			pw = getpwnam(value);
@@ -1051,7 +1051,7 @@ parse_options(const char *data, struct parsed_mount_info *parsed_info)
 			got_cruid = 1;
 			errno = 0;
 			cruid = strtoul(value, &ep, 10);
-			if (errno == 0)
+			if (errno == 0 && *ep == '\0')
 				goto nocopy;
 
 			pw = getpwnam(value);
@@ -1069,7 +1069,7 @@ parse_options(const char *data, struct parsed_mount_info *parsed_info)
 			got_gid = 1;
 			errno = 0;
 			gid = strtoul(value, &ep, 10);
-			if (errno == 0)
+			if (errno == 0 && *ep == '\0')
 				goto nocopy;
 
 			gr = getgrnam(value);
@@ -1175,8 +1175,9 @@ parse_options(const char *data, struct parsed_mount_info *parsed_info)
 				goto nocopy;
 
 			got_bkupuid = 1;
+			errno = 0;
 			bkupuid = strtoul(value, &ep, 10);
-			if (!strlen(ep))
+			if (errno == 0 && *ep == '\0')
 				goto nocopy;
 
 			pw = getpwnam(value);
@@ -1193,8 +1194,9 @@ parse_options(const char *data, struct parsed_mount_info *parsed_info)
 				goto nocopy;
 
 			got_bkupgid = 1;
+			errno = 0;
 			bkupgid = strtoul(value, &ep, 10);
-			if (!strlen(ep))
+			if (errno == 0 && *ep == '\0')
 				goto nocopy;
 
 			gr = getgrnam(value);
