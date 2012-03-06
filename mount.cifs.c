@@ -1438,6 +1438,7 @@ static struct option longopts[] = {
 	{"pass", 1, NULL, 'p'},
 	{"credentials", 1, NULL, 'c'},
 	{"port", 1, NULL, 'P'},
+	{"sloppy", 0, NULL, 's'},
 	{NULL, 0, NULL, 0}
 };
 
@@ -1863,6 +1864,7 @@ int main(int argc, char **argv)
 	char *currentaddress, *nextaddress;
 	int rc = 0;
 	int already_uppercased = 0;
+	int sloppy = 0;
 	size_t options_size = MAX_OPTIONS_LEN;
 	struct parsed_mount_info *parsed_info = NULL;
 	pid_t pid;
@@ -1900,7 +1902,7 @@ int main(int argc, char **argv)
 	}
 
 	/* add sharename in opts string as unc= parm */
-	while ((c = getopt_long(argc, argv, "?fhno:rvVw",
+	while ((c = getopt_long(argc, argv, "?fhno:rsvVw",
 				longopts, NULL)) != -1) {
 		switch (c) {
 		case '?':
@@ -1931,6 +1933,9 @@ int main(int argc, char **argv)
 			break;
 		case 'f':
 			++parsed_info->fakemnt;
+			break;
+		case 's':
+			++sloppy;
 			break;
 		default:
 			fprintf(stderr, "unknown command-line option: %c\n", c);
@@ -2036,6 +2041,9 @@ mount_retry:
 		strlcat(options, ",prefixpath=", options_size);
 		strlcat(options, parsed_info->prefix, options_size);
 	}
+
+	if (sloppy)
+		strlcat(options, ",sloppy", options_size);
 
 	if (parsed_info->verboseflag)
 		fprintf(stderr, "%s kernel mount options: %s",
