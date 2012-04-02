@@ -659,7 +659,8 @@ The variable
 may contain the pathname of a file to read the password from\&. A single line of input is read and used as the password\&.
 .SH "NOTES"
 .PP
-This command may be used only by root, unless installed setuid, in which case the noeexec and nosuid mount flags are enabled\&. When installed as a setuid program, the program follows the conventions set forth by the mount program for user mounts\&.
+This command may be used only by root, unless installed setuid, in which case the noeexec and nosuid mount flags are enabled\&. When installed as a setuid program, the program follows the conventions set forth by the mount program for user mounts, with the added restriction that users must be able to chdir() into the
+mountpoint prior to the mount in order to be able to mount onto it.
 .PP
 Some samba client tools like smbclient(8) honour client\-side configuration parameters present in smb\&.conf\&. Unlike those client tools,
 \fImount\&.cifs\fR

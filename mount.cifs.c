@@ -45,6 +45,9 @@
 #include <libgen.h>
 #include <sys/mman.h>
 #include <sys/wait.h>
+#ifdef HAVE_SYS_FSUID_H
+#include <sys/fsuid.h>
+#endif /* HAVE_SYS_FSUID_H */
 #ifdef HAVE_LIBCAP_NG
 #include <cap-ng.h>
 #else /* HAVE_LIBCAP_NG */
@@ -1854,6 +1857,68 @@ assemble_exit:
 	return rc;
 }
 
+/*
+ * chdir() into the mountpoint and determine "realpath". We assume here that
+ * "mountpoint" is a statically allocated string and does not need to be freed.
+ */
+static int
+acquire_mountpoint(char **mountpointp)
+{
+	int rc, dacrc;
+	uid_t realuid, oldfsuid;
+	gid_t oldfsgid;
+	char *mountpoint;
+
+	/*
+	 * Acquire the necessary privileges to chdir to the mountpoint. If
+	 * the real uid is root, then we reacquire CAP_DAC_READ_SEARCH. If
+	 * it's not, then we change the fsuid to the real uid to ensure that
+	 * the mounting user actually has access to the mountpoint.
+	 *
+	 * The mount(8) manpage does not state that users must be able to
+	 * chdir into the mountpoint in order to mount onto it, but if we
+	 * allow that, then an unprivileged user could use this program to
+	 * "probe" into directories to which he does not have access.
+	 */
+	realuid = getuid();
+	if (realuid == 0) {
+		dacrc = toggle_dac_capability(0, 1);
+		if (dacrc)
+			return dacrc;
+	} else {
+		oldfsuid = setfsuid(realuid);
+		oldfsgid = setfsgid(getgid());
+	}
+
+	rc = chdir(*mountpointp);
+	if (rc) {
+		fprintf(stderr, "Couldn't chdir to %s: %s\n", *mountpointp,
+			strerror(errno));
+		rc = EX_USAGE;
+		goto restore_privs;
+	}
+
+	mountpoint = realpath(".", NULL);
+	if (!mountpoint) {
+		fprintf(stderr, "Unable to resolve %s to canonical path: %s\n",
+			*mountpointp, strerror(errno));
+		rc = EX_SYSERR;
+	}
+
+	*mountpointp = mountpoint;
+restore_privs:
+	if (realuid == 0) {
+		dacrc = toggle_dac_capability(0, 0);
+		if (dacrc)
+			rc = rc ? rc : dacrc;
+	} else {
+		setfsuid(oldfsuid);
+		setfsgid(oldfsgid);
+	}
+
+	return rc;
+}
+
 int main(int argc, char **argv)
 {
 	int c;
@@ -1953,25 +2018,7 @@ int main(int argc, char **argv)
 	mountpoint = argv[optind + 1];
 
 	/* chdir into mountpoint as soon as possible */
-	rc = toggle_dac_capability(0, 1);
-	if (rc)
-		return rc;
-	rc = chdir(mountpoint);
-	if (rc) {
-		fprintf(stderr, "Couldn't chdir to %s: %s\n", mountpoint,
-			strerror(errno));
-		rc = EX_USAGE;
-		goto mount_exit;
-	}
-
-	mountpoint = realpath(".", NULL);
-	if (!mountpoint) {
-		fprintf(stderr, "Unable to resolve %s to canonical path: %s\n",
-			mountpoint, strerror(errno));
-		rc = EX_SYSERR;
-		goto mount_exit;
-	}
-	rc = toggle_dac_capability(0, 0);
+	rc = acquire_mountpoint(&mountpoint);
 	if (rc)
 		return rc;
 

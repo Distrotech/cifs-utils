@@ -77,6 +77,10 @@ AC_CHECK_FUNCS(clock_gettime, [], [
 # Checks for header files.
 AC_CHECK_HEADERS([arpa/inet.h ctype.h fcntl.h inttypes.h limits.h mntent.h netdb.h stddef.h stdint.h stdbool.h stdlib.h stdio.h errno.h string.h strings.h sys/mount.h sys/param.h sys/socket.h sys/time.h syslog.h unistd.h], , [AC_MSG_ERROR([necessary header(s) not found])])
 
+# do we have sys/fsuid.h and setfsuid()?
+AC_CHECK_HEADERS([sys/fsuid.h])
+AC_CHECK_FUNC(setfsuid, , [AC_MSG_ERROR([System does not support setfsuid()])])
+
 if test $enable_cifsupcall != "no"; then
 	AC_CHECK_HEADERS([krb5.h krb5/krb5.h])
 	if test x$ac_cv_header_krb5_krb5_h != xyes ; then
