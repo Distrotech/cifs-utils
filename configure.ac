@@ -46,6 +46,7 @@ AC_ARG_VAR(ROOTSBINDIR, [Location where files ordinarily under /sbin should be i
 AC_PROG_CC
 AC_PROG_SED
 AC_GNU_SOURCE
+AM_PROG_CC_C_O
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_HEADER_STDBOOL
@@ -137,21 +138,6 @@ if test $enable_cifsupcall != "no" -o $enable_cifsidmap != "no"; then
 					AC_MSG_WARN([keyutils.h not found, consider installing keyutils-libs-devel. Disabling cifs.idmap.])
 					enable_cifsidmap="no"
 				fi
-			])
-fi
-if test $enable_cifsacl != "no"; then
-	AC_CHECK_HEADERS([wbclient.h], , [
-				if test "$enable_cifsacl" = "yes"; then
-					AC_MSG_ERROR([wbclient.h not found, consider installing libwbclient-devel.])
-				else
-					AC_MSG_WARN([wbclient.h not found, consider installing libwbclient-devel. Disabling getcifsacl.])
-					enable_cifsacl="no"
-				fi
-			],
-			[AC_INCLUDES_DEFAULT]
-			[#ifdef HAVE_STDBOOL_H
-			    #include <stdbool.h>
-			    #endif
 			])
 fi
 if test $enable_cifsupcall != "no"; then

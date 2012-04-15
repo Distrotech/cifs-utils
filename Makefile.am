@@ -41,7 +41,8 @@ endif
 if CONFIG_CIFSIDMAP
 sbin_PROGRAMS += cifs.idmap
 cifs_idmap_SOURCES = cifs.idmap.c
-cifs_idmap_LDADD = -lkeyutils $(WINB_LDADD)
+cifs_idmap_LDADD = -lkeyutils $(WBCLIENT_LIBS)
+cifs_idmap_CFLAGS = $(WBCLIENT_CFLAGS)
 man_MANS += cifs.idmap.8
 
 cifs.idmap.8: cifs.idmap.8.in
@@ -56,12 +57,14 @@ endif
 if CONFIG_CIFSACL
 bin_PROGRAMS += getcifsacl
 getcifsacl_SOURCES = getcifsacl.c
-getcifsacl_LDADD = $(WINB_LDADD)
+getcifsacl_LDADD = $(WBCLIENT_LIBS)
+getcifsacl_CFLAGS = $(WBCLIENT_CFLAGS)
 man_MANS += getcifsacl.1
 
 bin_PROGRAMS += setcifsacl
 setcifsacl_SOURCES = setcifsacl.c
-setcifsacl_LDADD = $(WINB_LDADD)
+setcifsacl_LDADD = $(WBCLIENT_LIBS)
+setcifsacl_CFLAGS = $(WBCLIENT_CFLAGS)
 man_MANS += setcifsacl.1
 
 endif

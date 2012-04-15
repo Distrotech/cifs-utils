@@ -1,33 +1,8 @@
-dnl Headers needed by wbclient.h
-dnl
-AC_DEFUN([AC_WBCH_COMPL],[
-[
-#ifdef HAVE_STDINT_H
-#include <stdint.h>
-#endif
-]
-[#ifdef HAVE_STDBOOL_H
-#include <stdbool.h>
-#endif
-]
-[#ifdef HAVE_STDIO_H
-#include <stdio.h>
-#endif
-]
-[#ifdef HAVE_STDLIB_H
-#include <stdlib.h>
-#endif
-]
-[#ifdef HAVE_ERRNO_H
-#include <errno.h>
-#endif
-]])
-
-dnl Check for wbclient.h header and libwbclient.so
+dnl Check for wbclient package
 dnl
 AC_DEFUN([AC_TEST_WBCHL],[
 if test $enable_cifsidmap != "no" -o $enable_cifsacl != "no"; then
-	AC_CHECK_HEADERS([wbclient.h], , [
+	PKG_CHECK_MODULES(WBCLIENT, wbclient, , [
 				if test "$enable_cifsidmap" = "yes"; then
 					AC_MSG_ERROR([wbclient.h not found, consider installing libwbclient-devel.])
 				else
@@ -40,7 +15,7 @@ if test $enable_cifsidmap != "no" -o $enable_cifsacl != "no"; then
 					AC_MSG_WARN([wbclient.h not found, consider installing libwbclient-devel. Disabling cifsacl.])
 					enable_cifsacl="no"
 				fi
-			], [ AC_WBCH_COMPL ])
+			])
 fi
 
 if test $enable_cifsacl != "no"; then
@@ -52,11 +27,5 @@ if test $enable_cifsacl != "no"; then
 					enable_cifsacl="no"
 				fi
 			], [ ])
-fi
-
-if test $enable_cifsidmap != "no" -o $enable_cifsacl != "no"; then
-	AC_CHECK_LIB([wbclient], [wbcStringToSid],
-		[ WINB_LDADD='-lwbclient' ] [ AC_DEFINE(HAVE_LIBWBCLIENT, 1, ["Define var have_libwbclient"]) ], [AC_MSG_ERROR([No functioning wbclient library found!])])
-	AC_SUBST(WINB_LDADD)
 fi
 ])
