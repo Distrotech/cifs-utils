@@ -41,8 +41,9 @@ void asn1_free(struct asn1_data *data)
 /* write to the ASN1 buffer, advancing the buffer pointer */
 bool asn1_write(struct asn1_data *data, const void *p, int len)
 {
-	if (data->has_error) return false;
-	if (data->length < data->ofs+len) {
+	if (data->has_error)
+		return false;
+	if (data->length < (size_t)data->ofs + len) {
 		uint8_t *newp;
 		newp = talloc_realloc(data, data->data, uint8_t, data->ofs+len);
 		if (!newp) {
@@ -408,7 +409,7 @@ bool asn1_peek(struct asn1_data *data, void *p, int len)
 	if (len < 0 || data->ofs + len < data->ofs || data->ofs + len < len)
 		return false;
 
-	if (data->ofs + len > data->length) {
+	if ((size_t)data->ofs + len > data->length) {
 		/* we need to mark the buffer as consumed, so the caller knows
 		   this was an out of data error, and not a decode error */
 		data->ofs = data->length;
@@ -538,7 +539,11 @@ int asn1_tag_remaining(struct asn1_data *data)
 		return -1;
 	}
 	remaining = data->nesting->taglen - (data->ofs - data->nesting->start);
-	if (remaining > (data->length - data->ofs)) {
+	if (remaining < 0) {
+		data->has_error = true;
+		return -1;
+	}
+	if ((size_t)remaining > data->length - data->ofs) {
 		data->has_error = true;
 		return -1;
 	}
@@ -553,7 +558,7 @@ int asn1_tag_remaining(struct asn1_data *data)
 static bool _ber_read_OID_String_impl(TALLOC_CTX *mem_ctx, DATA_BLOB blob,
 					const char **OID, size_t *bytes_eaten)
 {
-	int i;
+	unsigned int i;
 	uint8_t *b;
 	unsigned int v;
 	char *tmp_oid = NULL;
