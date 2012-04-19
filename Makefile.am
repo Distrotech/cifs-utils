@@ -1,4 +1,4 @@
-AM_CFLAGS = -Wall -Wextra -Werror
+AM_CFLAGS = -Wall -Wextra -Werror -D_FORTIFY_SOURCE=2
 ACLOCAL_AMFLAGS = -I aclocal
 
 root_sbindir = $(ROOTSBINDIR)

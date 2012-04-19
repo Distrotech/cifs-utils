@@ -271,8 +271,10 @@ my_endmntent(FILE *stream, off_t size)
 
 	/* truncate file back to "size" -- best effort here */
 	if (rc) {
+		int ignore __attribute__((unused));
+
 		rc = errno;
-		ftruncate(fd, size);
+		ignore = ftruncate(fd, size);
 	}
 
 	endmntent(stream);

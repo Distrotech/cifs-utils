@@ -927,11 +927,11 @@ parse_options(const char *data, struct parsed_mount_info *parsed_info)
 					return EX_USAGE;
 				}
 			} else {
-				/* domain/username%password */
-				const int max = MAX_DOMAIN_SIZE +
-						MAX_USERNAME_SIZE +
-						MOUNT_PASSWD_SIZE + 2;
-				if (strnlen(value, max + 1) >= max + 1) {
+				/* domain/username%password  + NULL term. */
+				const size_t max = MAX_DOMAIN_SIZE +
+						   MAX_USERNAME_SIZE +
+						   MOUNT_PASSWD_SIZE + 2 + 1;
+				if (strnlen(value, max) >= max) {
 					fprintf(stderr, "username too long\n");
 					return EX_USAGE;
 				}
@@ -1603,8 +1603,10 @@ add_mtab(char *devname, char *mountpoint, unsigned long flags, const char *fstyp
 	mountent.mnt_passno = 0;
 	rc = addmntent(pmntfile, &mountent);
 	if (rc) {
+		int ignore __attribute__((unused));
+
 		fprintf(stderr, "unable to add mount entry to mtab\n");
-		ftruncate(fd, statbuf.st_size);
+		ignore = ftruncate(fd, statbuf.st_size);
 		rc = EX_FILEIO;
 	}
 	tmprc = my_endmntent(pmntfile, statbuf.st_size);
