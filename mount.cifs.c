@@ -577,7 +577,7 @@ toggle_dac_capability(int writable, int enable)
 	}
 free_caps:
 	cap_free(caps);
-	return 0;
+	return rc;
 }
 #else /* HAVE_LIBCAP */
 static int
