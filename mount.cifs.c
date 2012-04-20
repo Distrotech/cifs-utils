@@ -552,9 +552,6 @@ toggle_dac_capability(int writable, int enable)
 	cap_t caps;
 	cap_value_t capability = writable ? CAP_DAC_OVERRIDE : CAP_DAC_READ_SEARCH;
 
-	if (getuid() != 0)
-		return 0;
-
 	caps = cap_get_proc();
 	if (caps == NULL) {
 		fprintf(stderr, "Unable to get current capability set: %s\n",
