@@ -863,8 +863,8 @@ parse_options(const char *data, struct parsed_mount_info *parsed_info)
 	int got_uid = 0;
 	int got_cruid = 0;
 	int got_gid = 0;
-	uid_t uid, cruid = 0, bkupuid;
-	gid_t gid, bkupgid;
+	uid_t uid, cruid = 0, bkupuid = 0;
+	gid_t gid, bkupgid = 0;
 	char *ep;
 	struct passwd *pw;
 	struct group *gr;
