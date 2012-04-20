@@ -415,6 +415,14 @@ cifs_krb5_get_req(const char *host, const char *ccname,
 	 */
 	in_data.data = discard_const_p(char, gss_cksum);
 	in_data.length = 24;
+
+	/* MIT krb5 < 1.7 is missing the prototype, but still has the symbol */
+#if !HAVE_DECL_KRB5_AUTH_CON_SET_REQ_CKSUMTYPE
+	krb5_error_code krb5_auth_con_set_req_cksumtype(
+		krb5_context      context,
+		krb5_auth_context auth_context,
+		krb5_cksumtype    cksumtype);
+#endif
 	ret = krb5_auth_con_set_req_cksumtype(context, auth_context, 0x8003);
 	if (ret) {
 		syslog(LOG_DEBUG, "%s: unable to set 0x8003 checksum",

@@ -178,6 +178,9 @@ if test $enable_cifsupcall != "no"; then
 	AC_CHECK_FUNCS([krb5_auth_con_setaddrs krb5_auth_con_set_req_cksumtype])
 fi
 
+# MIT krb5 < 1.7 does not have this declaration but does have the symbol
+AC_CHECK_DECLS(krb5_auth_con_set_req_cksumtype, [], [], [#include <krb5.h>])
+
 LIBS=$cu_saved_libs
 
 AM_CONDITIONAL(CONFIG_CIFSUPCALL, [test "$enable_cifsupcall" != "no"])
