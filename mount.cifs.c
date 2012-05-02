@@ -1023,7 +1023,7 @@ parse_options(const char *data, struct parsed_mount_info *parsed_info)
 					rc, strerror(rc), value);
 				return rc;
 			}
-			break;
+			goto nocopy;
 
 		case OPT_UID:
 			if (!value || !*value)
@@ -1834,7 +1834,9 @@ assemble_mountinfo(struct parsed_mount_info *parsed_info,
 	}
 
 	/* copy in ver= string. It's not really needed, but what the hell */
-	strlcat(parsed_info->options, ",ver=", sizeof(parsed_info->options));
+	if (*parsed_info->options)
+		strlcat(parsed_info->options, ",", sizeof(parsed_info->options));
+	strlcat(parsed_info->options, "ver=", sizeof(parsed_info->options));
 	strlcat(parsed_info->options, OPTIONS_VERSION, sizeof(parsed_info->options));
 
 	/* copy in user= string */
