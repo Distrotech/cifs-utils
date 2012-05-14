@@ -114,7 +114,7 @@ See <citerefentry><refentrytitle>request-key.conf<manvolnum>5</manvolnum></refen
 	<para>Igor Mammedov wrote the cifs.upcall program.</para>
 	<para>Jeff Layton authored this manpage.</para>
 	<para>The maintainer of the Linux CIFS VFS is Steve French.</para>
-        <para>The <ulink url="mailto:linux-cifs-client@lists.samba.org">Linux
+        <para>The <ulink url="mailto:linux-cifs@vger.kernel.org">Linux
 		CIFS Mailing list</ulink> is the preferred place to ask
 		questions regarding these programs.
 	</para>

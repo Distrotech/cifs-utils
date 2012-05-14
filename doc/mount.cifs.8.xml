@@ -742,7 +742,7 @@ server type you are trying to contact.
 
 	<para>The maintainer of the Linux cifs vfs and the userspace
 		tool <emphasis>mount.cifs</emphasis> is <ulink url="mailto:sfrench@samba.org">Steve French</ulink>.
-		The <ulink url="mailto:linux-cifs-client@lists.samba.org">Linux CIFS Mailing list</ulink> 
+		The <ulink url="mailto:linux-cifs@vger.kernel.org">Linux CIFS Mailing list</ulink> 
 		is the preferred place to ask questions regarding these programs. 
 	</para>
 
