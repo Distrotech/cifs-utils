@@ -100,12 +100,6 @@
 #define MAX_DOMAIN_SIZE 64
 
 /*
- * value of the ver= option that gets passed to the kernel. Used to indicate
- * behavioral changes introduced in the mount helper.
- */
-#define OPTIONS_VERSION "1"
-
-/*
  * mount.cifs has been the subject of many "security" bugs that have arisen
  * because of users and distributions installing it as a setuid root program
  * before it had been audited for security holes. The default behavior is
@@ -1833,21 +1827,21 @@ assemble_mountinfo(struct parsed_mount_info *parsed_info,
 			goto assemble_exit;
 	}
 
-	/* copy in ver= string. It's not really needed, but what the hell */
-	if (*parsed_info->options)
-		strlcat(parsed_info->options, ",", sizeof(parsed_info->options));
-	strlcat(parsed_info->options, "ver=", sizeof(parsed_info->options));
-	strlcat(parsed_info->options, OPTIONS_VERSION, sizeof(parsed_info->options));
-
 	/* copy in user= string */
 	if (parsed_info->got_user) {
-		strlcat(parsed_info->options, ",user=",
+		if (*parsed_info->options)
+			strlcat(parsed_info->options, ",",
+				sizeof(parsed_info->options));
+		strlcat(parsed_info->options, "user=",
 			sizeof(parsed_info->options));
 		strlcat(parsed_info->options, parsed_info->username,
 			sizeof(parsed_info->options));
 	}
 
 	if (*parsed_info->domain) {
+		if (*parsed_info->options)
+			strlcat(parsed_info->options, ",",
+				sizeof(parsed_info->options));
 		strlcat(parsed_info->options, ",domain=",
 			sizeof(parsed_info->options));
 		strlcat(parsed_info->options, parsed_info->domain,
