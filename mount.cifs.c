@@ -525,13 +525,13 @@ free_caps:
 }
 #else /* HAVE_LIBCAP */
 static int
-drop_capabilities(int parent)
+drop_capabilities(int parent __attribute((unused)))
 {
 	return 0;
 }
 
 static int
-toggle_dac_capability(int writable, int enable)
+toggle_dac_capability(int writable __attribute((unused)), int enable __attribute((unused)))
 {
 	return 0;
 }
