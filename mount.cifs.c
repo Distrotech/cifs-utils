@@ -495,7 +495,7 @@ free_caps:
 static int
 toggle_dac_capability(int writable, int enable)
 {
-	int rc;
+	int rc = 0;
 	cap_t caps;
 	cap_value_t capability = writable ? CAP_DAC_OVERRIDE : CAP_DAC_READ_SEARCH;
 
