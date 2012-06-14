@@ -994,10 +994,12 @@ retry_new_hostname:
 		break;
 	}
 
-	if (rc)
+	if (rc) {
+		syslog(LOG_DEBUG, "Unable to obtain service ticket");
 		goto out;
+	}
 
-	/* pack SecurityBLob and SessionKey into downcall packet */
+	/* pack SecurityBlob and SessionKey into downcall packet */
 	datalen =
 	    sizeof(struct cifs_spnego_msg) + secblob.length + sess_key.length;
 	keydata = (struct cifs_spnego_msg *)calloc(sizeof(char), datalen);
@@ -1029,8 +1031,10 @@ out:
 	 * make sure the kernel doesn't hang it off of a searchable keyring
 	 * and interfere with the next attempt to instantiate the key.
 	 */
-	if (rc != 0 && key == 0)
+	if (rc != 0 && key == 0) {
+		syslog(LOG_DEBUG, "Negating key");
 		keyctl_negate(key, 1, KEY_REQKEY_DEFL_DEFAULT);
+	}
 	data_blob_free(&secblob);
 	data_blob_free(&sess_key);
 	SAFE_FREE(ccname);
@@ -1038,5 +1042,6 @@ out:
 	SAFE_FREE(arg.ip);
 	SAFE_FREE(arg.username);
 	SAFE_FREE(keydata);
+	syslog(LOG_DEBUG, "Exit status %ld", rc);
 	return rc;
 }
