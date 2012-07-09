@@ -10,6 +10,18 @@ AC_CONFIG_MACRO_DIR(aclocal)
 AM_INIT_AUTOMAKE
 
 # "enable" options
+AC_ARG_ENABLE(pie,
+	[AC_HELP_STRING([--enable-pie],
+			[Produce position independent executables @<:@default=yes@:>@])],
+	enable_pie=$enableval,
+	enable_pie="maybe")
+
+AC_ARG_ENABLE(relro,
+	[AC_HELP_STRING([--enable-relro],
+			[Enable relocations read-only support @<:@default=yes@:>@])],
+	enable_relro=$enableval,
+	enable_relro="maybe")
+
 AC_ARG_ENABLE(cifsupcall,
 	[AC_HELP_STRING([--enable-cifsupcall],
 			[Create cifs.upcall binary @<:@default=yes@:>@])],
@@ -81,6 +93,21 @@ AC_CHECK_HEADERS([arpa/inet.h ctype.h fcntl.h inttypes.h limits.h mntent.h netdb
 # do we have sys/fsuid.h and setfsuid()?
 AC_CHECK_HEADERS([sys/fsuid.h])
 AC_CHECK_FUNC(setfsuid, , [AC_MSG_ERROR([System does not support setfsuid()])])
+
+# FIXME: add test(s) to autodisable these flags when compiler/linker don't support it
+if test $enable_pie != "no"; then
+	PIE_CFLAGS="-fpie -pie"
+else
+	PIE_CFLAGS=""
+fi
+AC_SUBST([PIE_CFLAGS])
+
+if test $enable_relro != "no"; then
+	RELRO_CFLAGS="-Wl,-z,relro"
+else
+	RELRO_CFLAGS=""
+fi
+AC_SUBST([RELRO_CFLAGS])
 
 if test $enable_cifsupcall != "no"; then
 	AC_CHECK_HEADERS([krb5.h krb5/krb5.h])

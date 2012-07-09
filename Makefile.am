@@ -1,4 +1,4 @@
-AM_CFLAGS = -Wall -Wextra -D_FORTIFY_SOURCE=2
+AM_CFLAGS = -Wall -Wextra -D_FORTIFY_SOURCE=2 $(PIE_CFLAGS) $(RELRO_CFLAGS)
 ACLOCAL_AMFLAGS = -I aclocal
 
 root_sbindir = $(ROOTSBINDIR)
