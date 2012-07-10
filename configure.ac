@@ -56,9 +56,14 @@ AC_ARG_VAR(ROOTSBINDIR, [Location where files ordinarily under /sbin should be i
 
 # Checks for programs.
 AC_PROG_CC
-AC_PROG_SED
 AC_GNU_SOURCE
 AM_PROG_CC_C_O
+
+# AC_PROG_SED is only avaliable in recent autoconf versions.
+# Use AC_CHECK_PROG instead if AC_PROG_SED is not present.
+ifdef([AC_PROG_SED],
+      [AC_PROG_SED],
+      [AC_CHECK_PROG(SED, sed, sed)])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_HEADER_STDBOOL
