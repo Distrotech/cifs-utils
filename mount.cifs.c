@@ -1687,6 +1687,66 @@ drop_child_privs(void)
 	return 0;
 }
 
+/*
+ * If systemd is running and /bin/systemd-ask-password --
+ * is available, then use that else fallback on getpass(..)
+ *
+ * Returns: @input or NULL on error
+ */
+static char*
+get_password(const char *prompt, char *input, int capacity)
+{
+#ifdef ENABLE_SYSTEMD
+	int is_systemd_running;
+	struct stat a, b;
+
+	/* We simply test whether the systemd cgroup hierarchy is
+	 * mounted */
+	is_systemd_running = (lstat("/sys/fs/cgroup", &a) == 0)
+		&& (lstat("/sys/fs/cgroup/systemd", &b) == 0)
+		&& (a.st_dev != b.st_dev);
+
+	if (is_systemd_running) {
+		char *cmd, *ret;
+		FILE *ask_pass_fp = NULL;
+
+		cmd = ret = NULL;
+		if (asprintf(&cmd, "/bin/systemd-ask-password \"%s\"", prompt) >= 0) {
+			ask_pass_fp = popen (cmd, "re");
+			free (cmd);
+		}
+
+		if (ask_pass_fp) {
+			ret = fgets(input, capacity, ask_pass_fp);
+			pclose(ask_pass_fp);
+		}
+
+		if (ret) {
+			int len = strlen(input);
+			if (input[len - 1] == '\n')
+				input[len - 1] = '\0';
+			return input;
+		}
+	}
+#endif
+
+	/*
+	 * Falling back to getpass(..)
+	 * getpass is obsolete, but there's apparently nothing that replaces it
+	 */
+	char *tmp_pass = getpass(prompt);
+	if (!tmp_pass)
+		return NULL;
+
+	strncpy(input, tmp_pass, capacity - 1);
+	input[capacity - 1] = '\0';
+
+	/* zero-out the static buffer */
+	memset(tmp_pass, 0, strlen(tmp_pass));
+
+	return input;
+}
+
 static int
 assemble_mountinfo(struct parsed_mount_info *parsed_info,
 		   const char *thisprogram, const char *mountpoint,
@@ -1768,14 +1828,20 @@ assemble_mountinfo(struct parsed_mount_info *parsed_info,
 	}
 
 	if (!parsed_info->got_password) {
-		/* getpass is obsolete, but there's apparently nothing that replaces it */
-		char *tmp_pass = getpass("Password: ");
-		if (!tmp_pass) {
+		char tmp_pass[MOUNT_PASSWD_SIZE + 1];
+		char *prompt = NULL;
+
+		if(asprintf(&prompt, "Password for %s@%s: ", parsed_info->username, orig_dev) < 0)
+			prompt = NULL;
+
+		if (get_password(prompt ? prompt : "Password: ", tmp_pass, MOUNT_PASSWD_SIZE + 1)) {
+			rc = set_password(parsed_info, tmp_pass);
+		} else {
 			fprintf(stderr, "Error reading password, exiting\n");
 			rc = EX_SYSERR;
-			goto assemble_exit;
 		}
-		rc = set_password(parsed_info, tmp_pass);
+
+		free(prompt);
 		if (rc)
 			goto assemble_exit;
 	}

@@ -46,6 +46,12 @@ AC_ARG_ENABLE(cifsacl,
 	enable_cifsacl=$enableval,
 	enable_cifsacl="maybe")
 
+AC_ARG_ENABLE(systemd,
+	[AC_HELP_STRING([--enable-systemd],
+			[Enable systemd specific behavior for mount.cifs @<:@default=yes@:>@])],
+	enable_systemd=$enableval,
+	enable_systemd="maybe")
+
 # check for ROOTSBINDIR environment var
 if test -z $ROOTSBINDIR; then
 	ROOTSBINDIR="/sbin"
@@ -208,6 +214,10 @@ fi
 if test $enable_cifsupcall != "no"; then
 	AC_CHECK_FUNCS([krb5_principal_get_realm krb5_free_unparsed_name])
 	AC_CHECK_FUNCS([krb5_auth_con_setaddrs krb5_auth_con_set_req_cksumtype])
+fi
+
+if test $enable_systemd != "no"; then
+	AC_DEFINE(ENABLE_SYSTEMD, 1, [Enable systemd specific behavior for mount.cifs])
 fi
 
 # MIT krb5 < 1.7 does not have this declaration but does have the symbol
