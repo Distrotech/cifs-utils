@@ -590,6 +590,7 @@ static int open_cred_file(char *file_name,
 	i = access(file_name, R_OK);
 	if (i) {
 		toggle_dac_capability(0, 0);
+		i = errno;
 		goto return_i;
 	}
 
