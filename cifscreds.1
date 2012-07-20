@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "CIFSCREDS 1"
-.TH CIFSCREDS 1 "2012-01-24" "" ""
+.TH CIFSCREDS 1 "2012-07-17" "" ""
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -186,6 +186,13 @@ different username.
 The cifscreds utility requires a kernel built with support for the
 \&\fBlogin\fR key type. That key type was added in v3.3 in mainline Linux
 kernels.
+.PP
+Since \fBcifscreds\fR adds keys to the session keyring, it is highly
+recommended that one use \fBpam_keyinit\fR to ensure that a session keyring
+is established at login time.
+.SH "SEE ALSO"
+.IX Header "SEE ALSO"
+\&\fIpam_keyinit\fR\|(8)
 .SH "AUTHORS"
 .IX Header "AUTHORS"
 The cifscreds program was originally developed by Igor Druzhinin

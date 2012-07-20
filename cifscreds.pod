@@ -79,6 +79,14 @@ The cifscreds utility requires a kernel built with support for the
 B<login> key type. That key type was added in v3.3 in mainline Linux
 kernels.
 
+Since B<cifscreds> adds keys to the session keyring, it is highly
+recommended that one use B<pam_keyinit> to ensure that a session keyring
+is established at login time.
+
+=head1 SEE ALSO
+
+pam_keyinit(8)
+
 =head1 AUTHORS
 
 The cifscreds program was originally developed by Igor Druzhinin

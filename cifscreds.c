@@ -28,6 +28,7 @@
 #include <ctype.h>
 #include <keyutils.h>
 #include <getopt.h>
+#include <errno.h>
 #include "mount.h"
 #include "resolve_host.h"
 #include "util.h"
@@ -465,6 +466,36 @@ static int cifscreds_update(struct cmdarg *arg)
 	return EXIT_SUCCESS;
 }
 
+static int
+check_session_keyring(void)
+{
+	key_serial_t	ses_key, uses_key;
+
+	ses_key = keyctl_get_keyring_ID(KEY_SPEC_SESSION_KEYRING, 0);
+	if (ses_key == -1) {
+		if (errno == ENOKEY)
+			fprintf(stderr, "Error: you have no session keyring. "
+					"Consider using pam_keyinit to "
+					"install one.\n");
+		else
+			fprintf(stderr, "Error: unable to query session "
+					"keyring: %s\n", strerror(errno));
+		return (int)ses_key;
+	}
+
+	/* A problem querying the user-session keyring isn't fatal. */
+	uses_key = keyctl_get_keyring_ID(KEY_SPEC_USER_SESSION_KEYRING, 0);
+	if (uses_key == -1)
+		return 0;
+
+	if (ses_key == uses_key)
+		fprintf(stderr, "Warning: you have no persistent session "
+				"keyring. cifscreds keys will not persist "
+				"after this process exits. See "
+				"pam_keyinit(8).\n");
+	return 0;
+}
+
 int main(int argc, char **argv)
 {
 	struct command *cmd, *best;
@@ -534,6 +565,9 @@ int main(int argc, char **argv)
 
 	if (arg.user == NULL)
 		arg.user = getusername(getuid());
+
+	if (check_session_keyring())
+		return EXIT_FAILURE;
 
 	return best->action(&arg);
 }
