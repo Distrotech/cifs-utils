@@ -588,7 +588,8 @@ parsing_err:
 }
 
 static int open_cred_file(char *file_name,
-			struct parsed_mount_info *parsed_info)
+			struct parsed_mount_info *parsed_info,
+			char **saved_username)
 {
 	char *line_buf = NULL;
 	char *temp_val = NULL;
@@ -637,9 +638,11 @@ static int open_cred_file(char *file_name,
 		/* parse next token */
 		switch (parse_cred_line(line_buf + i, &temp_val)) {
 		case CRED_USER:
-			i = parse_username(temp_val, parsed_info);
-			if (i)
+			*saved_username = strdup(temp_val);
+			if (!*saved_username) {
+				i = EX_SYSERR;
 				goto return_i;
+			}
 			break;
 		case CRED_PASS:
 			i = set_password(parsed_info, temp_val);
@@ -827,6 +830,8 @@ parse_options(const char *data, struct parsed_mount_info *parsed_info)
 	char *ep;
 	struct passwd *pw;
 	struct group *gr;
+	char *saved_username = NULL;
+	bool krb5_auth = false;
 	/*
 	 * max 32-bit uint in decimal is 4294967295 which is 10 chars wide
 	 * +1 for NULL, and +1 for good measure
@@ -894,11 +899,10 @@ parse_options(const char *data, struct parsed_mount_info *parsed_info)
 					fprintf(stderr, "username too long\n");
 					return EX_USAGE;
 				}
-				rc = parse_username(value, parsed_info);
-				if (rc) {
-					fprintf(stderr,
-						"problem parsing username\n");
-					return rc;
+				saved_username = strdup(value);
+				if (!saved_username) {
+					fprintf(stderr, "Unable to allocate memory!\n");
+					return EX_SYSERR;
 				}
 				goto nocopy;
 			}
@@ -920,9 +924,12 @@ parse_options(const char *data, struct parsed_mount_info *parsed_info)
 
 		case OPT_SEC:
 			if (value) {
-				if (!strncmp(value, "none", 4) ||
-				    !strncmp(value, "krb5", 4))
+				if (!strncmp(value, "none", 4)) {
 					parsed_info->got_password = 1;
+				} else if (!strncmp(value, "krb5", 4)) {
+					parsed_info->got_password = 1;
+					krb5_auth = true;
+				}
 			}
 			break;
 
@@ -978,7 +985,7 @@ parse_options(const char *data, struct parsed_mount_info *parsed_info)
 					"invalid credential file name specified\n");
 				return EX_USAGE;
 			}
-			rc = open_cred_file(value, parsed_info);
+			rc = open_cred_file(value, parsed_info, &saved_username);
 			if (rc) {
 				fprintf(stderr,
 					"error %d (%s) opening credential file %s\n",
@@ -1196,6 +1203,22 @@ parse_options(const char *data, struct parsed_mount_info *parsed_info)
 nocopy:
 		data = next_keyword;
 	}
+
+	if (saved_username) {
+		if (krb5_auth) {
+			strlcpy(parsed_info->username, saved_username,
+				sizeof(parsed_info->username));
+			parsed_info->got_user = 1;
+		} else {
+			rc = parse_username(saved_username, parsed_info);
+			free(saved_username);
+			if (rc) {
+				fprintf(stderr, "Unable to parse username!\n");
+				return rc;
+			}
+		}
+	}
+
 
 	/* special-case the uid and gid */
 	if (got_uid) {
