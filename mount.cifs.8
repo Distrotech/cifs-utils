@@ -56,7 +56,9 @@ user=\fIarg\fR
 .RS 4
 specifies the username to connect as\&. If this is not given, then the environment variable
 \fIUSER\fR
-is used\&. This option can also take the form "user%password" or "workgroup/user" or "workgroup/user%password" to allow the password and workgroup to be specified as part of the username\&.
+is used\&.
+.PP
+Earlier versions of mount.cifs also allowed one to specify the username in a "user%password" or "workgroup/user" or "workgroup/user%password" to allow the password and workgroup to be specified as part of the username. Support for those alternate username formats is now deprecated and should no longer be used. Users should use the discrete "pass=" and "dom=" to specify the username.
 .if n \{\
 .sp
 .\}

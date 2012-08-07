@@ -45,6 +45,7 @@
 #include <libgen.h>
 #include <sys/mman.h>
 #include <sys/wait.h>
+#include <stdbool.h>
 #ifdef HAVE_SYS_FSUID_H
 #include <sys/fsuid.h>
 #endif /* HAVE_SYS_FSUID_H */
@@ -320,15 +321,22 @@ static int set_password(struct parsed_mount_info *parsed_info, const char *src)
  *
  * ...obviously the only required component is "username". The source string
  * is modified in the process, but it should remain unchanged at the end.
+ *
+ * NOTE: the above syntax does not allow for usernames that have slashes in
+ * them, as some krb5 usernames do. Support for the above syntax will be
+ * removed in a later version of cifs-utils. Users should use separate options
+ * instead of overloading this info into the username.
  */
 static int parse_username(char *rawuser, struct parsed_mount_info *parsed_info)
 {
 	char *user, *password, slash;
 	int rc = 0;
+	bool warn = false;
 
 	/* everything after first % sign is a password */
 	password = strchr(rawuser, '%');
 	if (password) {
+		warn = true;
 		rc = set_password(parsed_info, password + 1);
 		if (rc)
 			return rc;
@@ -342,6 +350,7 @@ static int parse_username(char *rawuser, struct parsed_mount_info *parsed_info)
 
 	/* everything before that slash is a domain */
 	if (user) {
+		warn = true;
 		slash = *user;
 		*user = '\0';
 		strlcpy(parsed_info->domain, rawuser,
@@ -355,6 +364,11 @@ static int parse_username(char *rawuser, struct parsed_mount_info *parsed_info)
 	parsed_info->got_user = 1;
 	if (password)
 		*password = '%';
+
+	if (warn)
+		fprintf(stderr, "WARNING: The DOMAIN/username%%password syntax "
+				"for usernames is deprecated and will be "
+				"removed in version 5.9 of cifs-utils.\n");
 
 	return 0;
 }
