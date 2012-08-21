@@ -10,7 +10,7 @@ man_MANS = mount.cifs.8
 
 bin_PROGRAMS =
 sbin_PROGRAMS =
-clean-local: clean-local-upcall clean-local-idmap clean-local-aclprogs
+clean-local: clean-local-upcall clean-local-idmap
 
 if CONFIG_CIFSUPCALL
 sbin_PROGRAMS += cifs.upcall
@@ -66,12 +66,6 @@ setcifsacl_SOURCES = setcifsacl.c
 setcifsacl_LDADD = $(WBCLIENT_LIBS)
 setcifsacl_CFLAGS = $(WBCLIENT_CFLAGS)
 man_MANS += setcifsacl.1
-
-endif
-
-clean-local-aclprogs:
-if CONFIG_CIFSACL
-	rm -f getcifsacl.8 getcifsacl.8-t setcifsacl.8 setcifsacl.8-t
 endif
 
 SUBDIRS = contrib

@@ -765,7 +765,7 @@ setcifsacl_usage(void)
 	"\n\t-S	Replace existing ACL with ACE(s), separated by a comma\n");
 	fprintf(stderr,
 	"\tsetcifsacl -S \"ACL:Administrator:ALLOWED/0x0/D\" <file_name>\n");
-	fprintf(stderr, "\nRefer to setcifsacl(8) manpage for details\n");
+	fprintf(stderr, "\nRefer to setcifsacl(1) manpage for details\n");
 }
 
 int

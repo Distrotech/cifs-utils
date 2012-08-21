@@ -322,7 +322,7 @@ getcifsacl_usage(void)
 	fprintf(stderr, "\t-v	Version of the program\n");
 	fprintf(stderr, "\n");
 	fprintf(stderr, "\t-r	Display raw values of the ACE fields\n");
-	fprintf(stderr, "\nRefer to getcifsacl(8) manpage for details\n");
+	fprintf(stderr, "\nRefer to getcifsacl(1) manpage for details\n");
 }
 
 int
