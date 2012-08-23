@@ -292,6 +292,11 @@ static char *find_krb5_cc(const char *dirname, uid_t uid)
 			free(namelist[i]);
 			continue;
 		}
+		if (S_ISDIR(sbuf.st_mode)) {
+			snprintf(ccname, sizeof(ccname), "DIR:%s/%s", dirname,
+				 namelist[i]->d_name);
+			credpath = ccname + 4;
+		} else
 		if (!S_ISREG(sbuf.st_mode)) {
 			syslog(LOG_DEBUG, "%s: %s is not a regular file",
 			       __func__, credpath);
