@@ -181,10 +181,9 @@ err_cache:
 
 static int krb5cc_filter(const struct dirent *dirent)
 {
-	if (strstr(dirent->d_name, CIFS_DEFAULT_KRB5_PREFIX))
-		return 1;
-	else
-		return 0;
+	/* subtract 1 for the null terminator */
+	return !strncmp(dirent->d_name, CIFS_DEFAULT_KRB5_PREFIX,
+			sizeof(CIFS_DEFAULT_KRB5_PREFIX) - 1);
 }
 
 static char *
