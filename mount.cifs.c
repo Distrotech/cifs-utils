@@ -1964,8 +1964,8 @@ restore_privs:
 		if (dacrc)
 			rc = rc ? rc : dacrc;
 	} else {
-		setfsuid(oldfsuid);
-		setfsgid(oldfsgid);
+		uid_t __attribute__((unused)) uignore = setfsuid(oldfsuid);
+		gid_t __attribute__((unused)) gignore = setfsgid(oldfsgid);
 	}
 
 	return rc;
