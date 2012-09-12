@@ -2119,7 +2119,7 @@ int main(int argc, char **argv)
 mount_retry:
 	if (!currentaddress) {
 		fprintf(stderr, "Unable to find suitable address.\n");
-		rc = EX_SYSERR;
+		rc = EX_FAIL;
 		goto mount_exit;
 	}
 	strlcpy(options, "ip=", options_size);
