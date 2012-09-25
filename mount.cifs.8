@@ -52,33 +52,13 @@ command displays the version of cifs mount helper\&.
 command displays the version of cifs module\&.
 .SH "OPTIONS"
 .PP
-user=\fIarg\fR
+username=\fIarg\fR
 .RS 4
 specifies the username to connect as\&. If this is not given, then the environment variable
 \fIUSER\fR
 is used\&.
 .PP
-Earlier versions of mount.cifs also allowed one to specify the username in a "user%password" or "workgroup/user" or "workgroup/user%password" to allow the password and workgroup to be specified as part of the username. Support for those alternate username formats is now deprecated and should no longer be used. Users should use the discrete "pass=" and "dom=" to specify the username.
-.if n \{\
-.sp
-.\}
-.RS 4
-.it 1 an-trap
-.nr an-no-space-flag 1
-.nr an-break-flag 1
-.br
-.ps +1
-\fBNote\fR
-.ps -1
-.br
-The cifs vfs accepts the parameter
-\fIuser=\fR, or for users familiar with smbfs it accepts the longer form of the parameter
-\fIusername=\fR\&. Similarly the longer smbfs style parameter names may be accepted as synonyms for the shorter cifs parameters
-\fIpass=\fR,\fIdom=\fR
-and
-\fIcred=\fR\&.
-.sp .5v
-.RE
+Earlier versions of mount.cifs also allowed one to specify the username in a "user%password" or "workgroup/user" or "workgroup/user%password" to allow the password and workgroup to be specified as part of the username. Support for those alternate username formats is now deprecated and should no longer be used. Users should use the discrete "password=" and "domain=" to specify those values. While some versions of the cifs kernel module accept "user=" as an abbreviation for this option, its use can confuse the standard mount program into thinking that this is a non-superuser mount. It is therefore recommended to use the full "username=" option name.
 .RE
 .PP
 password=\fIarg\fR
