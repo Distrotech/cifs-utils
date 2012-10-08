@@ -159,6 +159,7 @@
 #define OPT_CRUID      29
 #define OPT_BKUPUID    30
 #define OPT_BKUPGID    31
+#define OPT_NOFAIL     32
 
 #define MNT_TMP_FILE "/.mtab.cifs.XXXXXX"
 
@@ -178,6 +179,7 @@ struct parsed_mount_info {
 	unsigned int fakemnt:1;
 	unsigned int nomtab:1;
 	unsigned int verboseflag:1;
+	unsigned int nofail:1;
 };
 
 const char *thisprogram;
@@ -805,6 +807,8 @@ static int parse_opt_token(const char *token)
 		return OPT_BKUPUID;
 	if (strncmp(token, "backupgid", 9) == 0)
 		return OPT_BKUPGID;
+	if (strncmp(token, "nofail", 6) == 0)
+		return OPT_NOFAIL;
 
 	return OPT_ERROR;
 }
@@ -1176,6 +1180,9 @@ parse_options(const char *data, struct parsed_mount_info *parsed_info)
 			}
 
 			bkupgid = gr->gr_gid;
+			goto nocopy;
+		case OPT_NOFAIL:
+			parsed_info->nofail = 1;
 			goto nocopy;
 		}
 
@@ -2119,7 +2126,7 @@ int main(int argc, char **argv)
 mount_retry:
 	if (!currentaddress) {
 		fprintf(stderr, "Unable to find suitable address.\n");
-		rc = EX_FAIL;
+		rc = parsed_info->nofail ? 0 : EX_FAIL;
 		goto mount_exit;
 	}
 	strlcpy(options, "ip=", options_size);
