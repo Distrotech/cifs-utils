@@ -1335,6 +1335,7 @@ static int parse_unc(const char *unc_name, struct parsed_mount_info *parsed_info
 	}
 
 	/* Set up "host" and "share" pointers based on UNC format. */
+	/* TODO: Remove support for NFS syntax as of cifs-utils-6.0. */
 	if (strncmp(unc_name, "//", 2) && strncmp(unc_name, "\\\\", 2)) {
 		/*
 		 * check for nfs syntax (server:/share/prepath)
@@ -1351,6 +1352,9 @@ static int parse_unc(const char *unc_name, struct parsed_mount_info *parsed_info
 		share++;
 		if (*share == '/')
 			++share;
+		fprintf(stderr, "WARNING: using NFS syntax for mounting CIFS "
+			"shares is deprecated and will be removed in cifs-utils"
+			"-6.0. Please migrate to UNC syntax.\n");
 	} else {
 		host = unc_name + 2;
 		hostlen = strcspn(host, "/\\");
