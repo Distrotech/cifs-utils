@@ -54,28 +54,25 @@ static void usage(void)
 	fprintf(stderr, "Usage: %s key_serial\n", prog);
 }
 
-char *strget(const char *str, char *substr)
+char *strget(const char *str, const char *substr)
 {
 	int len, sublen, retlen;
-	char *retstr, *substrptr;
+	char *substrptr;
 
-	sublen = strlen(substr);
+	/* find the prefix */
 	substrptr = strstr(str, substr);
-	if (substrptr) {
-		len = strlen(substrptr);
-		substrptr += sublen;
+	if (!substrptr)
+		return substrptr;
 
-		retlen = len - sublen;
-		if (retlen > 0) {
-			retstr = malloc(retlen + 1);
-			if (retstr) {
-				strncpy(retstr, substrptr, retlen);
-				return retstr;
-			}
-		}
-	}
+	/* skip over it */
+	sublen = strlen(substr);
+	substrptr += sublen;
 
-	return NULL;
+	/* if there's nothing after the prefix, return NULL */
+	if (*substrptr == '\0')
+		return NULL;
+
+	return substrptr;
 }
 
 static int
@@ -179,9 +176,6 @@ cifs_idmap(const key_serial_t key, const char *key_descr)
 	syslog(LOG_DEBUG, "Invalid key: %s", key_descr);
 
 cifs_idmap_ret:
-	if (sidstr)
-		free(sidstr);
-
 	return rc;
 }
 
