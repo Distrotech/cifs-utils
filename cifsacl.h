@@ -110,20 +110,20 @@ struct cifs_ntsd {
 	uint32_t gsidoffset;
 	uint32_t sacloffset;
 	uint32_t dacloffset;
-};
+} __attribute__((packed));
 
 struct cifs_sid {
 	uint8_t revision; /* revision level */
 	uint8_t num_subauth;
 	uint8_t authority[6];
 	uint32_t sub_auth[5]; /* sub_auth[num_subauth] */
-};
+} __attribute__((packed));
 
 struct cifs_ctrl_acl {
 	uint16_t revision; /* revision level */
 	uint16_t size;
 	uint32_t num_aces;
-};
+} __attribute__((packed));
 
 struct cifs_ace {
 	uint8_t type;
@@ -131,6 +131,6 @@ struct cifs_ace {
 	uint16_t size;
 	uint32_t access_req;
 	struct cifs_sid sid; /* ie UUID of user or group who gets these perms */
-};
+} __attribute__((packed));
 
 #endif /* CIFSACL_H */
