@@ -75,6 +75,28 @@ char *strget(const char *str, const char *substr)
 	return substrptr;
 }
 
+/*
+ * Convert a string representation of unsigned int into a numeric one. Also
+ * check for incomplete string conversion and overflow.
+ */
+static int
+str_to_uint(const char *src, unsigned int *dst)
+{
+	unsigned long tmp;
+	char *end;
+
+	errno = 0;
+	tmp = strtoul(src, &end, 0);
+
+	if (*end != '\0')
+		return EINVAL;
+	if (tmp > UINT_MAX)
+		return EOVERFLOW;
+
+	*dst = (unsigned int)tmp;
+	return 0;
+}
+
 static int
 cifs_idmap(const key_serial_t key, const char *key_descr)
 {
@@ -138,11 +160,17 @@ cifs_idmap(const key_serial_t key, const char *key_descr)
 
 	sidstr = strget(key_descr, "oi:");
 	if (sidstr) {
-		uid = atoi(sidstr);
-		syslog(LOG_DEBUG, "SID: %s, uid: %d", sidstr, uid);
+		rc = str_to_uint(sidstr, (unsigned int *)&uid);
+		if (rc) {
+			syslog(LOG_ERR, "Unable to convert %s to uid: %s",
+				sidstr, strerror(rc));
+			goto cifs_idmap_ret;
+		}
+
+		syslog(LOG_DEBUG, "SID: %s, uid: %u", sidstr, uid);
 		rc = wbcUidToSid(uid, &sid);
 		if (rc)
-			syslog(LOG_DEBUG, "uid %d to SID  error: %d", uid, rc);
+			syslog(LOG_DEBUG, "uid %u to SID  error: %d", uid, rc);
 		if (!rc) { /* SID has been mapped to a uid */
 			rc = keyctl_instantiate(key, &sid,
 					sizeof(struct wbcDomainSid), 0);
@@ -156,11 +184,17 @@ cifs_idmap(const key_serial_t key, const char *key_descr)
 
 	sidstr = strget(key_descr, "gi:");
 	if (sidstr) {
-		gid = atoi(sidstr);
-		syslog(LOG_DEBUG, "SID: %s, gid: %d", sidstr, gid);
+		rc = str_to_uint(sidstr, (unsigned int *)&gid);
+		if (rc) {
+			syslog(LOG_ERR, "Unable to convert %s to gid: %s",
+				sidstr, strerror(rc));
+			goto cifs_idmap_ret;
+		}
+
+		syslog(LOG_DEBUG, "SID: %s, gid: %u", sidstr, gid);
 		rc = wbcGidToSid(gid, &sid);
 		if (rc)
-			syslog(LOG_DEBUG, "gid %d to SID error: %d", gid, rc);
+			syslog(LOG_DEBUG, "gid %u to SID error: %d", gid, rc);
 		if (!rc) { /* SID has been mapped to a gid */
 			rc = keyctl_instantiate(key, &sid,
 					sizeof(struct wbcDomainSid), 0);
