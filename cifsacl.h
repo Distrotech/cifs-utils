@@ -96,6 +96,9 @@
 #define COMPMASK 0x8
 #define COMPALL 0xf /* COMPSID | COMPTYPE | COMPFLAG | COMPMASK */
 
+#define NUM_AUTHS (6)   /* number of authority fields */
+#define SID_MAX_SUB_AUTHORITIES (15) /* max number of sub authority fields */
+
 enum ace_action {
 	acedelete = 0,
 	acemodify,
@@ -115,8 +118,8 @@ struct cifs_ntsd {
 struct cifs_sid {
 	uint8_t revision; /* revision level */
 	uint8_t num_subauth;
-	uint8_t authority[6];
-	uint32_t sub_auth[5]; /* sub_auth[num_subauth] */
+	uint8_t authority[NUM_AUTHS];
+	uint32_t sub_auth[SID_MAX_SUB_AUTHORITIES];
 } __attribute__((packed));
 
 struct cifs_ctrl_acl {

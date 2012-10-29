@@ -76,9 +76,9 @@ copy_sec_desc(const struct cifs_ntsd *pntsd, struct cifs_ntsd *pnntsd,
 
 	nowner_sid_ptr->revision = owner_sid_ptr->revision;
 	nowner_sid_ptr->num_subauth = owner_sid_ptr->num_subauth;
-	for (i = 0; i < 6; i++)
+	for (i = 0; i < NUM_AUTHS; i++)
 		nowner_sid_ptr->authority[i] = owner_sid_ptr->authority[i];
-	for (i = 0; i < 5; i++)
+	for (i = 0; i < SID_MAX_SUB_AUTHORITIES; i++)
 		nowner_sid_ptr->sub_auth[i] = owner_sid_ptr->sub_auth[i];
 
 	/* copy group sid */
@@ -87,9 +87,9 @@ copy_sec_desc(const struct cifs_ntsd *pntsd, struct cifs_ntsd *pnntsd,
 
 	ngroup_sid_ptr->revision = group_sid_ptr->revision;
 	ngroup_sid_ptr->num_subauth = group_sid_ptr->num_subauth;
-	for (i = 0; i < 6; i++)
+	for (i = 0; i < NUM_AUTHS; i++)
 		ngroup_sid_ptr->authority[i] = group_sid_ptr->authority[i];
-	for (i = 0; i < 5; i++)
+	for (i = 0; i < SID_MAX_SUB_AUTHORITIES; i++)
 		ngroup_sid_ptr->sub_auth[i] = group_sid_ptr->sub_auth[i];
 
 	return;
@@ -106,7 +106,7 @@ copy_ace(struct cifs_ace *dace, struct cifs_ace *sace)
 
 	dace->sid.revision = sace->sid.revision;
 	dace->sid.num_subauth = sace->sid.num_subauth;
-	for (i = 0; i < 6; i++)
+	for (i = 0; i < NUM_AUTHS; i++)
 		dace->sid.authority[i] = sace->sid.authority[i];
 	for (i = 0; i < sace->sid.num_subauth; i++)
 		dace->sid.sub_auth[i] = sace->sid.sub_auth[i];
@@ -126,7 +126,7 @@ compare_aces(struct cifs_ace *sace, struct cifs_ace *dace, int compflags)
 			return 0;
 		if (dace->sid.num_subauth != sace->sid.num_subauth)
 			return 0;
-		for (i = 0; i < 6; i++) {
+		for (i = 0; i < NUM_AUTHS; i++) {
 			if (dace->sid.authority[i] != sace->sid.authority[i])
 				return 0;
 		}
