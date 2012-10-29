@@ -45,6 +45,7 @@
 static const char *prog = "cifs.idmap";
 
 static const struct option long_options[] = {
+	{"help", 0, NULL, 'h'},
 	{"timeout", 1, NULL, 't'},
 	{"version", 0, NULL, 'v'},
 	{NULL, 0, NULL, 0}
@@ -52,7 +53,7 @@ static const struct option long_options[] = {
 
 static void usage(void)
 {
-	fprintf(stderr, "Usage: %s key_serial\n", prog);
+	fprintf(stderr, "Usage: %s [-h] [-v] [-t timeout] key_serial\n", prog);
 }
 
 char *strget(const char *str, const char *substr)
@@ -224,8 +225,13 @@ int main(const int argc, char *const argv[])
 
 	openlog(prog, 0, LOG_DAEMON);
 
-	while ((c = getopt_long(argc, argv, "t:v", long_options, NULL)) != -1) {
+	while ((c = getopt_long(argc, argv, "ht:v",
+					long_options, NULL)) != -1) {
 		switch (c) {
+		case 'h':
+			rc = 0;
+			usage();
+			goto out;
 		case 't':
 			rc = str_to_uint(optarg, &timeout);
 			if (rc) {
