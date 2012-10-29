@@ -225,8 +225,7 @@ int main(const int argc, char *const argv[])
 
 	syslog(LOG_DEBUG, "key description: %s", buf);
 
-	if ((strncmp(buf, "cifs.idmap", sizeof("cifs.idmap") - 1) == 0))
-		rc = cifs_idmap(key, buf);
+	rc = cifs_idmap(key, buf);
 out:
 	return rc;
 }
