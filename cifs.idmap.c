@@ -44,6 +44,11 @@
 
 static const char *prog = "cifs.idmap";
 
+static const struct option long_options[] = {
+	{"version", 0, NULL, 'v'},
+	{NULL, 0, NULL, 0}
+};
+
 static void usage(void)
 {
 	fprintf(stderr, "Usage: %s key_serial\n", prog);
@@ -189,7 +194,7 @@ int main(const int argc, char *const argv[])
 
 	openlog(prog, 0, LOG_DAEMON);
 
-	while ((c = getopt_long(argc, argv, "v", NULL, NULL)) != -1) {
+	while ((c = getopt_long(argc, argv, "v", long_options, NULL)) != -1) {
 		switch (c) {
 		case 'v':
 			printf("version: %s\n", VERSION);
