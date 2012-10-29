@@ -45,6 +45,7 @@
 static const char *prog = "cifs.idmap";
 
 static const struct option long_options[] = {
+	{"timeout", 1, NULL, 't'},
 	{"version", 0, NULL, 'v'},
 	{NULL, 0, NULL, 0}
 };
@@ -216,23 +217,35 @@ cifs_idmap_ret:
 int main(const int argc, char *const argv[])
 {
 	int c;
-	long rc = 1;
+	long rc;
 	key_serial_t key = 0;
 	char *buf;
+	unsigned int timeout = 600; /* default idmap cache timeout */
 
 	openlog(prog, 0, LOG_DAEMON);
 
-	while ((c = getopt_long(argc, argv, "v", long_options, NULL)) != -1) {
+	while ((c = getopt_long(argc, argv, "t:v", long_options, NULL)) != -1) {
 		switch (c) {
+		case 't':
+			rc = str_to_uint(optarg, &timeout);
+			if (rc) {
+				syslog(LOG_ERR, "bad timeout value %s: %s",
+					optarg, strerror(rc));
+				goto out;
+			}
+			break;
 		case 'v':
+			rc = 0;
 			printf("version: %s\n", VERSION);
 			goto out;
 		default:
+			rc = EINVAL;
 			syslog(LOG_ERR, "unknown option: %c", c);
 			goto out;
 		}
 	}
 
+	rc = 1;
 	/* is there a key? */
 	if (argc <= optind) {
 		usage();
@@ -245,6 +258,14 @@ int main(const int argc, char *const argv[])
 	if (errno != 0) {
 		key = 0;
 		syslog(LOG_ERR, "Invalid key format: %s", strerror(errno));
+		goto out;
+	}
+
+	/* set timeout on key */
+	rc = keyctl_set_timeout(key, timeout);
+	if (rc == -1) {
+		syslog(LOG_ERR, "unable to set key timeout: %s",
+			strerror(errno));
 		goto out;
 	}
 
