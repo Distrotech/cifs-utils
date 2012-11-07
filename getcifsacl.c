@@ -327,8 +327,8 @@ parse_sec_desc(struct cifs_ntsd *pntsd, ssize_t acl_len, int raw)
 				le32toh(pntsd->gsidoffset));
 	dacloffset = le32toh(pntsd->dacloffset);
 	dacl_ptr = (struct cifs_ctrl_acl *)((char *)pntsd + dacloffset);
-	printf("REVISION:0x%x\n", pntsd->revision);
-	printf("CONTROL:0x%x\n", pntsd->type);
+	printf("REVISION:0x%x\n", le16toh(pntsd->revision));
+	printf("CONTROL:0x%x\n", le16toh(pntsd->type));
 
 	rc = parse_sid(owner_sid_ptr, end_of_acl, "OWNER", raw);
 	if (rc)
