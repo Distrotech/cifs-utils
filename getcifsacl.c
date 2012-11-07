@@ -31,6 +31,7 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stddef.h>
 #include <errno.h>
 #include <limits.h>
 #include <wbclient.h>
@@ -235,7 +236,15 @@ print_sid_raw:
 static void
 print_ace(struct cifs_ace *pace, char *end_of_acl, int raw)
 {
-	/* 16 == size of cifs_ace sans the cifs_sid */
+	uint16_t size;
+
+	/* make sure we can safely get to "size" */
+	if (end_of_acl < (char *)pace + offsetof(struct cifs_ace, size) + 1)
+		return;
+
+	size = le16toh(pace->size);
+
+	/* 16 == size of cifs_ace when cifs_sid has no subauths */
 	if (le16toh(pace->size) < 16)
 		return;
 
@@ -250,8 +259,7 @@ print_ace(struct cifs_ace *pace, char *end_of_acl, int raw)
 	printf("/");
 	print_ace_flags(pace->flags, raw);
 	printf("/");
-	print_ace_mask(pace->access_req, raw);
-
+	print_ace_mask(le32toh(pace->access_req), raw);
 
 	return;
 }
