@@ -641,7 +641,7 @@ build_cmdline_aces_ret:
 static char **
 parse_cmdline_aces(char *acelist, int numcaces)
 {
-	int i = 0, len;
+	int i = 0;
 	char *acestr, *vacestr, **arrptr = NULL;
 
 	arrptr = (char **)malloc(numcaces * sizeof(char *));
@@ -677,7 +677,6 @@ parse_cmdline_aces_err:
 static unsigned int
 get_numcaces(const char *aces)
 {
-	int i, len;
 	unsigned int num = 1;
 	const char *current;
 
