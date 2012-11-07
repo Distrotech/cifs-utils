@@ -208,11 +208,11 @@ print_sid_raw:
 static void
 print_ace(struct cifs_ace *pace, char *end_of_acl, int raw)
 {
-	/* validate that we do not go past end of acl */
-
+	/* 16 == size of cifs_ace sans the cifs_sid */
 	if (le16toh(pace->size) < 16)
 		return;
 
+	/* validate that we do not go past end of acl */
 	if (end_of_acl < (char *)pace + le16toh(pace->size))
 		return;
 
