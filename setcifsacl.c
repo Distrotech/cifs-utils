@@ -512,62 +512,61 @@ verify_ace_flags(char *flagstr, uint8_t *flagval)
 }
 
 static uint32_t
-ace_mask_value(char *maskstr)
+ace_mask_value(char *mask)
 {
-	int i, len;
-	uint32_t maskval = 0x0;
-	char *lmask;
+	uint32_t maskval = 0;
+	char cur;
 
-	if (!strcmp(maskstr, "FULL"))
+	if (!strcmp(mask, "FULL"))
 		return FULL_CONTROL;
-	else if (!strcmp(maskstr, "CHANGE"))
+	if (!strcmp(mask, "CHANGE"))
 		return CHANGE;
-	else if (!strcmp(maskstr, "D"))
-		return DELETE;
-	else if (!strcmp(maskstr, "READ"))
+	if (!strcmp(mask, "READ"))
 		return EREAD;
-	else {
-		len = strlen(maskstr);
-		lmask = maskstr;
-		for (i = 0; i < len; ++i, ++lmask) {
-			if (*lmask == 'R')
-				maskval |= EREAD;
-			else if (*lmask == 'W')
-				maskval |= EWRITE;
-			else if (*lmask == 'X')
-				maskval |= EXEC;
-			else if (*lmask == 'D')
-				maskval |= DELETE;
-			else if (*lmask == 'P')
-				maskval |= WRITE_DAC;
-			else if (*lmask == 'O')
-				maskval |= WRITE_OWNER;
-			else
-				return 0;
-		}
-		return maskval;
-	}
 
-	return 0;
+	while((cur = *mask++)) {
+		switch(cur) {
+		case 'R':
+			maskval |= EREAD;
+			break;
+		case 'W':
+			maskval |= EWRITE;
+			break;
+		case 'X':
+			maskval |= EXEC;
+			break;
+		case 'D':
+			maskval |= DELETE;
+			break;
+		case 'P':
+			maskval |= WRITE_DAC;
+			break;
+		case 'O':
+			maskval |= WRITE_OWNER;
+			break;
+		default:
+			return 0;
+		}
+	}
+	return maskval;
 }
 
 static int
 verify_ace_mask(char *maskstr, uint32_t *maskval)
 {
-	char *invalflag;
+	unsigned long val;
+	char *ep;
 
-	if (strstr(maskstr, "0x") || !strcmp(maskstr, "DELDHLD")) {
-		*maskval = strtol(maskstr, &invalflag, 16);
-		if (!invalflag) {
-			printf("%s: Invalid mask: %s\n", __func__, maskstr);
-			return 1;
-		}
-	} else
-		*maskval = ace_mask_value(maskstr);
+	errno = 0;
+	val = strtoul(maskstr, &ep, 0);
+	if (errno == 0 && *ep == '\0')
+		*maskval = htole32((uint32_t)val);
+	else
+		*maskval = htole32(ace_mask_value(maskstr));
 
 	if (!*maskval) {
-		printf("%s: Invalid mask %s and value: 0x%x\n",
-			__func__, maskstr, *maskval);
+		printf("%s: Invalid mask %s (value 0x%x)\n", __func__,
+			maskstr, *maskval);
 		return 1;
 	}
 
