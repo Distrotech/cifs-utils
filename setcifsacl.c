@@ -779,7 +779,7 @@ main(const int argc, char *const argv[])
 	int i, rc, c, numcaces, numfaces;
 	enum setcifsacl_actions maction = ActUnknown;
 	ssize_t attrlen, bufsize = BUFSIZE;
-	char *filename, *attrval, **arrptr = NULL;
+	char *ace_list, *filename, *attrval, **arrptr = NULL;
 	struct cifs_ctrl_acl *daclptr = NULL;
 	struct cifs_ace **cacesptr = NULL, **facesptr = NULL;
 	struct cifs_ntsd *ntsdptr = NULL;
@@ -788,43 +788,49 @@ main(const int argc, char *const argv[])
 
 	openlog(prog, 0, LOG_DAEMON);
 
-	c = getopt(argc, argv, "v:D:M:a:S:?");
+	c = getopt(argc, argv, "hvD:M:a:S:");
 	switch (c) {
-	case 'v':
-		printf("Version: %s\n", VERSION);
-		goto out;
 	case 'D':
 		maction = ActDelete;
+		ace_list = optarg;
 		break;
 	case 'M':
 		maction = ActModify;
+		ace_list = optarg;
 		break;
 	case 'a':
 		maction = ActAdd;
+		ace_list = optarg;
 		break;
 	case 'S':
 		maction = ActSet;
+		ace_list = optarg;
 		break;
-	case '?':
+	case 'h':
 		setcifsacl_usage();
 		return 0;
+	case 'v':
+		printf("Version: %s\n", VERSION);
+		return 0;
 	default:
-		break;
+		setcifsacl_usage();
+		return -1;
 	}
 
+	/* We expect 1 argument in addition to the option */
 	if (argc != 4) {
 		setcifsacl_usage();
 		return -1;
 	}
 	filename = argv[3];
 
-	numcaces = get_numcaces(optarg);
+	numcaces = get_numcaces(ace_list);
 	if (!numcaces) {
 		printf("%s: No valid ACEs specified\n", __func__);
 		return -1;
 	}
 
-	arrptr = parse_cmdline_aces(optarg, numcaces);
+	arrptr = parse_cmdline_aces(ace_list, numcaces);
 	if (!arrptr)
 		goto setcifsacl_numcaces_ret;
 
@@ -878,7 +884,6 @@ cifsacl:
 		printf("%s: setxattr error: %s\n", __func__, strerror(errno));
 	goto setcifsacl_facenum_ret;
 
-out:
 	return 0;
 
 setcifsacl_action_ret:
