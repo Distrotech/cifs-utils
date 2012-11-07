@@ -61,9 +61,9 @@ copy_sec_desc(const struct cifs_ntsd *pntsd, struct cifs_ntsd *pnntsd,
 	struct cifs_ctrl_acl *dacl_ptr, *ndacl_ptr;
 
 	/* copy security descriptor control portion */
-	osidsoffset = htole32(pntsd->osidoffset);
-	gsidsoffset = htole32(pntsd->gsidoffset);
-	dacloffset = htole32(pntsd->dacloffset);
+	osidsoffset = le32toh(pntsd->osidoffset);
+	gsidsoffset = le32toh(pntsd->gsidoffset);
+	dacloffset = le32toh(pntsd->dacloffset);
 
 	pnntsd->revision = pntsd->revision;
 	pnntsd->type = pntsd->type;
@@ -110,7 +110,7 @@ copy_ace(struct cifs_ace *dace, struct cifs_ace *sace)
 
 	dace->type = sace->type;
 	dace->flags = sace->flags;
-	dace->access_req = htole32(sace->access_req);
+	dace->access_req = sace->access_req;
 
 	dace->sid.revision = sace->sid.revision;
 	dace->sid.num_subauth = sace->sid.num_subauth;
@@ -119,9 +119,9 @@ copy_ace(struct cifs_ace *dace, struct cifs_ace *sace)
 	for (i = 0; i < sace->sid.num_subauth; i++)
 		dace->sid.sub_auth[i] = sace->sid.sub_auth[i];
 
-	dace->size = htole16(sace->size);
+	dace->size = sace->size;
 
-	return dace->size;
+	return le16toh(dace->size);
 }
 
 static int
@@ -155,7 +155,7 @@ compare_aces(struct cifs_ace *sace, struct cifs_ace *dace, int compflags)
 	}
 
 	if (compflags & COMPMASK) {
-		if (dace->access_req != htole32(sace->access_req))
+		if (dace->access_req != sace->access_req)
 			return 0;
 	}
 
