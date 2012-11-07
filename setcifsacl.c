@@ -655,48 +655,36 @@ build_cmdline_aces_ret:
 }
 
 static char **
-parse_cmdline_aces(char *optarg, int numcaces)
+parse_cmdline_aces(char *acelist, int numcaces)
 {
 	int i = 0, len;
 	char *acestr, *vacestr, **arrptr = NULL;
 
-	errno = EINVAL;
 	arrptr = (char **)malloc(numcaces * sizeof(char *));
 	if (!arrptr) {
-		printf("%s: Error %d allocating char array\n", __func__, errno);
+		printf("%s: Unable to allocate char array\n", __func__);
 		return NULL;
 	}
 
 	while (i < numcaces) {
-		acestr = strtok(optarg, ","); /* everything before , */
-		if (acestr) {
-			vacestr = strstr(acestr, "ACL:"); /* ace as ACL:*" */
-			if (vacestr) {
-				vacestr = strchr(vacestr, ':');
-				if (vacestr)
-					++vacestr; /* go past : */
-				if (vacestr) {
-					len = strlen(vacestr);
-					arrptr[i] = malloc(len + 1);
-					if (!arrptr[i])
-						goto parse_cmdline_aces_ret;
-					strcpy(arrptr[i], vacestr);
-					++i;
-				} else
-					goto parse_cmdline_aces_ret;
-			} else
-				goto parse_cmdline_aces_ret;
-		} else
-			goto parse_cmdline_aces_ret;
-		optarg = NULL;
+		acestr = strtok(acelist, ","); /* everything before , */
+		if (!acestr)
+			goto parse_cmdline_aces_err;
+
+		vacestr = strstr(acestr, "ACL:"); /* ace as ACL:*" */
+		if (!vacestr)
+			goto parse_cmdline_aces_err;
+		vacestr += 4; /* skip past "ACL:" */
+		if (*vacestr) {
+			arrptr[i] = vacestr;
+			++i;
+		}
+		acelist = NULL;
 	}
-	errno = 0;
 	return arrptr;
 
-parse_cmdline_aces_ret:
-	printf("%s: Error %d parsing ACEs\n", __func__, errno);
-	for (;  i >= 0; --i)
-		free(arrptr[i]);
+parse_cmdline_aces_err:
+	printf("%s: Error parsing ACEs\n", __func__);
 	free(arrptr);
 	return NULL;
 }
@@ -908,8 +896,6 @@ setcifsacl_cmdlineverify_ret:
 	free(cacesptr);
 
 setcifsacl_cmdlineparse_ret:
-	for (i = 0; i < numcaces; ++i)
-		free(arrptr[i]);
 	free(arrptr);
 
 setcifsacl_numcaces_ret:
