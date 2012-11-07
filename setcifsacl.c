@@ -347,42 +347,36 @@ get_numfaces(struct cifs_ntsd *pntsd, ssize_t acl_len,
 static struct cifs_ace **
 build_fetched_aces(char *daclptr, int numfaces)
 {
-	int i, j, rc = 0, acl_size;
+	int i, acl_size;
 	char *acl_base;
 	struct cifs_ace *pace, **facesptr;
 
-	facesptr = (struct cifs_ace **)malloc(numfaces *
-					sizeof(struct cifs_aces *));
+	facesptr = calloc(numfaces, sizeof(struct cifs_aces *));
 	if (!facesptr) {
 		printf("%s: Error %d allocating ACE array",
 				__func__, errno);
-		rc = errno;
+		return facesptr;
 	}
 
 	acl_base = daclptr;
 	acl_size = sizeof(struct cifs_ctrl_acl);
 	for (i = 0; i < numfaces; ++i) {
 		facesptr[i] = malloc(sizeof(struct cifs_ace));
-		if (!facesptr[i]) {
-			rc = errno;
-			goto build_fetched_aces_ret;
-		}
+		if (!facesptr[i])
+			goto build_fetched_aces_err;
 		pace = (struct cifs_ace *) (acl_base + acl_size);
 		memcpy(facesptr[i], pace, sizeof(struct cifs_ace));
 		acl_base = (char *)pace;
 		acl_size = le16toh(pace->size);
 	}
-
-build_fetched_aces_ret:
-	if (rc) {
-		printf("%s: Invalid fetched ace\n", __func__);
-		if (i) {
-			for (j = i; j >= 0; --j)
-				free(facesptr[j]);
-		}
-		free(facesptr);
-	}
 	return facesptr;
+
+build_fetched_aces_err:
+	printf("%s: Invalid fetched ace\n", __func__);
+	for (i = 0; i < numfaces; ++i)
+		free(facesptr[i]);
+	free(facesptr);
+	return NULL;
 }
 
 static int
