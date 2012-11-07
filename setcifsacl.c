@@ -78,7 +78,7 @@ copy_sec_desc(const struct cifs_ntsd *pntsd, struct cifs_ntsd *pnntsd,
 	nowner_sid_ptr->num_subauth = owner_sid_ptr->num_subauth;
 	for (i = 0; i < NUM_AUTHS; i++)
 		nowner_sid_ptr->authority[i] = owner_sid_ptr->authority[i];
-	for (i = 0; i < SID_MAX_SUB_AUTHORITIES; i++)
+	for (i = 0; i < owner_sid_ptr->num_subauth; i++)
 		nowner_sid_ptr->sub_auth[i] = owner_sid_ptr->sub_auth[i];
 
 	/* copy group sid */
@@ -89,7 +89,7 @@ copy_sec_desc(const struct cifs_ntsd *pntsd, struct cifs_ntsd *pnntsd,
 	ngroup_sid_ptr->num_subauth = group_sid_ptr->num_subauth;
 	for (i = 0; i < NUM_AUTHS; i++)
 		ngroup_sid_ptr->authority[i] = group_sid_ptr->authority[i];
-	for (i = 0; i < SID_MAX_SUB_AUTHORITIES; i++)
+	for (i = 0; i < group_sid_ptr->num_subauth; i++)
 		ngroup_sid_ptr->sub_auth[i] = group_sid_ptr->sub_auth[i];
 
 	return;
