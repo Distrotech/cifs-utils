@@ -626,8 +626,8 @@ build_cmdline_aces(char **arrptr, int numcaces)
 			goto build_cmdline_aces_ret;
 		}
 
-		cacesptr[i]->size = 1 + 1 + 2 + 4 + 1 + 1 + 6 +
-				(cacesptr[i]->sid.num_subauth * 4);
+		cacesptr[i]->size = htole16(1 + 1 + 2 + 4 + 1 + 1 + 6 +
+					    cacesptr[i]->sid.num_subauth * 4);
 	}
 	return cacesptr;
 
