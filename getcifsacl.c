@@ -188,12 +188,11 @@ static void
 print_sid(struct cifs_sid *sidptr, int raw)
 {
 	int i;
-	int num_auths;
-	int num_auth = MAX_NUM_AUTHS;
 	wbcErr rc;
 	char *domain_name = NULL;
 	char *sidname = NULL;
 	enum wbcSidType sntype;
+	unsigned long long id_auth_val;
 
 	convert_sid_endianness(sidptr);
 
@@ -211,13 +210,25 @@ print_sid(struct cifs_sid *sidptr, int raw)
 	}
 
 print_sid_raw:
-	num_auths = sidptr->num_subauth;
-	printf("S");
-	printf("-%d", sidptr->revision);
-	for (i = 0; i < num_auth; ++i)
-		if (sidptr->authority[i])
-			printf("-%d", sidptr->authority[i]);
-	for (i = 0; i < num_auths; i++)
+	printf("S-%hhu", sidptr->revision);
+
+	id_auth_val = (unsigned long long)sidptr->authority[5];
+	id_auth_val += (unsigned long long)sidptr->authority[4] << 8;
+	id_auth_val += (unsigned long long)sidptr->authority[3] << 16;
+	id_auth_val += (unsigned long long)sidptr->authority[2] << 24;
+	id_auth_val += (unsigned long long)sidptr->authority[1] << 32;
+	id_auth_val += (unsigned long long)sidptr->authority[0] << 48;
+
+	/*
+	 * MS-DTYP states that if the authority is >= 2^32, then it should be
+	 * expressed as a hex value.
+	 */
+	if (id_auth_val <= UINT_MAX)
+		printf("-%llu", id_auth_val);
+	else
+		printf("-0x%llx", id_auth_val);
+
+	for (i = 0; i < sidptr->num_subauth; i++)
 		printf("-%u", sidptr->sub_auth[i]);
 }
 
