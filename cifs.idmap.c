@@ -42,6 +42,8 @@
 #include <limits.h>
 #include <wbclient.h>
 
+#include "cifsacl.h"
+
 static const char *prog = "cifs.idmap";
 
 static const struct option long_options[] = {
@@ -97,6 +99,19 @@ str_to_uint(const char *src, unsigned int *dst)
 
 	*dst = (unsigned int)tmp;
 	return 0;
+}
+
+/*
+ * Winbind keeps wbcDomainSid fields in host-endian. So, we must convert it
+ * to little endian since the kernel will expect that.
+ */
+static void
+convert_sid_endianness(struct cifs_sid *sid)
+{
+	int i;
+
+	for (i = 0; i < sid->num_subauth; i++)
+		sid->sub_auth[i] = htole32(sid->sub_auth[i]);
 }
 
 static int
@@ -173,7 +188,9 @@ cifs_idmap(const key_serial_t key, const char *key_descr)
 		rc = wbcUidToSid(uid, &sid);
 		if (rc)
 			syslog(LOG_DEBUG, "uid %u to SID  error: %d", uid, rc);
-		if (!rc) { /* SID has been mapped to a uid */
+		if (!rc) {
+			/* SID has been mapped to a uid */
+			convert_sid_endianness((struct cifs_sid *)&sid);
 			rc = keyctl_instantiate(key, &sid,
 					sizeof(struct wbcDomainSid), 0);
 			if (rc)
@@ -197,7 +214,9 @@ cifs_idmap(const key_serial_t key, const char *key_descr)
 		rc = wbcGidToSid(gid, &sid);
 		if (rc)
 			syslog(LOG_DEBUG, "gid %u to SID error: %d", gid, rc);
-		if (!rc) { /* SID has been mapped to a gid */
+		if (!rc) {
+			/* SID has been mapped to a gid */
+			convert_sid_endianness((struct cifs_sid *)&sid);
 			rc = keyctl_instantiate(key, &sid,
 					sizeof(struct wbcDomainSid), 0);
 			if (rc)
