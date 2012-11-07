@@ -329,19 +329,16 @@ get_numfaces(struct cifs_ntsd *pntsd, ssize_t acl_len,
 	struct cifs_ctrl_acl *ldaclptr;
 	char *end_of_acl = ((char *)pntsd) + acl_len;
 
-	if (pntsd == NULL)
-		return 0;
-
 	dacloffset = le32toh(pntsd->dacloffset);
 	if (!dacloffset)
 		return 0;
-	else {
-		ldaclptr = (struct cifs_ctrl_acl *)((char *)pntsd + dacloffset);
-		/* validate that we do not go past end of acl */
-		if (end_of_acl >= (char *)ldaclptr + le16toh(ldaclptr->size)) {
-			numfaces = le32toh(ldaclptr->num_aces);
-			*daclptr = ldaclptr;
-		}
+
+	ldaclptr = (struct cifs_ctrl_acl *)((char *)pntsd + dacloffset);
+
+	/* validate that we do not go past end of acl */
+	if (end_of_acl >= (char *)ldaclptr + le16toh(ldaclptr->size)) {
+		numfaces = le32toh(ldaclptr->num_aces);
+		*daclptr = ldaclptr;
 	}
 
 	return numfaces;
