@@ -581,8 +581,7 @@ build_cmdline_aces(char **arrptr, int numcaces)
 	char *acesid, *acetype, *aceflag, *acemask;
 	struct cifs_ace **cacesptr;
 
-	cacesptr = (struct cifs_ace **)malloc(numcaces *
-				sizeof(struct cifs_aces *));
+	cacesptr = calloc(numcaces, sizeof(struct cifs_aces *));
 	if (!cacesptr) {
 		printf("%s: Error %d allocating ACE array", __func__, errno);
 		return NULL;
@@ -634,7 +633,7 @@ build_cmdline_aces(char **arrptr, int numcaces)
 	return cacesptr;
 
 build_cmdline_aces_ret:
-	for (; i >= 0; --i)
+	for (i = 0; i < numcaces; ++i)
 		free(cacesptr[i]);
 	free(cacesptr);
 	return NULL;
