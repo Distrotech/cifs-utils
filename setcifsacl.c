@@ -50,11 +50,22 @@ enum setcifsacl_actions {
 };
 
 static void
-copy_sec_desc(const struct cifs_ntsd *pntsd, struct cifs_ntsd *pnntsd,
-		int numaces, int acessize)
+copy_cifs_sid(struct cifs_sid *dst, const struct cifs_sid *src)
 {
 	int i;
 
+	dst->revision = src->revision;
+	dst->num_subauth = src->num_subauth;
+	for (i = 0; i < NUM_AUTHS; i++)
+		dst->authority[i] = src->authority[i];
+	for (i = 0; i < src->num_subauth; i++)
+		dst->sub_auth[i] = src->sub_auth[i];
+}
+
+static void
+copy_sec_desc(const struct cifs_ntsd *pntsd, struct cifs_ntsd *pnntsd,
+		int numaces, int acessize)
+{
 	int osidsoffset, gsidsoffset, dacloffset;
 	struct cifs_sid *owner_sid_ptr, *group_sid_ptr;
 	struct cifs_sid *nowner_sid_ptr, *ngroup_sid_ptr;
@@ -81,24 +92,12 @@ copy_sec_desc(const struct cifs_ntsd *pntsd, struct cifs_ntsd *pnntsd,
 	/* copy owner sid */
 	owner_sid_ptr = (struct cifs_sid *)((char *)pntsd + osidsoffset);
 	nowner_sid_ptr = (struct cifs_sid *)((char *)pnntsd + osidsoffset);
-
-	nowner_sid_ptr->revision = owner_sid_ptr->revision;
-	nowner_sid_ptr->num_subauth = owner_sid_ptr->num_subauth;
-	for (i = 0; i < NUM_AUTHS; i++)
-		nowner_sid_ptr->authority[i] = owner_sid_ptr->authority[i];
-	for (i = 0; i < owner_sid_ptr->num_subauth; i++)
-		nowner_sid_ptr->sub_auth[i] = owner_sid_ptr->sub_auth[i];
+	copy_cifs_sid(nowner_sid_ptr, owner_sid_ptr);
 
 	/* copy group sid */
 	group_sid_ptr = (struct cifs_sid *)((char *)pntsd + gsidsoffset);
 	ngroup_sid_ptr = (struct cifs_sid *)((char *)pnntsd + gsidsoffset);
-
-	ngroup_sid_ptr->revision = group_sid_ptr->revision;
-	ngroup_sid_ptr->num_subauth = group_sid_ptr->num_subauth;
-	for (i = 0; i < NUM_AUTHS; i++)
-		ngroup_sid_ptr->authority[i] = group_sid_ptr->authority[i];
-	for (i = 0; i < group_sid_ptr->num_subauth; i++)
-		ngroup_sid_ptr->sub_auth[i] = group_sid_ptr->sub_auth[i];
+	copy_cifs_sid(ngroup_sid_ptr, group_sid_ptr);
 
 	return;
 }
@@ -106,18 +105,11 @@ copy_sec_desc(const struct cifs_ntsd *pntsd, struct cifs_ntsd *pnntsd,
 static int
 copy_ace(struct cifs_ace *dace, struct cifs_ace *sace)
 {
-	int i;
-
 	dace->type = sace->type;
 	dace->flags = sace->flags;
 	dace->access_req = sace->access_req;
 
-	dace->sid.revision = sace->sid.revision;
-	dace->sid.num_subauth = sace->sid.num_subauth;
-	for (i = 0; i < NUM_AUTHS; i++)
-		dace->sid.authority[i] = sace->sid.authority[i];
-	for (i = 0; i < sace->sid.num_subauth; i++)
-		dace->sid.sub_auth[i] = sace->sid.sub_auth[i];
+	copy_cifs_sid(&dace->sid, &sace->sid);
 
 	dace->size = sace->size;
 
