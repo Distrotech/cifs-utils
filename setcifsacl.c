@@ -39,7 +39,7 @@
 #include <sys/xattr.h>
 #include "cifsacl.h"
 
-static const char *prog = "setcifsacl";
+static const char *prog;
 
 static void
 copy_sec_desc(const struct cifs_ntsd *pntsd, struct cifs_ntsd *pnntsd,
@@ -774,6 +774,8 @@ main(const int argc, char *const argv[])
 	struct cifs_ctrl_acl *daclptr = NULL;
 	struct cifs_ace **cacesptr = NULL, **facesptr = NULL;
 	struct cifs_ntsd *ntsdptr = NULL;
+
+	prog = basename(argv[0]);
 
 	openlog(prog, 0, LOG_DAEMON);
 

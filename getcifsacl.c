@@ -38,7 +38,7 @@
 #include <sys/xattr.h>
 #include "cifsacl.h"
 
-static const char *prog = "getcifsacl";
+static const char *prog;
 
 static void
 print_each_ace_mask(uint32_t mask)
@@ -333,6 +333,7 @@ main(const int argc, char *const argv[])
 	size_t bufsize = BUFSIZE;
 	char *filename, *attrval;
 
+	prog = basename(argv[0]);
 	openlog(prog, 0, LOG_DAEMON);
 
 	while ((c = getopt_long(argc, argv, "r:v", NULL, NULL)) != -1) {
