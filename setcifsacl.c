@@ -396,30 +396,30 @@ build_fetched_aces_ret:
 static int
 verify_ace_sid(char *sidstr, struct cifs_sid *sid)
 {
-	int rc, i;
-	char *lstr;
-	struct passwd *winpswdptr;
+	int i;
+	wbcErr rc;
+	char *name, *domain;
+	enum wbcSidType type;
 
-	lstr = strstr(sidstr, "\\"); /* everything before | */
-	if (lstr)
-		++lstr;
-	else
-		lstr = sidstr;
+	name = strchr(sidstr, '\\');
+	if (!name) {
+		/* might be a raw string representation of SID */
+		rc = wbcStringToSid(sidstr, (struct wbcDomainSid *)sid);
+		if (WBC_ERROR_IS_OK(rc))
+			goto fix_endianness;
 
-	/* Check if it is a (raw) SID (string) */
-	rc = wbcStringToSid(lstr, (struct wbcDomainSid *)sid);
-	if (!rc)
-		goto fix_endianness;
-
-	/* Check if it a name (string) which can be resolved to a SID*/
-	rc = wbcGetpwnam(lstr, &winpswdptr);
-	if (rc) {
-		printf("%s: Invalid user name: %s\n", __func__, sidstr);
-		return rc;
+		domain = "";
+		name = sidstr;
+	} else {
+		domain = sidstr;
+		*name = '\0';
+		++name;
 	}
-	rc = wbcUidToSid(winpswdptr->pw_uid, (struct wbcDomainSid *)sid);
-	if (rc) {
-		printf("%s: Invalid user: %s\n", __func__, sidstr);
+
+	rc = wbcLookupName(domain, name, (struct wbcDomainSid *)sid, &type);
+	if (!WBC_ERROR_IS_OK(rc)) {
+		printf("%s: Error converting %s\\%s to SID: %s\n",
+			__func__, domain, name, wbcErrorString(rc));
 		return rc;
 	}
 
