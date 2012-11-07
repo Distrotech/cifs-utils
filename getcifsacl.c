@@ -171,6 +171,19 @@ print_ace_type(uint8_t acetype, int raw)
 	}
 }
 
+/*
+ * Winbind keeps wbcDomainSid fields in host-endian. So, we must convert from
+ * little endian here so that winbind will understand correctly.
+ */
+static void
+convert_sid_endianness(struct wbcDomainSid *sid)
+{
+	int i;
+
+	for (i = 0; i < sid->num_subauth; i++)
+		sid->sub_auth[i] = le32toh(sid->sub_auths[i]);
+}
+
 static void
 print_sid(struct wbcDomainSid *sidptr, int raw)
 {
@@ -182,11 +195,13 @@ print_sid(struct wbcDomainSid *sidptr, int raw)
 	char *sidname = NULL;
 	enum wbcSidType sntype;
 
+	convert_sid_endianness(sidptr);
+
 	if (raw)
 		goto print_sid_raw;
 
 	rc = wbcLookupSid(sidptr, &domain_name, &sidname, &sntype);
-	if (!rc) {
+	if (WBC_ERROR_IS_OK(rc)) {
 		printf("%s", domain_name);
 		if (strlen(domain_name))
 			printf("%c", '\\');
@@ -202,7 +217,7 @@ print_sid_raw:
 		if (sidptr->id_auth[i])
 			printf("-%d", sidptr->id_auth[i]);
 	for (i = 0; i < num_auths; i++)
-		printf("-%u", le32toh(sidptr->sub_auths[i]));
+		printf("-%u", sidptr->sub_auths[i]);
 }
 
 static void
