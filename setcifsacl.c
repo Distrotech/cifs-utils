@@ -701,22 +701,19 @@ parse_cmdline_aces_ret:
 	return NULL;
 }
 
+/* How many aces were provided on the command-line? Count the commas. */
 static unsigned int
-get_numcaces(const char *optarg)
+get_numcaces(const char *aces)
 {
 	int i, len;
-	unsigned int numcaces = 1;
+	unsigned int num = 1;
+	const char *current;
 
-	if (!optarg)
-		return 0;
+	current = aces;
+	while((current = strchr(current, ',')))
+		++num;
 
-	len = strlen(optarg);
-	for (i = 0; i < len; ++i) {
-		if (*(optarg + i) == ',')
-			++numcaces;
-	}
-
-	return numcaces;
+	return num;
 }
 
 static int
@@ -831,11 +828,12 @@ main(const int argc, char *const argv[])
 	}
 	filename = argv[3];
 
-	numcaces = get_numcaces(ace_list);
-	if (!numcaces) {
+	if (!ace_list) {
 		printf("%s: No valid ACEs specified\n", __func__);
 		return -1;
 	}
+
+	numcaces = get_numcaces(ace_list);
 
 	arrptr = parse_cmdline_aces(ace_list, numcaces);
 	if (!arrptr)
