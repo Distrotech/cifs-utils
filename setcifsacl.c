@@ -396,7 +396,7 @@ build_fetched_aces_ret:
 static int
 verify_ace_sid(char *sidstr, struct cifs_sid *sid)
 {
-	int rc;
+	int rc, i;
 	char *lstr;
 	struct passwd *winpswdptr;
 
@@ -409,7 +409,7 @@ verify_ace_sid(char *sidstr, struct cifs_sid *sid)
 	/* Check if it is a (raw) SID (string) */
 	rc = wbcStringToSid(lstr, (struct wbcDomainSid *)sid);
 	if (!rc)
-		return rc;
+		goto fix_endianness;
 
 	/* Check if it a name (string) which can be resolved to a SID*/
 	rc = wbcGetpwnam(lstr, &winpswdptr);
@@ -423,6 +423,13 @@ verify_ace_sid(char *sidstr, struct cifs_sid *sid)
 		return rc;
 	}
 
+fix_endianness:
+	/*
+	 * Winbind keeps wbcDomainSid fields in host-endian. So, we must
+	 * convert that to little endian since the server will expect that.
+	 */
+	for (i = 0; i < sid->num_subauth; i++)
+		sid->sub_auth[i] = htole32(sid->sub_auth[i]);
 	return 0;
 }
 
