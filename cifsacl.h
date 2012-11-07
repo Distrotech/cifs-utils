@@ -83,7 +83,7 @@
 #define NO_PROPAGATE_INHERIT_FLAG 0x04	/* NP */
 #define INHERIT_ONLY_FLAG 0x08		/* IO */
 #define INHERITED_ACE_FLAG 0x10		/* I */
-#define VFLAGS 0x1f
+#define VFLAGS (OBJECT_INHERIT_FLAG|CONTAINER_INHERIT_FLAG|NO_PROPAGATE_INHERIT_FLAG|INHERIT_ONLY_FLAG|INHERITED_ACE_FLAG)
 
 #define ACCESS_ALLOWED	0		/* ALLOWED */
 #define ACCESS_DENIED	1		/* DENIED */
@@ -94,18 +94,17 @@
 #define COMPTYPE 0x2
 #define COMPFLAG 0x4
 #define COMPMASK 0x8
-#define COMPALL 0xf /* COMPSID | COMPTYPE | COMPFLAG | COMPMASK */
+#define COMPALL (COMPSID|COMPTYPE|COMPFLAG|COMPMASK)
 
-#define NUM_AUTHS (6)   /* number of authority fields */
-#define SID_MAX_SUB_AUTHORITIES (15) /* max number of sub authority fields */
+#define NUM_AUTHS (6)			/* number of authority fields */
+#define SID_MAX_SUB_AUTHORITIES (15)	/* max number of sub authority fields */
 
-enum ace_action {
-	acedelete = 0,
-	acemodify,
-	aceadd,
-	aceset
-};
-
+/*
+ * While not indicated here, the structs below represent on-the-wire data
+ * structures. Any multi-byte values are expected to be little-endian!
+ *
+ * FIXME: should we change these to use endianness annotations?
+ */
 struct cifs_ntsd {
 	uint16_t revision; /* revision level */
 	uint16_t type;
