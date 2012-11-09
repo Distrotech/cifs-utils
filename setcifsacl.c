@@ -828,7 +828,7 @@ main(const int argc, char *const argv[])
 
 cifsacl:
 	if (bufsize >= XATTR_SIZE_MAX) {
-		printf("%s: Buffer size %ld exceeds max size of %d\n",
+		printf("%s: Buffer size %zd exceeds max size of %d\n",
 				__func__, bufsize, XATTR_SIZE_MAX);
 		goto setcifsacl_cmdlineverify_ret;
 	}
