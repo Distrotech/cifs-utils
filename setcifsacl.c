@@ -379,20 +379,37 @@ build_fetched_aces_err:
 	return NULL;
 }
 
-static int
-verify_ace_sid(char *sidstr, struct cifs_sid *sid)
+/*
+ * Winbind keeps wbcDomainSid fields in host-endian. Copy fields from the
+ * wsid to the csid, while converting the subauthority fields to LE.
+ */
+static void
+wsid_to_csid(struct cifs_sid *csid, struct wbcDomainSid *wsid)
 {
 	int i;
+
+	csid->revision = wsid->sid_rev_num;
+	csid->num_subauth = wsid->num_auths;
+	for (i = 0; i < NUM_AUTHS; i++)
+		csid->authority[i] = wsid->id_auth[i];
+	for (i = 0; i < wsid->num_auths; i++)
+		csid->sub_auth[i] = htole32(wsid->sub_auths[i]);
+}
+
+static int
+verify_ace_sid(char *sidstr, struct cifs_sid *csid)
+{
 	wbcErr rc;
 	char *name, *domain;
 	enum wbcSidType type;
+	struct wbcDomainSid wsid;
 
 	name = strchr(sidstr, '\\');
 	if (!name) {
 		/* might be a raw string representation of SID */
-		rc = wbcStringToSid(sidstr, (struct wbcDomainSid *)sid);
+		rc = wbcStringToSid(sidstr, &wsid);
 		if (WBC_ERROR_IS_OK(rc))
-			goto fix_endianness;
+			goto convert_sid;
 
 		domain = "";
 		name = sidstr;
@@ -402,20 +419,15 @@ verify_ace_sid(char *sidstr, struct cifs_sid *sid)
 		++name;
 	}
 
-	rc = wbcLookupName(domain, name, (struct wbcDomainSid *)sid, &type);
+	rc = wbcLookupName(domain, name, &wsid, &type);
 	if (!WBC_ERROR_IS_OK(rc)) {
 		printf("%s: Error converting %s\\%s to SID: %s\n",
 			__func__, domain, name, wbcErrorString(rc));
 		return rc;
 	}
 
-fix_endianness:
-	/*
-	 * Winbind keeps wbcDomainSid fields in host-endian. So, we must
-	 * convert that to little endian since the server will expect that.
-	 */
-	for (i = 0; i < sid->num_subauth; i++)
-		sid->sub_auth[i] = htole32(sid->sub_auth[i]);
+convert_sid:
+	wsid_to_csid(csid, &wsid);
 	return 0;
 }
 

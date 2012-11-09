@@ -106,7 +106,7 @@ str_to_uint(const char *src, unsigned int *dst)
  * wsid to the csid, while converting the subauthority fields to LE.
  */
 static void
-convert_sid(struct cifs_sid *csid, struct wbcDomainSid *wsid)
+wsid_to_csid(struct cifs_sid *csid, struct wbcDomainSid *wsid)
 {
 	int i;
 
@@ -196,7 +196,7 @@ cifs_idmap(const key_serial_t key, const char *key_descr)
 			struct cifs_sid csid;
 
 			/* SID has been mapped to a uid */
-			convert_sid(&csid, &sid);
+			wsid_to_csid(&csid, &sid);
 			rc = keyctl_instantiate(key, &csid,
 					sizeof(struct cifs_sid), 0);
 			if (rc)
@@ -224,7 +224,7 @@ cifs_idmap(const key_serial_t key, const char *key_descr)
 			struct cifs_sid csid;
 
 			/* SID has been mapped to a gid */
-			convert_sid(&csid, &sid);
+			wsid_to_csid(&csid, &sid);
 			rc = keyctl_instantiate(key, &csid,
 					sizeof(struct cifs_sid), 0);
 			if (rc)
