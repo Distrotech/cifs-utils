@@ -2071,7 +2071,7 @@ int main(int argc, char **argv)
 		}
 	}
 
-	if (argc < 3 || argv[optind] == NULL || argv[optind + 1] == NULL) {
+	if (argc < optind + 2) {
 		rc = mount_usage(stderr);
 		goto mount_exit;
 	}
