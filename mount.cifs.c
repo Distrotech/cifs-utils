@@ -1003,57 +1003,55 @@ parse_options(const char *data, struct parsed_mount_info *parsed_info)
 				goto nocopy;
 
 			got_uid = 1;
+			pw = getpwnam(value);
+			if (pw) {
+				uid = pw->pw_uid;
+				goto nocopy;
+			}
+
 			errno = 0;
 			uid = strtoul(value, &ep, 10);
 			if (errno == 0 && *ep == '\0')
 				goto nocopy;
 
-			pw = getpwnam(value);
-			if (pw == NULL) {
-				fprintf(stderr, "bad user name \"%s\"\n", value);
-				return EX_USAGE;
-			}
-
-			uid = pw->pw_uid;
-			goto nocopy;
-
+			fprintf(stderr, "bad option uid=\"%s\"\n", value);
+			return EX_USAGE;
 		case OPT_CRUID:
 			if (!value || !*value)
 				goto nocopy;
 
 			got_cruid = 1;
+			pw = getpwnam(value);
+			if (pw) {
+				cruid = pw->pw_uid;
+				goto nocopy;
+			}
+
 			errno = 0;
 			cruid = strtoul(value, &ep, 10);
 			if (errno == 0 && *ep == '\0')
 				goto nocopy;
 
-			pw = getpwnam(value);
-			if (pw == NULL) {
-				fprintf(stderr, "bad user name \"%s\"\n", value);
-				return EX_USAGE;
-			}
-			cruid = pw->pw_uid;
-			goto nocopy;
-
+			fprintf(stderr, "bad option: cruid=\"%s\"\n", value);
+			return EX_USAGE;
 		case OPT_GID:
 			if (!value || !*value)
 				goto nocopy;
 
 			got_gid = 1;
+			gr = getgrnam(value);
+			if (gr) {
+				gid = gr->gr_gid;
+				goto nocopy;
+			}
+
 			errno = 0;
 			gid = strtoul(value, &ep, 10);
 			if (errno == 0 && *ep == '\0')
 				goto nocopy;
 
-			gr = getgrnam(value);
-			if (gr == NULL) {
-				fprintf(stderr, "bad group name \"%s\"\n", value);
-				return EX_USAGE;
-			}
-
-			gid = gr->gr_gid;
-			goto nocopy;
-
+			fprintf(stderr, "bad option: gid=\"%s\"\n", value);
+			return EX_USAGE;
 		/* fmask fall through to file_mode */
 		case OPT_FMASK:
 			fprintf(stderr,
