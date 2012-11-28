@@ -1091,23 +1091,15 @@ parse_options(const char *data, struct parsed_mount_info *parsed_info)
 					"WARNING: '%s' not expressed in octal.\n",
 					data);
 			break;
-
-		/* the following mount options should be
-		   stripped out from what is passed into the kernel
-		   since these options are best passed as the
-		   mount flags rather than redundantly to the kernel
-		   and could generate spurious warnings depending on the
-		   level of the corresponding cifs vfs kernel code */
 		case OPT_NO_SUID:
 			*filesys_flags |= MS_NOSUID;
-			break;
+			goto nocopy;
 		case OPT_SUID:
 			*filesys_flags &= ~MS_NOSUID;
-			break;
+			goto nocopy;
 		case OPT_NO_DEV:
 			*filesys_flags |= MS_NODEV;
-			break;
-		/* nolock || nobrl */
+			goto nocopy;
 		case OPT_NO_LOCK:
 			*filesys_flags &= ~MS_MANDLOCK;
 			break;
@@ -1119,17 +1111,17 @@ parse_options(const char *data, struct parsed_mount_info *parsed_info)
 			goto nocopy;
 		case OPT_DEV:
 			*filesys_flags &= ~MS_NODEV;
-			break;
+			goto nocopy;
 		case OPT_NO_EXEC:
 			*filesys_flags |= MS_NOEXEC;
-			break;
+			goto nocopy;
 		case OPT_EXEC:
 			*filesys_flags &= ~MS_NOEXEC;
-			break;
+			goto nocopy;
 		case OPT_GUEST:
 			parsed_info->got_user = 1;
 			parsed_info->got_password = 1;
-			break;
+			goto nocopy;
 		case OPT_RO:
 			*filesys_flags |= MS_RDONLY;
 			goto nocopy;
@@ -1138,7 +1130,7 @@ parse_options(const char *data, struct parsed_mount_info *parsed_info)
 			goto nocopy;
 		case OPT_REMOUNT:
 			*filesys_flags |= MS_REMOUNT;
-			break;
+			goto nocopy;
 		case OPT_IGNORE:
 			goto nocopy;
 		case OPT_BKUPUID:
