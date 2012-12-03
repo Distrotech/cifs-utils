@@ -33,10 +33,13 @@
 #include <stddef.h>
 #include <errno.h>
 #include <limits.h>
-#include <wbclient.h>
 #include <ctype.h>
 #include <sys/xattr.h>
 #include "cifsacl.h"
+#include "idmap_plugin.h"
+
+static void *plugin_handle;
+static bool plugin_loaded;
 
 static void
 print_each_ace_mask(uint32_t mask)
@@ -169,61 +172,33 @@ print_ace_type(uint8_t acetype, int raw)
 	}
 }
 
-/*
- * Winbind keeps wbcDomainSid fields in host-endian. Copy fields from the
- * csid to the wsid, while converting the subauthority fields from LE.
- */
 static void
-csid_to_wsid(struct wbcDomainSid *wsid, const struct cifs_sid *csid)
+print_sid(struct cifs_sid *csid, int raw)
 {
-	int i;
-	uint8_t num_subauth = (csid->num_subauth <= WBC_MAXSUBAUTHS) ?
-				csid->num_subauth : WBC_MAXSUBAUTHS;
-
-	wsid->sid_rev_num = csid->revision;
-	wsid->num_auths = num_subauth;
-	for (i = 0; i < NUM_AUTHS; i++)
-		wsid->id_auth[i] = csid->authority[i];
-	for (i = 0; i < num_subauth; i++)
-		wsid->sub_auths[i] = le32toh(csid->sub_auth[i]);
-}
-
-static void
-print_sid(struct cifs_sid *sidptr, int raw)
-{
-	int i;
-	wbcErr rc;
-	char *domain_name = NULL;
-	char *sidname = NULL;
-	enum wbcSidType sntype;
+	int i, rc;
+	char *name;
 	unsigned long long id_auth_val;
-	struct wbcDomainSid wsid;
 
-	csid_to_wsid(&wsid, sidptr);
-
-	if (raw)
+	if (raw || !plugin_loaded)
 		goto print_sid_raw;
 
-	rc = wbcLookupSid(&wsid, &domain_name, &sidname, &sntype);
-	if (WBC_ERROR_IS_OK(rc)) {
-		printf("%s", domain_name);
-		if (strlen(domain_name))
-			printf("%c", '\\');
-		printf("%s", sidname);
-		wbcFreeMemory(domain_name);
-		wbcFreeMemory(sidname);
-		return;
-	}
+	rc = sid_to_str(plugin_handle, csid, &name);
+	if (rc)
+		goto print_sid_raw;
+
+	printf("%s", name);
+	free(name);
+	return;
 
 print_sid_raw:
-	printf("S-%hhu", wsid.sid_rev_num);
+	printf("S-%hhu", csid->revision);
 
-	id_auth_val = (unsigned long long)wsid.id_auth[5];
-	id_auth_val += (unsigned long long)wsid.id_auth[4] << 8;
-	id_auth_val += (unsigned long long)wsid.id_auth[3] << 16;
-	id_auth_val += (unsigned long long)wsid.id_auth[2] << 24;
-	id_auth_val += (unsigned long long)wsid.id_auth[1] << 32;
-	id_auth_val += (unsigned long long)wsid.id_auth[0] << 48;
+	id_auth_val = (unsigned long long)csid->authority[5];
+	id_auth_val += (unsigned long long)csid->authority[4] << 8;
+	id_auth_val += (unsigned long long)csid->authority[3] << 16;
+	id_auth_val += (unsigned long long)csid->authority[2] << 24;
+	id_auth_val += (unsigned long long)csid->authority[1] << 32;
+	id_auth_val += (unsigned long long)csid->authority[0] << 48;
 
 	/*
 	 * MS-DTYP states that if the authority is >= 2^32, then it should be
@@ -234,8 +209,8 @@ print_sid_raw:
 	else
 		printf("-0x%llx", id_auth_val);
 
-	for (i = 0; i < wsid.num_auths; i++)
-		printf("-%u", wsid.sub_auths[i]);
+	for (i = 0; i < csid->num_subauth; i++)
+		printf("-%u", le32toh(csid->sub_auth[i]));
 }
 
 static void
@@ -368,7 +343,8 @@ getcifsacl_usage(const char *prog)
 int
 main(const int argc, char *const argv[])
 {
-	int c, raw = 0;
+	int c, ret = 0;
+	bool raw = false;
 	ssize_t attrlen;
 	size_t bufsize = BUFSIZE;
 	char *filename, *attrval;
@@ -379,7 +355,7 @@ main(const int argc, char *const argv[])
 			printf("Version: %s\n", VERSION);
 			goto out;
 		case 'r':
-			raw = 1;
+			raw = true;
 			break;
 		default:
 			break;
@@ -392,20 +368,31 @@ main(const int argc, char *const argv[])
 		filename = argv[1];
 	else {
 		getcifsacl_usage(basename(argv[0]));
-		return 0;
+		goto out;
+	}
+
+	if (!raw && !plugin_loaded) {
+		ret = init_plugin(&plugin_handle);
+		if (ret)
+			printf("WARNING: unable to initialize idmapping plugin: %s\n",
+				plugin_errmsg);
+		else
+			plugin_loaded = true;
 	}
 
 cifsacl:
 	if (bufsize >= XATTR_SIZE_MAX) {
 		printf("buffer to allocate exceeds max size of %d\n",
 				XATTR_SIZE_MAX);
-		return -1;
+		ret = -1;
+		goto out;
 	}
 
 	attrval = malloc(bufsize * sizeof(char));
 	if (!attrval) {
 		printf("error allocating memory for attribute value buffer\n");
-		return -1;
+		ret = -1;
+		goto out;
 	}
 
 	attrlen = getxattr(filename, ATTRNAME, attrval, bufsize);
@@ -421,7 +408,8 @@ cifsacl:
 	parse_sec_desc((struct cifs_ntsd *)attrval, attrlen, raw);
 
 	free(attrval);
-
 out:
-	return 0;
+	if (plugin_loaded)
+		exit_plugin(plugin_handle);
+	return ret;
 }

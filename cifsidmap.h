@@ -34,4 +34,49 @@ struct cifs_sid {
 	uint32_t sub_auth[SID_MAX_SUB_AUTHORITIES];
 } __attribute__((packed));
 
+/* Plugins should implement the following functions: */
+
+/**
+ * cifs_idmap_init_plugin - Initialize the plugin interface
+ * @handle - return pointer for an opaque handle
+ * @errmsg - pointer to error message pointer
+ *
+ * This function should do whatever is required to establish a context
+ * for later ID mapping operations. The "handle" is an opaque context
+ * cookie that will be passed in on subsequent ID mapping operations.
+ * The errmsg is used to pass back an error string both during the init
+ * and in subsequent idmapping functions. On any error, the plugin
+ * should point *errmsg at a string describing that error. Returns 0
+ * on success and non-zero on error.
+ *
+ * int cifs_idmap_init_plugin(void **handle, const char **errmsg);
+ */
+
+/**
+ * cifs_idmap_exit_plugin - Destroy an idmapping context
+ * @handle - context handle that should be destroyed
+ *
+ * When programs are finished with the idmapping plugin, they'll call
+ * this function to destroy any context that was created during the
+ * init_plugin. The handle passed back in was the one given by the init
+ * routine.
+ *
+ * void cifs_idmap_exit_plugin(void *handle);
+ */
+
+/**
+ * cifs_idmap_sid_to_str - convert cifs_sid to a string
+ * @handle - context handle
+ * @sid    - pointer to a cifs_sid
+ * @name   - return pointer for the name
+ *
+ * This function should convert the given cifs_sid to a string
+ * representation in a heap-allocated buffer. The caller of this
+ * function is expected to free "name" on success. Returns 0 on
+ * success and non-zero on error.
+ *
+ * int cifs_idmap_sid_to_str(void *handle, const struct cifs_sid *sid,
+ * 				char **name);
+ */
+
 #endif /* _CIFSIDMAP_H */

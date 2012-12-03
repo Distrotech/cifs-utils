@@ -57,9 +57,8 @@ endif
 
 if CONFIG_CIFSACL
 bin_PROGRAMS += getcifsacl
-getcifsacl_SOURCES = getcifsacl.c
-getcifsacl_LDADD = $(WBCLIENT_LIBS)
-getcifsacl_CFLAGS = $(WBCLIENT_CFLAGS)
+getcifsacl_SOURCES = getcifsacl.c idmap_plugin.c
+getcifsacl_LDADD = -ldl
 man_MANS += getcifsacl.1
 
 bin_PROGRAMS += setcifsacl
@@ -67,6 +66,14 @@ setcifsacl_SOURCES = setcifsacl.c
 setcifsacl_LDADD = $(WBCLIENT_LIBS)
 setcifsacl_CFLAGS = $(WBCLIENT_CFLAGS)
 man_MANS += setcifsacl.1
+endif
+
+if CONFIG_PLUGIN
+plugindir = $(pkglibdir)
+plugin_PROGRAMS = idmapwb.so
+
+idmapwb.so: idmapwb.c
+	$(CC) $(CFLAGS) $(AM_CFLAGS) $(WBCLIENT_CFLAGS) $(LDFLAGS) -shared -fpic -o $@ $+ $(WBCLIENT_LIBS)
 endif
 
 SUBDIRS = contrib

@@ -52,6 +52,14 @@ AC_ARG_ENABLE(systemd,
 	enable_systemd=$enableval,
 	enable_systemd="maybe")
 
+# "with" options
+AC_ARG_WITH(idmap-plugin,
+	[AC_HELP_STRING([--with-idmap-plugin=/path/to/plugin],
+			[Define the path to the plugin that the idmapping infrastructure should use @<:@default=/etc/cifs-utils/idmap-plugin@:>@])],
+	pluginpath=$withval,
+	pluginpath="/etc/cifs-utils/idmap-plugin")
+AC_DEFINE_UNQUOTED(IDMAP_PLUGIN_PATH, "$pluginpath", [Location of plugin that ID mapping infrastructure should use. (usually a symlink to real plugin)])
+
 # check for ROOTSBINDIR environment var
 if test -z $ROOTSBINDIR; then
 	ROOTSBINDIR="/sbin"
@@ -230,6 +238,7 @@ AM_CONDITIONAL(CONFIG_CIFSUPCALL, [test "$enable_cifsupcall" != "no"])
 AM_CONDITIONAL(CONFIG_CIFSCREDS, [test "$enable_cifscreds" != "no"])
 AM_CONDITIONAL(CONFIG_CIFSIDMAP, [test "$enable_cifsidmap" != "no"])
 AM_CONDITIONAL(CONFIG_CIFSACL, [test "$enable_cifsacl" != "no"])
+AM_CONDITIONAL(CONFIG_PLUGIN, [test "$enable_cifsidmap" != "no" -o "$enable_cifsacl" != "no"])
 
 LIBCAP_NG_PATH
 
