@@ -249,11 +249,11 @@ print_ace(struct cifs_ace *pace, char *end_of_acl, int raw)
 	size = le16toh(pace->size);
 
 	/* 16 == size of cifs_ace when cifs_sid has no subauths */
-	if (le16toh(pace->size) < 16)
+	if (size < 16)
 		return;
 
 	/* validate that we do not go past end of acl */
-	if (end_of_acl < (char *)pace + le16toh(pace->size))
+	if (end_of_acl < (char *)pace + size)
 		return;
 
 	printf("ACL:");
