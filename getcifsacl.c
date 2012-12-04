@@ -211,6 +211,8 @@ print_sid(struct cifs_sid *sidptr, int raw)
 		if (strlen(domain_name))
 			printf("%c", '\\');
 		printf("%s", sidname);
+		wbcFreeMemory(domain_name);
+		wbcFreeMemory(sidname);
 		return;
 	}
 
