@@ -180,12 +180,14 @@ static void
 csid_to_wsid(struct wbcDomainSid *wsid, const struct cifs_sid *csid)
 {
 	int i;
+	uint8_t num_subauth = (csid->num_subauth <= WBC_MAXSUBAUTHS) ?
+				csid->num_subauth : WBC_MAXSUBAUTHS;
 
 	wsid->sid_rev_num = csid->revision;
-	wsid->num_auths = csid->num_subauth;
+	wsid->num_auths = num_subauth;
 	for (i = 0; i < NUM_AUTHS; i++)
 		wsid->id_auth[i] = csid->authority[i];
-	for (i = 0; i < csid->num_subauth; i++)
+	for (i = 0; i < num_subauth; i++)
 		wsid->sub_auths[i] = le32toh(csid->sub_auth[i]);
 }
 
