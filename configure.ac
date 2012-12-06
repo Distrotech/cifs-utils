@@ -114,7 +114,7 @@ fi
 AC_SUBST([PIE_CFLAGS])
 
 if test $enable_relro != "no"; then
-	RELRO_CFLAGS="-Wl,-z,relro"
+	RELRO_CFLAGS="-Wl,-z,relro,-z,now"
 else
 	RELRO_CFLAGS=""
 fi
