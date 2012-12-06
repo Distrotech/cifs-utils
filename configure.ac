@@ -94,9 +94,10 @@ AC_CHECK_FUNCS(clock_gettime, [], [
       AC_DEFINE(HAVE_CLOCK_GETTIME, 1)
 	AC_DEFINE(HAVE_CLOCK_GETTIME,1,
 		[Whether the clock_gettime func is there])
-      LIBS="$LIBS -lrt"
+      RT_LDADD="-lrt"
         ])
   ])
+AC_SUBST(RT_LDADD)
 
 # Checks for header files.
 AC_CHECK_HEADERS([arpa/inet.h ctype.h fcntl.h inttypes.h limits.h mntent.h netdb.h stddef.h stdint.h stdbool.h stdlib.h stdio.h errno.h string.h strings.h sys/mount.h sys/param.h sys/socket.h sys/time.h syslog.h unistd.h], , [AC_MSG_ERROR([necessary header(s) not found])])
