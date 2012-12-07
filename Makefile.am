@@ -62,9 +62,8 @@ getcifsacl_LDADD = -ldl
 man_MANS += getcifsacl.1
 
 bin_PROGRAMS += setcifsacl
-setcifsacl_SOURCES = setcifsacl.c
-setcifsacl_LDADD = $(WBCLIENT_LIBS)
-setcifsacl_CFLAGS = $(WBCLIENT_CFLAGS)
+setcifsacl_SOURCES = setcifsacl.c idmap_plugin.c
+setcifsacl_LDADD = -ldl
 man_MANS += setcifsacl.1
 endif
 

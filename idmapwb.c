@@ -52,6 +52,25 @@ csid_to_wsid(struct wbcDomainSid *wsid, const struct cifs_sid *csid)
 		wsid->sub_auths[i] = le32toh(csid->sub_auth[i]);
 }
 
+/*
+ * Winbind keeps wbcDomainSid fields in host-endian. Copy fields from the
+ * wsid to the csid, while converting the subauthority fields to LE.
+ */
+static void
+wsid_to_csid(struct cifs_sid *csid, struct wbcDomainSid *wsid)
+{
+	int i;
+	uint8_t num_subauth = (wsid->num_auths <= SID_MAX_SUB_AUTHORITIES) ?
+				wsid->num_auths : SID_MAX_SUB_AUTHORITIES;
+
+	csid->revision = wsid->sid_rev_num;
+	csid->num_subauth = num_subauth;
+	for (i = 0; i < NUM_AUTHS; i++)
+		csid->authority[i] = wsid->id_auth[i];
+	for (i = 0; i < num_subauth; i++)
+		csid->sub_auth[i] = htole32(wsid->sub_auths[i]);
+}
+
 int
 cifs_idmap_sid_to_str(void *handle __attribute__ ((unused)),
 			const struct cifs_sid *csid, char **string)
@@ -95,6 +114,50 @@ out:
 	wbcFreeMemory(domain);
 	wbcFreeMemory(name);
 	return rc;
+}
+
+int
+cifs_idmap_str_to_sid(void *handle __attribute__ ((unused)),
+			const char *orig, struct cifs_sid *csid)
+{
+	wbcErr wbcrc;
+	char *name, *domain, *sidstr;
+	enum wbcSidType type;
+	struct wbcDomainSid wsid;
+
+	sidstr = strdup(orig);
+	if (!sidstr) {
+		*plugin_errmsg = "Unable to copy string";
+		return -ENOMEM;
+	}
+
+	name = strchr(sidstr, '\\');
+	if (!name) {
+		/* might be a raw string representation of SID */
+		wbcrc = wbcStringToSid(sidstr, &wsid);
+		if (WBC_ERROR_IS_OK(wbcrc))
+			goto convert_sid;
+
+		domain = "";
+		name = sidstr;
+	} else {
+		domain = sidstr;
+		*name = '\0';
+		++name;
+	}
+
+	wbcrc = wbcLookupName(domain, name, &wsid, &type);
+	/* FIXME: map these to better POSIX error codes? */
+	if (!WBC_ERROR_IS_OK(wbcrc)) {
+		*plugin_errmsg = wbcErrorString(wbcrc);
+		free(sidstr);
+		return -EIO;
+	}
+
+convert_sid:
+	wsid_to_csid(csid, &wsid);
+	free(sidstr);
+	return 0;
 }
 
 /*

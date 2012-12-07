@@ -101,3 +101,17 @@ sid_to_str(void *handle, const struct cifs_sid *sid, char **name)
 
 	return (*entry)(handle, sid, name);
 }
+
+int
+str_to_sid(void *handle, const char *name, struct cifs_sid *sid)
+{
+	int (*entry)(void *, const char *, struct cifs_sid *);
+
+	*(void **)(&entry) = resolve_symbol("cifs_idmap_str_to_sid");
+	if (!entry) {
+		plugin_errmsg = "cifs_idmap_str_to_sid not implemented";
+		return -ENOSYS;
+	}
+
+	return (*entry)(handle, name, sid);
+}

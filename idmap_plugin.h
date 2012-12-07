@@ -43,4 +43,7 @@ extern void exit_plugin(void *handle);
 /* Convert cifs_sid to a string. Caller must free *name on success */
 extern int sid_to_str(void *handle, const struct cifs_sid *sid, char **name);
 
+/* Convert string to cifs_sid. */
+extern int str_to_sid(void *handle, const char *name, struct cifs_sid *csid);
+
 #endif /* _IDMAP_PLUGIN_H */

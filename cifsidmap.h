@@ -71,12 +71,29 @@ struct cifs_sid {
  * @name   - return pointer for the name
  *
  * This function should convert the given cifs_sid to a string
- * representation in a heap-allocated buffer. The caller of this
- * function is expected to free "name" on success. Returns 0 on
- * success and non-zero on error.
+ * representation or mapped name in a heap-allocated buffer. The caller
+ * of this function is expected to free "name" on success. Returns 0 on
+ * success and non-zero on error. On error, the errmsg pointer passed
+ * in to the init_plugin function should point to an error string.
  *
  * int cifs_idmap_sid_to_str(void *handle, const struct cifs_sid *sid,
  * 				char **name);
+ */
+
+/**
+ * cifs_idmap_str_to_sid - convert string to struct cifs_sid
+ * @handle - context handle
+ * @name   - pointer to name string to be converted
+ * @sid    - pointer to struct cifs_sid where result should go
+ *
+ * This function converts a name string or string representation of
+ * a SID to a struct cifs_sid. The cifs_sid should already be
+ * allocated. Returns 0 on success and non-zero on error. On error, the
+ * plugin should reset the errmsg pointer passed to the init_plugin
+ * function to an error string.
+ *
+ * int cifs_idmap_str_to_sid(void *handle, const char *name,
+ * 				struct cifs_sid *sid);
  */
 
 #endif /* _CIFSIDMAP_H */

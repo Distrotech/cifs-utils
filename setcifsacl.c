@@ -33,10 +33,11 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <limits.h>
-#include <wbclient.h>
 #include <ctype.h>
 #include <sys/xattr.h>
+
 #include "cifsacl.h"
+#include "idmap_plugin.h"
 
 enum setcifsacl_actions {
 	ActUnknown = -1,
@@ -45,6 +46,8 @@ enum setcifsacl_actions {
 	ActAdd,
 	ActSet
 };
+
+static void *plugin_handle;
 
 static void
 copy_cifs_sid(struct cifs_sid *dst, const struct cifs_sid *src)
@@ -376,58 +379,6 @@ build_fetched_aces_err:
 	return NULL;
 }
 
-/*
- * Winbind keeps wbcDomainSid fields in host-endian. Copy fields from the
- * wsid to the csid, while converting the subauthority fields to LE.
- */
-static void
-wsid_to_csid(struct cifs_sid *csid, struct wbcDomainSid *wsid)
-{
-	int i;
-
-	csid->revision = wsid->sid_rev_num;
-	csid->num_subauth = wsid->num_auths;
-	for (i = 0; i < NUM_AUTHS; i++)
-		csid->authority[i] = wsid->id_auth[i];
-	for (i = 0; i < wsid->num_auths; i++)
-		csid->sub_auth[i] = htole32(wsid->sub_auths[i]);
-}
-
-static int
-verify_ace_sid(char *sidstr, struct cifs_sid *csid)
-{
-	wbcErr rc;
-	char *name, *domain;
-	enum wbcSidType type;
-	struct wbcDomainSid wsid;
-
-	name = strchr(sidstr, '\\');
-	if (!name) {
-		/* might be a raw string representation of SID */
-		rc = wbcStringToSid(sidstr, &wsid);
-		if (WBC_ERROR_IS_OK(rc))
-			goto convert_sid;
-
-		domain = "";
-		name = sidstr;
-	} else {
-		domain = sidstr;
-		*name = '\0';
-		++name;
-	}
-
-	rc = wbcLookupName(domain, name, &wsid, &type);
-	if (!WBC_ERROR_IS_OK(rc)) {
-		printf("%s: Error converting %s\\%s to SID: %s\n",
-			__func__, domain, name, wbcErrorString(rc));
-		return rc;
-	}
-
-convert_sid:
-	wsid_to_csid(csid, &wsid);
-	return 0;
-}
-
 static int
 verify_ace_type(char *typestr, uint8_t *typeval)
 {
@@ -612,8 +563,9 @@ build_cmdline_aces(char **arrptr, int numcaces)
 			goto build_cmdline_aces_ret;
 		}
 
-		if (verify_ace_sid(acesid, &cacesptr[i]->sid)) {
-			printf("%s: Invalid SID: %s\n", __func__, arrptr[i]);
+		if (str_to_sid(plugin_handle, acesid, &cacesptr[i]->sid)) {
+			printf("%s: Invalid SID (%s): %s\n", __func__, arrptr[i],
+				plugin_errmsg);
 			goto build_cmdline_aces_ret;
 		}
 
@@ -809,6 +761,12 @@ main(const int argc, char *const argv[])
 		return -1;
 	}
 
+	if (init_plugin(&plugin_handle)) {
+		printf("ERROR: unable to initialize idmapping plugin: %s\n",
+			plugin_errmsg);
+		return -1;
+	}
+
 	numcaces = get_numcaces(ace_list);
 
 	arrptr = parse_cmdline_aces(ace_list, numcaces);
@@ -865,6 +823,7 @@ cifsacl:
 		printf("%s: setxattr error: %s\n", __func__, strerror(errno));
 	goto setcifsacl_facenum_ret;
 
+	exit_plugin(plugin_handle);
 	return 0;
 
 setcifsacl_action_ret:
@@ -887,5 +846,6 @@ setcifsacl_cmdlineparse_ret:
 	free(arrptr);
 
 setcifsacl_numcaces_ret:
+	exit_plugin(plugin_handle);
 	return -1;
 }
