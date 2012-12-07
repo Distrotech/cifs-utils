@@ -26,7 +26,6 @@
 
 #include <string.h>
 #include <getopt.h>
-#include <syslog.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <unistd.h>
@@ -38,8 +37,6 @@
 #include <ctype.h>
 #include <sys/xattr.h>
 #include "cifsacl.h"
-
-static const char *prog;
 
 enum setcifsacl_actions {
 	ActUnknown = -1,
@@ -732,7 +729,7 @@ setacl_action(struct cifs_ntsd *pntsd, struct cifs_ntsd **npntsd,
 }
 
 static void
-setcifsacl_usage(void)
+setcifsacl_usage(const char *prog)
 {
 	fprintf(stderr,
 	"%s: Alter CIFS/NTFS ACL in a security descriptor of a file object\n",
@@ -771,10 +768,6 @@ main(const int argc, char *const argv[])
 	struct cifs_ace **cacesptr = NULL, **facesptr = NULL;
 	struct cifs_ntsd *ntsdptr = NULL;
 
-	prog = basename(argv[0]);
-
-	openlog(prog, 0, LOG_DAEMON);
-
 	c = getopt(argc, argv, "hvD:M:a:S:");
 	switch (c) {
 	case 'D':
@@ -794,19 +787,19 @@ main(const int argc, char *const argv[])
 		ace_list = optarg;
 		break;
 	case 'h':
-		setcifsacl_usage();
+		setcifsacl_usage(basename(argv[0]));
 		return 0;
 	case 'v':
 		printf("Version: %s\n", VERSION);
 		return 0;
 	default:
-		setcifsacl_usage();
+		setcifsacl_usage(basename(argv[0]));
 		return -1;
 	}
 
 	/* We expect 1 argument in addition to the option */
 	if (argc != 4) {
-		setcifsacl_usage();
+		setcifsacl_usage(basename(argv[0]));
 		return -1;
 	}
 	filename = argv[3];
