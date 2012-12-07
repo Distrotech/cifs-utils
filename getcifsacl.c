@@ -25,7 +25,6 @@
 
 #include <string.h>
 #include <getopt.h>
-#include <syslog.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <unistd.h>
@@ -38,8 +37,6 @@
 #include <ctype.h>
 #include <sys/xattr.h>
 #include "cifsacl.h"
-
-static const char *prog;
 
 static void
 print_each_ace_mask(uint32_t mask)
@@ -355,7 +352,7 @@ parse_sec_desc(struct cifs_ntsd *pntsd, ssize_t acl_len, int raw)
 }
 
 static void
-getcifsacl_usage(void)
+getcifsacl_usage(const char *prog)
 {
 	fprintf(stderr,
 	"%s: Display CIFS/NTFS ACL in a security descriptor of a file object\n",
@@ -376,9 +373,6 @@ main(const int argc, char *const argv[])
 	size_t bufsize = BUFSIZE;
 	char *filename, *attrval;
 
-	prog = basename(argv[0]);
-	openlog(prog, 0, LOG_DAEMON);
-
 	while ((c = getopt_long(argc, argv, "r:v", NULL, NULL)) != -1) {
 		switch (c) {
 		case 'v':
@@ -397,7 +391,7 @@ main(const int argc, char *const argv[])
 	else if (argc == 2)
 		filename = argv[1];
 	else {
-		getcifsacl_usage();
+		getcifsacl_usage(basename(argv[0]));
 		return 0;
 	}
 
