@@ -23,6 +23,7 @@
 #include <dlfcn.h>
 #include <errno.h>
 #include <stdint.h>
+#include <sys/types.h>
 
 #include "cifsidmap.h"
 
@@ -114,4 +115,36 @@ str_to_sid(void *handle, const char *name, struct cifs_sid *sid)
 	}
 
 	return (*entry)(handle, name, sid);
+}
+
+int
+sids_to_ids(void *handle, const struct cifs_sid *sid, const size_t num,
+	  struct cifs_uxid *cuxid)
+{
+	int (*entry)(void *handle, const struct cifs_sid *sids,
+			const size_t num, struct cifs_uxid *cuxid);
+
+	*(void **)(&entry) = resolve_symbol("cifs_idmap_sids_to_ids");
+	if (!entry) {
+		plugin_errmsg = "cifs_idmap_sids_to_ids not implemented";
+		return -ENOSYS;
+	}
+
+	return (*entry)(handle, sid, num, cuxid);
+}
+
+int
+ids_to_sids(void *handle, const struct cifs_uxid *cuxid, const size_t num,
+		struct cifs_sid *sid)
+{
+	int (*entry)(void *handle, const struct cifs_uxid *cuxid,
+			const size_t num, struct cifs_sid *sid);
+
+	*(void **)(&entry) = resolve_symbol("cifs_idmap_ids_to_sids");
+	if (!entry) {
+		plugin_errmsg = "cifs_idmap_ids_to_sids not implemented";
+		return -ENOSYS;
+	}
+
+	return (*entry)(handle, cuxid, num, sid);
 }

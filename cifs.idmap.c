@@ -40,9 +40,11 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <limits.h>
-#include <wbclient.h>
 
 #include "cifsacl.h"
+#include "idmap_plugin.h"
+
+static void *plugin_handle;
 
 static const char *prog = "cifs.idmap";
 
@@ -101,31 +103,13 @@ str_to_uint(const char *src, unsigned int *dst)
 	return 0;
 }
 
-/*
- * Winbind keeps wbcDomainSid fields in host-endian. Copy fields from the
- * wsid to the csid, while converting the subauthority fields to LE.
- */
-static void
-wsid_to_csid(struct cifs_sid *csid, struct wbcDomainSid *wsid)
-{
-	int i;
-
-	csid->revision = wsid->sid_rev_num;
-	csid->num_subauth = wsid->num_auths;
-	for (i = 0; i < NUM_AUTHS; i++)
-		csid->authority[i] = wsid->id_auth[i];
-	for (i = 0; i < wsid->num_auths; i++)
-		csid->sub_auth[i] = htole32(wsid->sub_auths[i]);
-}
-
 static int
 cifs_idmap(const key_serial_t key, const char *key_descr)
 {
-	uid_t uid = 0;
-	gid_t gid = 0;;
-	wbcErr rc = 1;
+	int rc = 1;
 	char *sidstr = NULL;
-	struct wbcDomainSid sid;
+	struct cifs_sid sid;
+	struct cifs_uxid cuxid;
 
 	/*
 	 * Use winbind to convert received string to a SID and lookup
@@ -137,104 +121,105 @@ cifs_idmap(const key_serial_t key, const char *key_descr)
 	 */
 	sidstr = strget(key_descr, "os:");
 	if (sidstr) {
-		rc = wbcStringToSid(sidstr, &sid);
+		rc = str_to_sid(plugin_handle, sidstr, &sid);
+		if (rc) {
+			syslog(LOG_DEBUG, "Unable to convert owner string %s "
+				"to SID: %s", key_descr, plugin_errmsg);
+			goto cifs_idmap_ret;
+		}
+
+		rc = sids_to_ids(plugin_handle, &sid, 1, &cuxid);
+		if (rc || (cuxid.type != CIFS_UXID_TYPE_UID &&
+			   cuxid.type != CIFS_UXID_TYPE_BOTH)) {
+			syslog(LOG_DEBUG, "Unable to convert %s to "
+				"UID: %s", key_descr, plugin_errmsg);
+			rc = rc ? rc : -EINVAL;
+			goto cifs_idmap_ret;
+		}
+		rc = keyctl_instantiate(key, &cuxid.id.uid, sizeof(uid_t), 0);
 		if (rc)
-			syslog(LOG_DEBUG, "Invalid owner string: %s, rc: %d",
-				key_descr, rc);
-		else {
-			rc = wbcSidToUid(&sid, &uid);
-			if (rc)
-				syslog(LOG_DEBUG, "SID %s to uid wbc error: %d",
-						key_descr, rc);
-		}
-		if (!rc) { /* SID has been mapped to an uid */
-			rc = keyctl_instantiate(key, &uid, sizeof(uid_t), 0);
-			if (rc)
-				syslog(LOG_ERR, "%s: key inst: %s",
-					__func__, strerror(errno));
-		}
+			syslog(LOG_ERR, "%s: key inst: %s", __func__,
+					strerror(errno));
 
 		goto cifs_idmap_ret;
 	}
 
 	sidstr = strget(key_descr, "gs:");
 	if (sidstr) {
-		rc = wbcStringToSid(sidstr, &sid);
+		rc = str_to_sid(plugin_handle, sidstr, &sid);
+		if (rc) {
+			syslog(LOG_DEBUG, "Unable to convert group string %s "
+				"to SID: %s", key_descr, plugin_errmsg);
+			goto cifs_idmap_ret;
+		}
+
+		rc = sids_to_ids(plugin_handle, &sid, 1, &cuxid);
+		if (rc || (cuxid.type != CIFS_UXID_TYPE_GID &&
+			   cuxid.type != CIFS_UXID_TYPE_BOTH)) {
+			syslog(LOG_DEBUG, "Unable to convert %s to "
+				"GID: %s", key_descr, plugin_errmsg);
+			rc = rc ? rc : -EINVAL;
+			goto cifs_idmap_ret;
+		}
+		rc = keyctl_instantiate(key, &cuxid.id.gid, sizeof(gid_t), 0);
 		if (rc)
-			syslog(LOG_DEBUG, "Invalid group string: %s, rc: %d",
-					key_descr, rc);
-		else {
-			rc = wbcSidToGid(&sid, &gid);
-			if (rc)
-				syslog(LOG_DEBUG, "SID %s to gid wbc error: %d",
-						key_descr, rc);
-		}
-		if (!rc) { /* SID has been mapped to a gid */
-			rc = keyctl_instantiate(key, &gid, sizeof(gid_t), 0);
-			if (rc)
-				syslog(LOG_ERR, "%s: key inst: %s",
-						__func__, strerror(errno));
-		}
+			syslog(LOG_ERR, "%s: key inst: %s", __func__,
+					strerror(errno));
 
 		goto cifs_idmap_ret;
 	}
 
 	sidstr = strget(key_descr, "oi:");
 	if (sidstr) {
-		rc = str_to_uint(sidstr, (unsigned int *)&uid);
+		rc = str_to_uint(sidstr, (unsigned int *)&cuxid.id.uid);
 		if (rc) {
 			syslog(LOG_ERR, "Unable to convert %s to uid: %s",
 				sidstr, strerror(rc));
 			goto cifs_idmap_ret;
 		}
+		cuxid.type = CIFS_UXID_TYPE_UID;
 
-		syslog(LOG_DEBUG, "SID: %s, uid: %u", sidstr, uid);
-		rc = wbcUidToSid(uid, &sid);
-		if (rc)
-			syslog(LOG_DEBUG, "uid %u to SID  error: %d", uid, rc);
-		if (!rc) {
-			struct cifs_sid csid;
-
-			/* SID has been mapped to a uid */
-			wsid_to_csid(&csid, &sid);
-			rc = keyctl_instantiate(key, &csid,
-					sizeof(struct cifs_sid), 0);
-			if (rc)
-				syslog(LOG_ERR, "%s: key inst: %s",
-					__func__, strerror(errno));
+		syslog(LOG_DEBUG, "SID: %s, uid: %u", sidstr, cuxid.id.uid);
+		rc = ids_to_sids(plugin_handle, &cuxid, 1, &sid);
+		if (rc || sid.revision == 0) {
+			syslog(LOG_DEBUG, "uid %u to SID error: %s",
+				cuxid.id.uid, plugin_errmsg);
+			goto cifs_idmap_ret;
 		}
+
+		rc = keyctl_instantiate(key, &sid, sizeof(struct cifs_sid), 0);
+		if (rc)
+			syslog(LOG_ERR, "%s: key inst: %s", __func__,
+				strerror(errno));
 
 		goto cifs_idmap_ret;
 	}
 
 	sidstr = strget(key_descr, "gi:");
 	if (sidstr) {
-		rc = str_to_uint(sidstr, (unsigned int *)&gid);
+		rc = str_to_uint(sidstr, (unsigned int *)&cuxid.id.gid);
 		if (rc) {
 			syslog(LOG_ERR, "Unable to convert %s to gid: %s",
 				sidstr, strerror(rc));
 			goto cifs_idmap_ret;
 		}
+		cuxid.type = CIFS_UXID_TYPE_GID;
 
-		syslog(LOG_DEBUG, "SID: %s, gid: %u", sidstr, gid);
-		rc = wbcGidToSid(gid, &sid);
-		if (rc)
-			syslog(LOG_DEBUG, "gid %u to SID error: %d", gid, rc);
-		if (!rc) {
-			struct cifs_sid csid;
-
-			/* SID has been mapped to a gid */
-			wsid_to_csid(&csid, &sid);
-			rc = keyctl_instantiate(key, &csid,
-					sizeof(struct cifs_sid), 0);
-			if (rc)
-				syslog(LOG_ERR, "%s: key inst: %s",
-					__func__, strerror(errno));
+		syslog(LOG_DEBUG, "SID: %s, gid: %u", sidstr, cuxid.id.gid);
+		rc = ids_to_sids(plugin_handle, &cuxid, 1, &sid);
+		if (rc || sid.revision == 0) {
+			syslog(LOG_DEBUG, "gid %u to SID error: %s",
+				cuxid.id.gid, plugin_errmsg);
+			goto cifs_idmap_ret;
 		}
+
+		rc = keyctl_instantiate(key, &sid, sizeof(struct cifs_sid), 0);
+		if (rc)
+			syslog(LOG_ERR, "%s: key inst: %s", __func__,
+				strerror(errno));
 
 		goto cifs_idmap_ret;
 	}
-
 
 	syslog(LOG_DEBUG, "Invalid key: %s", key_descr);
 
@@ -294,25 +279,33 @@ int main(const int argc, char *const argv[])
 		goto out;
 	}
 
+	if (init_plugin(&plugin_handle)) {
+		plugin_handle = NULL;
+		syslog(LOG_ERR, "Unable to initialize ID mapping plugin: %s",
+			plugin_errmsg);
+		goto out;
+	}
+
 	/* set timeout on key */
 	rc = keyctl_set_timeout(key, timeout);
 	if (rc == -1) {
 		syslog(LOG_ERR, "unable to set key timeout: %s",
 			strerror(errno));
-		goto out;
+		goto out_exit_plugin;
 	}
 
 	rc = keyctl_describe_alloc(key, &buf);
 	if (rc == -1) {
 		syslog(LOG_ERR, "keyctl_describe_alloc failed: %s",
 		       strerror(errno));
-		rc = 1;
-		goto out;
+		goto out_exit_plugin;
 	}
 
 	syslog(LOG_DEBUG, "key description: %s", buf);
 
 	rc = cifs_idmap(key, buf);
+out_exit_plugin:
+	exit_plugin(plugin_handle);
 out:
 	return rc;
 }

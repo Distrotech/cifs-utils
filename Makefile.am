@@ -41,9 +41,8 @@ endif
 
 if CONFIG_CIFSIDMAP
 sbin_PROGRAMS += cifs.idmap
-cifs_idmap_SOURCES = cifs.idmap.c
-cifs_idmap_LDADD = -lkeyutils $(WBCLIENT_LIBS)
-cifs_idmap_CFLAGS = $(WBCLIENT_CFLAGS)
+cifs_idmap_SOURCES = cifs.idmap.c idmap_plugin.c
+cifs_idmap_LDADD = -lkeyutils -ldl
 man_MANS += cifs.idmap.8
 
 cifs.idmap.8: cifs.idmap.8.in

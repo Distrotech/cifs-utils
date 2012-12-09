@@ -28,6 +28,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <wbclient.h>
+#include <limits.h>
 
 #include "cifsidmap.h"
 
@@ -158,6 +159,128 @@ convert_sid:
 	wsid_to_csid(csid, &wsid);
 	free(sidstr);
 	return 0;
+}
+
+static void
+wuxid_to_cuxid(struct cifs_uxid *cuxid, const struct wbcUnixId *wuxid)
+{
+	switch(wuxid->type) {
+	case WBC_ID_TYPE_UID:
+		cuxid->id.uid = wuxid->id.uid;
+		cuxid->type = CIFS_UXID_TYPE_UID;
+		break;
+	case WBC_ID_TYPE_GID:
+		cuxid->id.gid = wuxid->id.gid;
+		cuxid->type = CIFS_UXID_TYPE_GID;
+		break;
+#ifdef HAVE_WBC_ID_TYPE_BOTH
+	case WBC_ID_TYPE_BOTH:
+		cuxid->id.uid = wuxid->id.uid;
+		cuxid->type = CIFS_UXID_TYPE_BOTH;
+		break;
+#endif /* HAVE_WBC_ID_TYPE_BOTH */
+	default:
+		cuxid->type = CIFS_UXID_TYPE_UNKNOWN;
+	}
+}
+
+int
+cifs_idmap_sids_to_ids(void *handle __attribute__((unused)),
+			const struct cifs_sid *csid, size_t num,
+			struct cifs_uxid *cuxid)
+{
+	int ret;
+	unsigned int i;
+	wbcErr wbcret;
+	struct wbcDomainSid *wsid;
+	struct wbcUnixId *wuxid;
+
+	if (num > UINT_MAX) {
+		*plugin_errmsg = "num is too large.";
+		return -EINVAL;
+	}
+
+	wsid = calloc(num, sizeof(*wsid));
+	if (!wsid) {
+		*plugin_errmsg = "Unable to allocate memory.";
+		return -ENOMEM;
+	}
+
+	wuxid = calloc(num, sizeof(*wuxid));
+	if (!wuxid) {
+		*plugin_errmsg = "Unable to allocate memory.";
+		ret = -ENOMEM;
+		goto out;
+	}
+
+	for (i = 0; i < num; ++i)
+		csid_to_wsid(&wsid[i], &csid[i]);
+
+	/*
+	 * Winbind does not set an error message in the event that some
+	 * mappings fail. So, we preemptively do it here, just in case.
+	 */
+	*plugin_errmsg = "Some IDs could not be mapped.";
+
+	wbcret = wbcSidsToUnixIds(wsid, num, wuxid);
+	if (!WBC_ERROR_IS_OK(wbcret)) {
+		*plugin_errmsg = wbcErrorString(wbcret);
+		ret = -EIO;
+		goto out;
+	}
+
+	ret = 0;
+	for (i = 0; i < num; ++i)
+		wuxid_to_cuxid(&cuxid[i], &wuxid[i]);
+out:
+	free(wuxid);
+	free(wsid);
+	return ret;
+}
+
+int
+cifs_idmap_ids_to_sids(void *handle __attribute__((unused)),
+			const struct cifs_uxid *cuxid, size_t num,
+			struct cifs_sid *csid)
+{
+	int ret = -EIO;
+	wbcErr wbcrc;
+	size_t i;
+	struct wbcDomainSid wsid;
+
+	for (i = 0; i < num; ++i) {
+		switch(cuxid[i].type) {
+		case CIFS_UXID_TYPE_UID:
+			wbcrc = wbcUidToSid(cuxid[i].id.uid, &wsid);
+			break;
+		case CIFS_UXID_TYPE_GID:
+			wbcrc = wbcGidToSid(cuxid[i].id.gid, &wsid);
+			break;
+		case CIFS_UXID_TYPE_BOTH:
+			/*
+			 * In the BOTH case, prefer a user type first and fall
+			 * back to a group if that doesn't map.
+			 */
+			wbcrc = wbcUidToSid(cuxid[i].id.uid, &wsid);
+			if (WBC_ERROR_IS_OK(wbcrc))
+				break;
+			wbcrc = wbcGidToSid(cuxid[i].id.gid, &wsid);
+			break;
+		default:
+			csid[i].revision = 0;
+			*plugin_errmsg = "Invalid CIFS_UXID_TYPE value";
+			continue;
+		}
+
+		if (WBC_ERROR_IS_OK(wbcrc)) {
+			ret = 0;
+			wsid_to_csid(&csid[i], &wsid);
+		} else {
+			csid[i].revision = 0;
+			*plugin_errmsg = wbcErrorString(wbcrc);
+		}
+	}
+	return ret;
 }
 
 /*

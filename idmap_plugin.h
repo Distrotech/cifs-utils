@@ -46,4 +46,12 @@ extern int sid_to_str(void *handle, const struct cifs_sid *sid, char **name);
 /* Convert string to cifs_sid. */
 extern int str_to_sid(void *handle, const char *name, struct cifs_sid *csid);
 
+/* convert array of cifs_sids to cifs_uxids */
+extern int sids_to_ids(void *handle, const struct cifs_sid *sids,
+			const size_t num, struct cifs_uxid *ids);
+
+/* convert array of cifs_uxids to cifs_sids */
+extern int ids_to_sids(void *handle, const struct cifs_uxid *id,
+			const size_t num, struct cifs_sid *sid);
+
 #endif /* _IDMAP_PLUGIN_H */

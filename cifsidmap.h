@@ -34,7 +34,32 @@ struct cifs_sid {
 	uint32_t sub_auth[SID_MAX_SUB_AUTHORITIES];
 } __attribute__((packed));
 
-/* Plugins should implement the following functions: */
+
+/*
+ * The type of the ID stored within cifs_uxid. UNKNOWN generally means that
+ * the mapping failed for some reason. BOTH means that the ID is usable as
+ * either a UID or a GID -- IOW, the UID and GID namespaces are unity-mapped.
+ */
+#define	CIFS_UXID_TYPE_UNKNOWN	(0)	/* mapping type is unknown */
+#define	CIFS_UXID_TYPE_UID	(1)	/* mapping is a UID */
+#define	CIFS_UXID_TYPE_GID	(2)	/* mapping is a GID */
+#define	CIFS_UXID_TYPE_BOTH	(3)	/* usable as UID or GID */
+
+/*
+ * This struct represents both a uid or gid and its type. The type should
+ * never be set to CIFSIDMAP_BOTH.
+ */
+struct cifs_uxid {
+	union {
+		uid_t uid;
+		gid_t gid;
+	} id;
+	unsigned char type;
+} __attribute__((packed));
+
+/*
+ * Plugins should implement the following functions:
+ */
 
 /**
  * cifs_idmap_init_plugin - Initialize the plugin interface
@@ -74,7 +99,8 @@ struct cifs_sid {
  * representation or mapped name in a heap-allocated buffer. The caller
  * of this function is expected to free "name" on success. Returns 0 on
  * success and non-zero on error. On error, the errmsg pointer passed
- * in to the init_plugin function should point to an error string.
+ * in to the init_plugin function should point to an error string. The
+ * caller will not free the error string.
  *
  * int cifs_idmap_sid_to_str(void *handle, const struct cifs_sid *sid,
  * 				char **name);
@@ -90,10 +116,53 @@ struct cifs_sid {
  * a SID to a struct cifs_sid. The cifs_sid should already be
  * allocated. Returns 0 on success and non-zero on error. On error, the
  * plugin should reset the errmsg pointer passed to the init_plugin
- * function to an error string.
+ * function to an error string. The caller will not free the error string.
  *
  * int cifs_idmap_str_to_sid(void *handle, const char *name,
  * 				struct cifs_sid *sid);
+ */
+
+/**
+ * cifs_idmap_sids_to_ids - convert struct cifs_sids to struct cifs_uxids
+ * @handle - context handle
+ * @sid    - pointer to array of struct cifs_sids to be converted
+ * @num    - number of sids to be converted
+ * @cuxid  - pointer to preallocated array of struct cifs_uxids for return
+ *
+ * This function should map an array of struct cifs_sids to an array of
+ * struct cifs_uxids.
+ *
+ * Returns 0 if at least one conversion was successful and success and
+ * non-zero on error. Any that were not successfully converted will have a
+ * cuxid->type of CIFS_UXID_TYPE_UNKNOWN.
+ *
+ * On error, the plugin should reset the errmsg pointer passed to the
+ * init_plugin function to an error string. The caller will not free the error
+ * string.
+ *
+ * int cifs_idmap_sids_to_ids(void *handle, const struct cifs_sid *sid,
+ * 				const size_t num, struct cifs_uxid *cuxid);
+ */
+
+/**
+ * cifs_idmap_ids_to_sids - convert uid to struct cifs_sid
+ * @handle - context handle
+ * @cuxid  - pointer to array of struct cifs_uxid to be converted to SIDs
+ * @num    - number of cifs_uxids to be converted to SIDs
+ * @sid    - pointer to preallocated array of struct cifs_sid where results
+ * 	     should be stored
+ *
+ * This function should map an array of cifs_uxids an array of struct cifs_sids.
+ * Returns 0 if at least one conversion was successful and non-zero on error.
+ * Any sids that were not successfully converted will have a revision number of
+ * 0.
+ *
+ * On error, the plugin should reset the errmsg pointer passed to the
+ * init_plugin function to an error string. The caller will not free the error
+ * string.
+ *
+ * int cifs_idmap_ids_to_sids(void *handle, const struct cifs_uxid *cuxid,
+ * 				const size_t num, struct cifs_sid *sid);
  */
 
 #endif /* _CIFSIDMAP_H */
