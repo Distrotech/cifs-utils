@@ -7,6 +7,7 @@ mount_cifs_SOURCES = mount.cifs.c mtab.c resolve_host.c util.c
 mount_cifs_LDADD = $(LIBCAP) $(CAPNG_LDADD) $(RT_LDADD)
 
 man_MANS = mount.cifs.8
+include_HEADERS = cifsidmap.h
 
 bin_PROGRAMS =
 sbin_PROGRAMS =

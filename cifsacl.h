@@ -20,6 +20,8 @@
 * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
 
+#include "cifsidmap.h"
+
 #ifndef _CIFSACL_H
 #define _CIFSACL_H
 
@@ -96,9 +98,6 @@
 #define COMPMASK 0x8
 #define COMPALL (COMPSID|COMPTYPE|COMPFLAG|COMPMASK)
 
-#define NUM_AUTHS (6)			/* number of authority fields */
-#define SID_MAX_SUB_AUTHORITIES (15)	/* max number of sub authority fields */
-
 /*
  * While not indicated here, the structs below represent on-the-wire data
  * structures. Any multi-byte values are expected to be little-endian!
@@ -112,13 +111,6 @@ struct cifs_ntsd {
 	uint32_t gsidoffset;
 	uint32_t sacloffset;
 	uint32_t dacloffset;
-} __attribute__((packed));
-
-struct cifs_sid {
-	uint8_t revision; /* revision level */
-	uint8_t num_subauth;
-	uint8_t authority[NUM_AUTHS];
-	uint32_t sub_auth[SID_MAX_SUB_AUTHORITIES];
 } __attribute__((packed));
 
 struct cifs_ctrl_acl {
