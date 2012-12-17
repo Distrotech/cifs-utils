@@ -27,7 +27,9 @@ getcifsacl [\-v|\-r] {file system object}
 .PP
 This tool is part of the cifs-utils suite\&.
 .PP
-getcifsacl is a userspace helper program for the Linux CIFS client file system.  It is intended to display a security descriptor including ACL for a file system object.  It is best utilized when an option of cifsacl is specified when mounting a cifs share in conjunction with winbind facility of Samba suite.
+getcifsacl is a userspace helper program for the Linux CIFS client file system. It is intended to display a security descriptor including ACL for a file system object.
+.PP
+This program uses a plugin to handle the mapping of SIDs to user and group names. \fB@pluginpath@\fR should be a symlink that points to the correct plugin to use.
 .PP
 Fields of an ACE such as SID, type, flags, and mask are displayed separated by /.  Numeric values of type, flags, and mask are displayed in hexadecimal format.
 .SH "OPTIONS"
@@ -46,7 +48,6 @@ Kernel support for getcifsacl/setcifsacl utilities was initially introduced in t
 .SH "SEE ALSO"
 .PP
 \fBmount.cifs\fR(8),
-\fBwinbindd\fR(8),
 \fBsetcifsacl\fR(1)
 .PP
 .SH "AUTHOR"

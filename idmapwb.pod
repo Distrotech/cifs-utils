@@ -1,0 +1,26 @@
+# turn into a manpage with the following command:
+#
+# pod2man -s 8 -c '' -r '' --stderr idmapwb.pod > idmapwb.8.in
+#
+
+=head1 NAME
+
+idmapwb.so - winbind ID mapping plugin for cifs-utils
+
+=head1 DESCRIPTION
+
+This plugin allows the utilities in cifs-utils to work in conjuction with
+the winbind facility of Samba suite. It handles several functions including
+mapping UID and GID to SIDs and vice versa.
+
+Utilities are usually configured to use the correct plugin by creating a
+symlink at @pluginpath@ that points to the correct plugin that you wish
+to use.
+
+This plugin requires that B<winbindd(8)> be properly configured and running.
+
+=head1 SEE ALSO
+getcifsacl(1), setcifsacl(1), cifs.idmap(8), samba(7), smb.conf(5), winbindd(8)
+
+=head1 AUTHOR
+idmapwb.so was written by Jeff Layton <jlayton@samba.org>

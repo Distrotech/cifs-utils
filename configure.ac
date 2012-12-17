@@ -59,6 +59,7 @@ AC_ARG_WITH(idmap-plugin,
 	pluginpath=$withval,
 	pluginpath="/etc/cifs-utils/idmap-plugin")
 AC_DEFINE_UNQUOTED(IDMAP_PLUGIN_PATH, "$pluginpath", [Location of plugin that ID mapping infrastructure should use. (usually a symlink to real plugin)])
+AC_SUBST([pluginpath])
 
 # check for ROOTSBINDIR environment var
 if test -z $ROOTSBINDIR; then

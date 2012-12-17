@@ -11,7 +11,7 @@ include_HEADERS = cifsidmap.h
 
 bin_PROGRAMS =
 sbin_PROGRAMS =
-clean-local: clean-local-upcall clean-local-idmap
+clean-local: clean-local-upcall clean-local-idmap clean-local-cifsacl
 
 if CONFIG_CIFSUPCALL
 sbin_PROGRAMS += cifs.upcall
@@ -46,7 +46,7 @@ cifs_idmap_LDADD = -lkeyutils -ldl
 man_MANS += cifs.idmap.8
 
 cifs.idmap.8: cifs.idmap.8.in
-	$(SED) 's,[@]sbindir@,$(sbindir),' $(srcdir)/$@.in > $@-t && mv $@-t $@
+	$(SED) -e 's,[@]sbindir@,$(sbindir),' -e 's,[@]pluginpath@,$(pluginpath),' $(srcdir)/$@.in > $@-t && mv $@-t $@
 endif
 
 clean-local-idmap:
@@ -60,18 +60,35 @@ getcifsacl_SOURCES = getcifsacl.c idmap_plugin.c
 getcifsacl_LDADD = -ldl
 man_MANS += getcifsacl.1
 
+getcifsacl.1: getcifsacl.1.in
+	$(SED) 's,[@]pluginpath@,$(pluginpath),' $(srcdir)/$@.in > $@-t && mv $@-t $@
+
 bin_PROGRAMS += setcifsacl
 setcifsacl_SOURCES = setcifsacl.c idmap_plugin.c
 setcifsacl_LDADD = -ldl
 man_MANS += setcifsacl.1
+
+setcifsacl.1: setcifsacl.1.in
+	$(SED) 's,[@]pluginpath@,$(pluginpath),' $(srcdir)/$@.in > $@-t && mv $@-t $@
+endif
+
+clean-local-cifsacl:
+if CONFIG_CIFSACL
+	rm -f getcifsacl.1 getcifsacl.1-t
+	rm -f setcifsacl.1 setcifsacl.1-t
 endif
 
 if CONFIG_PLUGIN
 plugindir = $(pkglibdir)
 plugin_PROGRAMS = idmapwb.so
+man_MANS += idmapwb.8
 
 idmapwb.so: idmapwb.c
 	$(CC) $(CFLAGS) $(AM_CFLAGS) $(WBCLIENT_CFLAGS) $(LDFLAGS) -shared -fpic -o $@ $+ $(WBCLIENT_LIBS)
+
+idmapwb.8: idmapwb.8.in
+	$(SED) 's,[@]pluginpath@,$(pluginpath),' $(srcdir)/$@.in > $@-t && mv $@-t $@
+
 endif
 
 SUBDIRS = contrib

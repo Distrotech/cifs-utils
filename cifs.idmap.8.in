@@ -32,18 +32,16 @@ cifs\&.idmap is a userspace helper program for the linux CIFS client filesystem\
 cifs\&.idmap is generally intended to be run when the kernel calls request\-key(8)
 for a particular key type\&. While it can be run directly from the command\-line, it is not generally intended to be run that way\&.
 .PP
-cifs\&.idmap works in conjuction with winbind facility of Samba suite to map owner and group SIDs to uids and gids respectively\&.  It is best utilized when
-.br
-\t\- a mount option of cifsacl is specified when mounting a cifs share
-.br
-\t\- winbind is specified as one of the search entries for passwd and group databases in file /etc/nsswitch\&.conf
-.br
-\t\- file smb.conf has winbind specific entries
-.br
-\t\- winbind daemon program is running
-.br
-.sp
-In case winbind and cifs.idmap facilities are unavailable, file objects in a mounted share are assigned uid and gid of the credentials of the process that mounted the share\&. So it is strongly recomemended to use mount options of uid and gid to specify a default uid and gid to map owner SIDs and group SIDs respectively in case services of winbind and cifs.idmap facility are unavailable\&.
+This program is only called if a share is mounted with the \fBcifsacl\fR mount
+option. The kernel will only upcall to do this conversion if that mount option
+is specified.
+.PP
+cifs.idmap relies on a plugin to handle the ID mapping. If it can't find the
+plugin then it will not work properly. The plugin (or a symlink to it) must be
+at \fB@pluginpath@\fR.
+.PP
+In the case where cifs.idmap or the plugin are unavailable, file objects in a mounted share are assigned uid and gid of the credentials of the process that mounted the share\&. It is strongly recomemended to use mount options of uid and gid to specify a default uid and gid to map owner SIDs and group SIDs in this
+situation.
 .SH "OPTIONS"
 .PP
 --help|-h

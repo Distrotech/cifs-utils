@@ -27,7 +27,10 @@ setcifsacl [\-v|\-a|\-D|\-M|\-S] "{one or more ACEs}" {file system object}
 .PP
 This tool is part of the cifs-utils suite\&.
 .PP
-setcifsacl is a userspace helper program for the Linux CIFS client file system.  It is intended to alter an ACL of a security descriptor for a file system object.  It is best utilized when an option of cifsacl is specified when mounting a cifs share in conjunction with winbind facility of Samba suite.  Whether a security descriptor to be set is applied or not is determined by the CIFS/SMB server.
+setcifsacl is a userspace helper program for the Linux CIFS client file system.  It is intended to alter an ACL of a security descriptor for a file system object. 
+Whether a security descriptor to be set is applied or not is determined by the CIFS/SMB server.
+.PP
+This program uses a plugin to handle the mapping of user and group names to SIDs. \fB@pluginpath@\fR should be a symlink that points to the correct plugin to use.
 .SH "OPTIONS"
 .PP
 -h
@@ -99,7 +102,6 @@ Kernel support for getcifsacl/setcifsacl utilities was initially introduced in t
 .SH "SEE ALSO"
 .PP
 \fBmount.cifs\fR(8),
-\fBwinbindd\fR(8),
 \fBgetcifsacl\fR(1)
 .PP
 .SH "AUTHOR"
