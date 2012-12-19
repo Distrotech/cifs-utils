@@ -197,6 +197,9 @@ fi
 # checks for wbclient.h and libwbclient.so library
 AC_TEST_WBCHL
 
+# test for presence of WBC_ID_TYPE_BOTH enum value
+AC_TEST_WBC_IDMAP_BOTH
+
 if test $enable_cifscreds != "no"; then
 	AC_CHECK_HEADERS([keyutils.h], , [
 
