@@ -45,10 +45,7 @@ struct cifs_sid {
 #define	CIFS_UXID_TYPE_GID	(2)	/* mapping is a GID */
 #define	CIFS_UXID_TYPE_BOTH	(3)	/* usable as UID or GID */
 
-/*
- * This struct represents both a uid or gid and its type. The type should
- * never be set to CIFSIDMAP_BOTH.
- */
+/* This struct represents a uid or gid and its type */
 struct cifs_uxid {
 	union {
 		uid_t uid;
