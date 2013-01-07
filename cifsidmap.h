@@ -129,11 +129,11 @@ struct cifs_uxid {
  * This function should map an array of struct cifs_sids to an array of
  * struct cifs_uxids.
  *
- * Returns 0 if at least one conversion was successful and success and
- * non-zero on error. Any that were not successfully converted will have a
- * cuxid->type of CIFS_UXID_TYPE_UNKNOWN.
+ * Returns 0 if at least one conversion was successful and non-zero on error.
+ * Any that were not successfully converted will have a cuxid->type of
+ * CIFS_UXID_TYPE_UNKNOWN.
  *
- * On error, the plugin should reset the errmsg pointer passed to the
+ * On any error, the plugin should reset the errmsg pointer passed to the
  * init_plugin function to an error string. The caller will not free the error
  * string.
  *
@@ -151,10 +151,10 @@ struct cifs_uxid {
  *
  * This function should map an array of cifs_uxids an array of struct cifs_sids.
  * Returns 0 if at least one conversion was successful and non-zero on error.
- * Any sids that were not successfully converted will have a revision number of
- * 0.
+ * Any sids that were not successfully converted should have their revision
+ * number set to 0.
  *
- * On error, the plugin should reset the errmsg pointer passed to the
+ * On any error, the plugin should reset the errmsg pointer passed to the
  * init_plugin function to an error string. The caller will not free the error
  * string.
  *
