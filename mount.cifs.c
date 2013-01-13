@@ -581,7 +581,8 @@ static int open_cred_file(char *file_name,
 		switch (parse_cred_line(line_buf + i, &temp_val)) {
 		case CRED_USER:
 			strlcpy(parsed_info->username, temp_val,
-				sizeof(parsed_info->domain));
+				sizeof(parsed_info->username));
+			parsed_info->got_user = 1;
 			break;
 		case CRED_PASS:
 			i = set_password(parsed_info, temp_val);
