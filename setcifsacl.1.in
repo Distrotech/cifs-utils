@@ -94,7 +94,7 @@ Set an ACL
 .br
 setcifsacl -S "ACL:CIFSTESTDOM\\Administrator:0x0/0x0/FULL,
 .br
-ACL:CIFSTESTDOM\\user2:0x0/0x0/FULL," <file_name>
+ACL:CIFSTESTDOM\\user2:0x0/0x0/FULL" <file_name>
 .PP
 .SH "NOTES"
 .PP

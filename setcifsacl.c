@@ -642,8 +642,10 @@ get_numcaces(const char *aces)
 	const char *current;
 
 	current = aces;
-	while((current = strchr(current, ',')))
+	while((current = strchr(current, ','))) {
+		++current;
 		++num;
+	}
 
 	return num;
 }
