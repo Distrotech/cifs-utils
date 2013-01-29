@@ -183,7 +183,7 @@ static int
 ace_set(struct cifs_ntsd *pntsd, struct cifs_ntsd **npntsd, ssize_t *bufsize,
 			struct cifs_ace **cacesptr, int numcaces)
 {
-	int i, rc, acessize = 0;
+	int i, rc, size = 0, acessize = 0;
 	size_t acesoffset;
 	char *acesptr;
 
@@ -193,8 +193,9 @@ ace_set(struct cifs_ntsd *pntsd, struct cifs_ntsd **npntsd, ssize_t *bufsize,
 
 	acesptr = (char *)*npntsd + acesoffset;
 	for (i = 0; i < numcaces; ++i) {
-		acessize += copy_ace((struct cifs_ace *)acesptr, cacesptr[i]);
-		acesptr += sizeof(struct cifs_ace);
+		size = copy_ace((struct cifs_ace *)acesptr, cacesptr[i]);
+		acessize += size;
+		acesptr += size;
 	}
 	copy_sec_desc(pntsd, *npntsd, numcaces, acessize);
 	acesptr = (char *)*npntsd + acesoffset;
