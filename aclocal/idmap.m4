@@ -19,6 +19,26 @@ if test $enable_cifsidmap != "no" -o $enable_cifsacl != "no"; then
 			])
 fi
 
+if test $enable_cifsacl != "no" -o $enable_cifsacl != "no"; then
+	ac_wbc_save_LDFLAGS="$LDFLAGS"
+	LDFLAGS="$LDFLAGS $WBCLIENT_LIBS"
+	AC_CHECK_LIB(wbclient, wbcSidsToUnixIds, , [
+				if test "$enable_cifsidmap" = "yes"; then
+					AC_MSG_ERROR([wbclient library lacks wbcSidsToUnixIds().])
+				else
+					AC_MSG_WARN([wbclient library lacks wbcSidsToUnixIds(). Disabling cifs.idmap.])
+					enable_cifsidmap="no"
+				fi
+				if test "$enable_cifsacl" = "yes"; then
+					AC_MSG_ERROR([wbclient library lacks wbcSidsToUnixIds.])
+				else
+					AC_MSG_WARN([wbclient library lacks wbcSidsToUnixIds(). Disabling cifsacl tools.])
+					enable_cifsacl="no"
+				fi
+			])
+	LDFLAGS=$ac_wbc_save_LDFLAGS
+fi
+
 if test $enable_cifsacl != "no"; then
 	AC_CHECK_HEADERS([sys/xattr.h], , [
 				if test "$enable_cifsacl" = "yes"; then
