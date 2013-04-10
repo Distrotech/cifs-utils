@@ -975,7 +975,7 @@ parse_options(const char *data, struct parsed_mount_info *parsed_info)
 
 			fprintf(stderr, "bad option: gid=\"%s\"\n", value);
 			return EX_USAGE;
-		/* fmask fall through to file_mode */
+		/* fmask falls through to file_mode */
 		case OPT_FMASK:
 			fprintf(stderr,
 				"WARNING: CIFS mount option 'fmask' is\
@@ -1145,7 +1145,7 @@ nocopy:
 	if (got_cruid) {
 		word_len = snprintf(txtbuf, sizeof(txtbuf), "%u", cruid);
 
-		/* comma + "cruid=" + terminating NULL == 6 */
+		/* comma + "cruid=" + terminating NULL == 8 */
 		if (out_len + word_len + 8 > MAX_OPTIONS_LEN) {
 			fprintf(stderr, "Options string too long\n");
 			return EX_USAGE;
