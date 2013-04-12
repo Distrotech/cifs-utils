@@ -822,9 +822,10 @@ cifsacl:
 		goto setcifsacl_action_ret;
 
 	attrlen = setxattr(filename, ATTRNAME, ntsdptr, bufsize, 0);
-	if (attrlen == -1)
+	if (attrlen == -1) {
 		printf("%s: setxattr error: %s\n", __func__, strerror(errno));
-	goto setcifsacl_facenum_ret;
+		goto setcifsacl_facenum_ret;
+	}
 
 	exit_plugin(plugin_handle);
 	return 0;
