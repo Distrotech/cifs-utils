@@ -857,6 +857,7 @@ int main(const int argc, char *const argv[])
 			legacy_uid++;
 			break;
 		case 'v':
+			rc = 0;
 			printf("version: %s\n", VERSION);
 			goto out;
 		default:
