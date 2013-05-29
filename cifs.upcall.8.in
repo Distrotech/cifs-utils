@@ -22,7 +22,7 @@
 cifs.upcall \- Userspace upcall helper for Common Internet File System (CIFS)
 .SH "SYNOPSIS"
 .HP \w'\ 'u
-cifs\&.upcall [\-\-trust\-dns|\-t] [\-\-version|\-v] [\-\-legacy\-uid|\-l] [--krb5conf=/path/to/krb5.conf|-k /path/to/...] {keyid}
+cifs\&.upcall [\-\-trust\-dns|\-t] [\-\-version|\-v] [\-\-legacy\-uid|\-l] [--krb5conf=/path/to/krb5.conf|-k /path/to/krb5.conf] [--keytab=/path/to/keytab|-K /path/to/keytab] {keyid}
 .SH "DESCRIPTION"
 .PP
 This tool is part of the cifs-utils suite\&.
@@ -42,6 +42,11 @@ This option is deprecated and is currently ignored\&.
 .RS 4
 This option allows administrators to set an alternate location for the
 krb5.conf file that cifs.upcall will use.
+.RE
+.PP
+\--keytab=/path/to/keytab|-K /path/to/keytab
+.RS 4
+This option allows administrators to specify a keytab file to be used. When a user has no credential cache already established, cifs.upcall will attempt to use this keytab to acquire them. The default is the system-wide keytab /etc/krb5.keytab.
 .RE
 .PP
 \-\-trust\-dns|\-t
