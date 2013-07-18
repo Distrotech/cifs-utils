@@ -75,9 +75,9 @@ static int cifscreds_clear(struct cmdarg *arg);
 static int cifscreds_clearall(struct cmdarg *arg);
 static int cifscreds_update(struct cmdarg *arg);
 
-const char *thisprogram;
+static const char *thisprogram;
 
-struct command commands[] = {
+static struct command commands[] = {
 	{ cifscreds_add,	"add",		"[-u username] [-d] <host|domain>" },
 	{ cifscreds_clear,	"clear",	"[-u username] [-d] <host|domain>" },
 	{ cifscreds_clearall,	"clearall",	"" },
@@ -85,7 +85,7 @@ struct command commands[] = {
 	{ NULL, "", NULL }
 };
 
-struct option longopts[] = {
+static struct option longopts[] = {
 	{"username", 1, NULL, 'u'},
 	{"domain", 0, NULL, 'd' },
 	{NULL, 0, NULL, 0}

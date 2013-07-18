@@ -244,7 +244,7 @@ init_cc_from_keytab(const char *keytab_name, const char *user)
 	if (ccname == NULL)
 		syslog(LOG_ERR, "Unable to allocate memory");
 icfk_cleanup:
-	my_creds.client = 0;
+	my_creds.client = (krb5_principal)0;
 	krb5_free_cred_contents(context, &my_creds);
 
 	if (me)
@@ -808,7 +808,7 @@ static void usage(void)
 	fprintf(stderr, "Usage: %s [ -K /path/to/keytab] [-k /path/to/krb5.conf] [-t] [-v] [-l] key_serial\n", prog);
 }
 
-const struct option long_options[] = {
+static const struct option long_options[] = {
 	{"krb5conf", 1, NULL, 'k'},
 	{"legacy-uid", 0, NULL, 'l'},
 	{"trust-dns", 0, NULL, 't'},

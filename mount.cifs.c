@@ -182,8 +182,8 @@ struct parsed_mount_info {
 	unsigned int nofail:1;
 };
 
-const char *thisprogram;
-const char *cifs_fstype = "cifs";
+static const char *thisprogram;
+static const char *cifs_fstype = "cifs";
 
 static int parse_unc(const char *unc_name, struct parsed_mount_info *parsed_info);
 
@@ -1899,7 +1899,7 @@ int main(int argc, char **argv)
 		thisprogram = "mount.cifs";
 
 	/* allocate parsed_info as shared anonymous memory range */
-	parsed_info = mmap(0, sizeof(*parsed_info), PROT_READ | PROT_WRITE,
+	parsed_info = mmap((void *)0, sizeof(*parsed_info), PROT_READ | PROT_WRITE,
 			   MAP_ANONYMOUS | MAP_SHARED, -1, 0);
 	if (parsed_info == (struct parsed_mount_info *) -1) {
 		parsed_info = NULL;

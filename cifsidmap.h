@@ -70,9 +70,8 @@ struct cifs_uxid {
  * and in subsequent idmapping functions. On any error, the plugin
  * should point *errmsg at a string describing that error. Returns 0
  * on success and non-zero on error.
- *
- * int cifs_idmap_init_plugin(void **handle, const char **errmsg);
  */
+extern int cifs_idmap_init_plugin(void **handle, const char **errmsg);
 
 /**
  * cifs_idmap_exit_plugin - Destroy an idmapping context
@@ -82,9 +81,8 @@ struct cifs_uxid {
  * this function to destroy any context that was created during the
  * init_plugin. The handle passed back in was the one given by the init
  * routine.
- *
- * void cifs_idmap_exit_plugin(void *handle);
  */
+extern void cifs_idmap_exit_plugin(void *handle);
 
 /**
  * cifs_idmap_sid_to_str - convert cifs_sid to a string
@@ -98,10 +96,9 @@ struct cifs_uxid {
  * success and non-zero on error. On error, the errmsg pointer passed
  * in to the init_plugin function should point to an error string. The
  * caller will not free the error string.
- *
- * int cifs_idmap_sid_to_str(void *handle, const struct cifs_sid *sid,
- * 				char **name);
  */
+extern int cifs_idmap_sid_to_str(void *handle, const struct cifs_sid *sid,
+					char **name);
 
 /**
  * cifs_idmap_str_to_sid - convert string to struct cifs_sid
@@ -114,10 +111,9 @@ struct cifs_uxid {
  * allocated. Returns 0 on success and non-zero on error. On error, the
  * plugin should reset the errmsg pointer passed to the init_plugin
  * function to an error string. The caller will not free the error string.
- *
- * int cifs_idmap_str_to_sid(void *handle, const char *name,
- * 				struct cifs_sid *sid);
  */
+extern int cifs_idmap_str_to_sid(void *handle, const char *name,
+				struct cifs_sid *sid);
 
 /**
  * cifs_idmap_sids_to_ids - convert struct cifs_sids to struct cifs_uxids
@@ -136,10 +132,9 @@ struct cifs_uxid {
  * On any error, the plugin should reset the errmsg pointer passed to the
  * init_plugin function to an error string. The caller will not free the error
  * string.
- *
- * int cifs_idmap_sids_to_ids(void *handle, const struct cifs_sid *sid,
- * 				const size_t num, struct cifs_uxid *cuxid);
  */
+extern int cifs_idmap_sids_to_ids(void *handle, const struct cifs_sid *sid,
+				const size_t num, struct cifs_uxid *cuxid);
 
 /**
  * cifs_idmap_ids_to_sids - convert uid to struct cifs_sid
@@ -157,9 +152,7 @@ struct cifs_uxid {
  * On any error, the plugin should reset the errmsg pointer passed to the
  * init_plugin function to an error string. The caller will not free the error
  * string.
- *
- * int cifs_idmap_ids_to_sids(void *handle, const struct cifs_uxid *cuxid,
- * 				const size_t num, struct cifs_sid *sid);
  */
-
+extern int cifs_idmap_ids_to_sids(void *handle, const struct cifs_uxid *cuxid,
+				const size_t num, struct cifs_sid *sid);
 #endif /* _CIFSIDMAP_H */

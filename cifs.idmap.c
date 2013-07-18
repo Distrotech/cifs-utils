@@ -60,7 +60,8 @@ static void usage(void)
 	fprintf(stderr, "Usage: %s [-h] [-v] [-t timeout] key_serial\n", prog);
 }
 
-char *strget(const char *str, const char *substr)
+static char *
+strget(const char *str, const char *substr)
 {
 	int sublen;
 	char *substrptr;

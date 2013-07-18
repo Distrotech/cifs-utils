@@ -124,10 +124,6 @@ extern char *sys_errlist[];
 #define strerror(i) sys_errlist[i]
 #endif
 
-#ifndef HAVE_ERRNO_DECL
-extern int errno;
-#endif
-
 #ifndef HAVE_STRDUP
 #define strdup rep_strdup
 char *rep_strdup(const char *s);

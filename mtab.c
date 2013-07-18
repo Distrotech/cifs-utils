@@ -62,7 +62,7 @@ setlkw_timeout (int sig __attribute__((unused))) {
 }
 
 /* use monotonic time for timeouts */
-struct timeval
+static struct timeval
 mono_time(void) {
 	struct timeval ret;
 #if defined(HAVE_CLOCK_GETTIME) && defined(CLOCK_MONOTONIC)

@@ -25,6 +25,7 @@
 #include <sys/types.h>
 #include <string.h>
 #include <pwd.h>
+#include "util.h"
 
 /* glibc doesn't have strlcpy, strlcat. Ensure we do. JRA. We
  * don't link to libreplace so need them here. */

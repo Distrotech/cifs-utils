@@ -26,6 +26,7 @@
 #include <sys/types.h>
 
 #include "cifsidmap.h"
+#include "idmap_plugin.h"
 
 const char *plugin_errmsg;
 static void *plugin;
