@@ -84,21 +84,30 @@
 #define MTAB_OPTIONS_LEN 220
 
 /*
- * Maximum length of "share" portion of a UNC. I have no idea if this is at
- * all valid. According to MSDN, the typical max length of any component is
- * 255, so use that here.
+ * Max share name, username, password and domain sizes match the kernel's
+ * allowances for these string sizes which in turn match Microsoft's
+ * documentation.
  */
+
+/* Max length of the share name portion of a UNC. Share names over 80
+ * characters cannot be accessed via commandline in Windows 2000/XP. */
 #define MAX_SHARE_LEN 256
 
-/* max length of username (somewhat made up here) */
-#define MAX_USERNAME_SIZE 32
+/* Max user name length. */
+#define MAX_USERNAME_SIZE 256
+
+/* Max domain size. */
+#define MAX_DOMAIN_SIZE 256
+
+/* Max password size. */
+#define MOUNT_PASSWD_SIZE 512
+
+
 
 #ifndef SAFE_FREE
 #define SAFE_FREE(x) do { if ((x) != NULL) {free(x); x = NULL; } } while (0)
 #endif
 
-#define MOUNT_PASSWD_SIZE 128
-#define MAX_DOMAIN_SIZE 64
 
 /*
  * mount.cifs has been the subject of many "security" bugs that have arisen
