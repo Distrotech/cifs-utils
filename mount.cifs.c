@@ -1626,7 +1626,7 @@ drop_child_privs(void)
 }
 
 /*
- * If systemd is running and /bin/systemd-ask-password --
+ * If systemd is running and systemd-ask-password --
  * is available, then use that else fallback on getpass(..)
  *
  * Returns: @input or NULL on error
@@ -1649,7 +1649,7 @@ get_password(const char *prompt, char *input, int capacity)
 		FILE *ask_pass_fp = NULL;
 
 		cmd = ret = NULL;
-		if (asprintf(&cmd, "/bin/systemd-ask-password \"%s\"", prompt) >= 0) {
+		if (asprintf(&cmd, "systemd-ask-password \"%s\"", prompt) >= 0) {
 			ask_pass_fp = popen (cmd, "re");
 			free (cmd);
 		}
