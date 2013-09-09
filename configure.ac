@@ -135,9 +135,9 @@ if test $enable_cifsupcall != "no"; then
 	if test x$ac_cv_header_krb5_krb5_h != xyes ; then
 		if test x$ac_cv_header_krb5_h != xyes ; then
 			if test "$enable_cifsupcall" = "yes"; then
-				AC_MSG_ERROR([krb5.h not found, consider installing krb5-libs-devel.])
+				AC_MSG_ERROR([krb5.h not found, consider installing krb5-devel or krb5-libs-devel.])
 			else
-				AC_MSG_WARN([krb5.h not found, consider installing krb5-libs-devel. Disabling cifs.upcall.])
+				AC_MSG_WARN([krb5.h not found, consider installing krb5-devel or krb5-libs-devel. Disabling cifs.upcall.])
 				enable_cifsupcall="no"
 			fi
 		fi
