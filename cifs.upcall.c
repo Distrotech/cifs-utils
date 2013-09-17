@@ -382,11 +382,20 @@ cifs_krb5_get_req(const char *host, const char *ccname,
 		return ret;
 	}
 
-	ret = krb5_cc_resolve(context, ccname, &ccache);
-	if (ret) {
-		syslog(LOG_DEBUG, "%s: unable to resolve %s to ccache\n",
-		       __func__, ccname);
-		goto out_free_context;
+	if (ccname) {
+		ret = krb5_cc_resolve(context, ccname, &ccache);
+		if (ret) {
+			syslog(LOG_DEBUG, "%s: unable to resolve %s to ccache\n",
+			       __func__, ccname);
+			goto out_free_context;
+		}
+	} else {
+		ret = krb5_cc_default(context, &ccache);
+		if (ret) {
+			syslog(LOG_DEBUG, "%s: krb5_cc_default: %d",
+				__func__, (int)ret);
+			goto out_free_context;
+		}
 	}
 
 	memset(&in_creds, 0, sizeof(in_creds));
