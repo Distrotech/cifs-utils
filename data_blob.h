@@ -61,71 +61,9 @@ _PUBLIC_ DATA_BLOB data_blob_named(const void *p, size_t length, const char *nam
 _PUBLIC_ DATA_BLOB data_blob_talloc_named(TALLOC_CTX *mem_ctx, const void *p, size_t length, const char *name);
 
 /**
- construct a zero data blob, using supplied TALLOC_CTX. 
- use this sparingly as it initialises data - better to initialise
- yourself if you want specific data in the blob
-**/
-_PUBLIC_ DATA_BLOB data_blob_talloc_zero(TALLOC_CTX *mem_ctx, size_t length);
-
-/**
 free a data blob
 **/
 _PUBLIC_ void data_blob_free(DATA_BLOB *d);
-
-/**
-clear a DATA_BLOB's contents
-**/
-_PUBLIC_ void data_blob_clear(DATA_BLOB *d);
-
-/**
-free a data blob and clear its contents
-**/
-_PUBLIC_ void data_blob_clear_free(DATA_BLOB *d);
-
-/**
-check if two data blobs are equal
-**/
-_PUBLIC_ int data_blob_cmp(const DATA_BLOB *d1, const DATA_BLOB *d2);
-
-/**
-print the data_blob as hex string
-**/
-_PUBLIC_ char *data_blob_hex_string_upper(TALLOC_CTX *mem_ctx, const DATA_BLOB *blob);
-
-/**
-print the data_blob as hex string
-**/
-_PUBLIC_ char *data_blob_hex_string_lower(TALLOC_CTX *mem_ctx, const DATA_BLOB *blob);
-
-/**
-  useful for constructing data blobs in test suites, while
-  avoiding const warnings
-**/
-_PUBLIC_ DATA_BLOB data_blob_string_const(const char *str);
-
-/**
-  useful for constructing data blobs in test suites, while
-  avoiding const warnings
-
-  includes the terminating null character (as opposed to data_blo_string_const)
-**/
-_PUBLIC_ DATA_BLOB data_blob_string_const_null(const char *str);
-
-/**
- * Create a new data blob from const data 
- */
-_PUBLIC_ DATA_BLOB data_blob_const(const void *p, size_t length);
-
-/**
-  realloc a data_blob
-**/
-_PUBLIC_ bool data_blob_realloc(TALLOC_CTX *mem_ctx, DATA_BLOB *blob, size_t length);
-
-/**
-  append some data to a data blob
-**/
-_PUBLIC_ bool data_blob_append(TALLOC_CTX *mem_ctx, DATA_BLOB *blob,
-				   const void *p, size_t length);
 
 extern const DATA_BLOB data_blob_null;
 
