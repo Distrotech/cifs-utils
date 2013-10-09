@@ -575,7 +575,7 @@ raw_str_to_sid(const char *str, struct cifs_sid *csid)
 	csid->authority[3] = (x & 0x000000ff0000ULL) >> 16;
 	csid->authority[2] = (x & 0x0000ff000000ULL) >> 24;
 	csid->authority[1] = (x & 0x00ff00000000ULL) >> 32;
-	csid->authority[0] = (x & 0xff0000000000ULL) >> 48;
+	csid->authority[0] = (x & 0xff0000000000ULL) >> 40;
 
 	/* now read the the subauthorities and store as __le32 vals */
 	p = q + 1;

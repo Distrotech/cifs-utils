@@ -198,7 +198,7 @@ print_sid_raw:
 	id_auth_val += (unsigned long long)csid->authority[3] << 16;
 	id_auth_val += (unsigned long long)csid->authority[2] << 24;
 	id_auth_val += (unsigned long long)csid->authority[1] << 32;
-	id_auth_val += (unsigned long long)csid->authority[0] << 48;
+	id_auth_val += (unsigned long long)csid->authority[0] << 40;
 
 	/*
 	 * MS-DTYP states that if the authority is >= 2^32, then it should be
