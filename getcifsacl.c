@@ -106,10 +106,7 @@ print_ace_flags(uint8_t flags, int raw)
 	}
 
 	if (flags & OBJECT_INHERIT_FLAG) {
-		if (mflags)
-			printf("|");
-		else
-			mflags = true;
+		mflags = true;
 		printf("OI");
 	}
 	if (flags & CONTAINER_INHERIT_FLAG) {
