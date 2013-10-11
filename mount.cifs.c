@@ -1508,23 +1508,29 @@ add_mtab_exit:
 static int
 del_mtab(char *mountpoint)
 {
-	int tmprc, rc = 0;
+	int len, tmprc, rc = 0;
 	FILE *mnttmp, *mntmtab;
 	struct mntent *mountent;
-	char *mtabfile, *mtabdir, *mtabtmpfile;
+	char *mtabfile, *mtabdir, *mtabtmpfile = NULL;
 
 	mtabfile = strdup(MOUNTED);
-	mtabdir = dirname(mtabfile);
-	mtabdir = realloc(mtabdir, strlen(mtabdir) + strlen(MNT_TMP_FILE) + 2);
-	if (!mtabdir) {
-		fprintf(stderr, "del_mtab: cannot determine current mtab path");
+	if (!mtabfile) {
+		fprintf(stderr, "del_mtab: cannot strdup MOUNTED\n");
 		rc = EX_FILEIO;
 		goto del_mtab_exit;
 	}
 
-	mtabtmpfile = strcat(mtabdir, MNT_TMP_FILE);
+	mtabdir = dirname(mtabfile);
+	len = strlen(mtabdir) + strlen(MNT_TMP_FILE);
+	mtabtmpfile = malloc(len + 1);
 	if (!mtabtmpfile) {
-		fprintf(stderr, "del_mtab: cannot allocate memory to tmp file");
+		fprintf(stderr, "del_mtab: cannot allocate memory to tmp file\n");
+		rc = EX_FILEIO;
+		goto del_mtab_exit;
+	}
+
+	if (sprintf(mtabtmpfile, "%s%s", mtabdir, MNT_TMP_FILE) != len) {
+		fprintf(stderr, "del_mtab: error writing new string\n");
 		rc = EX_FILEIO;
 		goto del_mtab_exit;
 	}
@@ -1532,14 +1538,14 @@ del_mtab(char *mountpoint)
 	atexit(unlock_mtab);
 	rc = lock_mtab();
 	if (rc) {
-		fprintf(stderr, "del_mtab: cannot lock mtab");
+		fprintf(stderr, "del_mtab: cannot lock mtab\n");
 		rc = EX_FILEIO;
 		goto del_mtab_exit;
 	}
 
 	mtabtmpfile = mktemp(mtabtmpfile);
 	if (!mtabtmpfile) {
-		fprintf(stderr, "del_mtab: cannot setup tmp file destination");
+		fprintf(stderr, "del_mtab: cannot setup tmp file destination\n");
 		rc = EX_FILEIO;
 		goto del_mtab_exit;
 	}
@@ -1587,7 +1593,8 @@ del_mtab(char *mountpoint)
 
 del_mtab_exit:
 	unlock_mtab();
-	free(mtabdir);
+	free(mtabtmpfile);
+	free(mtabfile);
 	return rc;
 
 del_mtab_error:
