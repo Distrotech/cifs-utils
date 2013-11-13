@@ -29,34 +29,15 @@
 #include <keyutils.h>
 #include <getopt.h>
 #include <errno.h>
+#include "cifskey.h"
 #include "mount.h"
 #include "resolve_host.h"
 #include "util.h"
 
 #define THIS_PROGRAM_NAME "cifscreds"
-#define KEY_PREFIX	  "cifs"
 
 /* max length of appropriate command */
 #define MAX_COMMAND_SIZE 32
-
-/* max length of username, password and domain name */
-#define MAX_USERNAME_SIZE 32
-#define MOUNT_PASSWD_SIZE 128
-#define MAX_DOMAIN_SIZE 64
-
-/*
- * disallowed characters for user and domain names. See:
- * http://technet.microsoft.com/en-us/library/bb726984.aspx
- * http://support.microsoft.com/kb/909264
- */
-#define USER_DISALLOWED_CHARS "\\/\"[]:|<>+=;,?*"
-#define DOMAIN_DISALLOWED_CHARS "\\/:*?\"<>|"
-
-/* destination keyring */
-#define DEST_KEYRING KEY_SPEC_SESSION_KEYRING
-#define CIFS_KEY_TYPE  "logon"
-#define CIFS_KEY_PERMS (KEY_POS_VIEW|KEY_POS_WRITE|KEY_POS_SEARCH| \
-			KEY_USR_VIEW|KEY_USR_WRITE|KEY_USR_SEARCH)
 
 struct cmdarg {
 	char		*host;
@@ -104,17 +85,6 @@ usage(void)
 	fprintf(stderr, "\n");
 
 	return EXIT_FAILURE;
-}
-
-/* search a specific key in keyring */
-static key_serial_t
-key_search(const char *addr, char keytype)
-{
-	char desc[INET6_ADDRSTRLEN + sizeof(KEY_PREFIX) + 4];
-
-	sprintf(desc, "%s:%c:%s", KEY_PREFIX, keytype, addr);
-
-	return keyctl_search(DEST_KEYRING, CIFS_KEY_TYPE, desc, 0);
 }
 
 /* search all program's keys in keyring */
@@ -168,23 +138,6 @@ static key_serial_t key_search_all(void)
 key_search_all_out:
 	free(keylist);
 	return ret;
-}
-
-/* add or update a specific key to keyring */
-static key_serial_t
-key_add(const char *addr, const char *user, const char *pass, char keytype)
-{
-	int len;
-	char desc[INET6_ADDRSTRLEN + sizeof(KEY_PREFIX) + 4];
-	char val[MOUNT_PASSWD_SIZE +  MAX_USERNAME_SIZE + 2];
-
-	/* set key description */
-	sprintf(desc, "%s:%c:%s", KEY_PREFIX, keytype, addr);
-
-	/* set payload contents */
-	len = sprintf(val, "%s:%s", user, pass);
-
-	return add_key(CIFS_KEY_TYPE, desc, val, len + 1, DEST_KEYRING);
 }
 
 /* add command handler */

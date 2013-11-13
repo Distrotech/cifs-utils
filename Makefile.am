@@ -34,7 +34,7 @@ endif
 
 if CONFIG_CIFSCREDS
 bin_PROGRAMS += cifscreds
-cifscreds_SOURCES = cifscreds.c resolve_host.c util.c
+cifscreds_SOURCES = cifscreds.c cifskey.c resolve_host.c util.c
 cifscreds_LDADD = -lkeyutils
 man_MANS += cifscreds.1
 endif
@@ -89,6 +89,15 @@ idmapwb.so: idmapwb.c
 idmapwb.8: idmapwb.8.in
 	$(SED) 's,[@]pluginpath@,$(pluginpath),' $(srcdir)/$@.in > $@-t && mv $@-t $@
 
+endif
+
+if CONFIG_PAM
+pamdir = $(libdir)/security
+
+pam_PROGRAMS = pam_cifscreds.so
+
+pam_cifscreds.so: pam_cifscreds.c cifskey.c resolve_host.c util.c
+	$(CC) $(CFLAGS) $(AM_CFLAGS) $(LDFLAGS) -shared -fpic -o $@ $+ -lpam -lkeyutils
 endif
 
 SUBDIRS = contrib

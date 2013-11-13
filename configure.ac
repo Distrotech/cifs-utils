@@ -40,6 +40,11 @@ AC_ARG_ENABLE(cifsacl,
 	enable_cifsacl=$enableval,
 	enable_cifsacl="maybe")
 
+AC_ARG_ENABLE(pam,
+	[AS_HELP_STRING([--enable-pam],[Create cifscreds PAM module @<:@default=yes@:>@])],
+	enable_pam=$enableval,
+	enable_pam="maybe")
+
 AC_ARG_ENABLE(systemd,
 	[AS_HELP_STRING([--enable-systemd],[Enable systemd specific behavior for mount.cifs @<:@default=yes@:>@])],
 	enable_systemd=$enableval,
@@ -190,18 +195,30 @@ AC_TEST_WBCHL
 # test for presence of WBC_ID_TYPE_BOTH enum value
 AC_TEST_WBC_IDMAP_BOTH
 
-if test $enable_cifscreds != "no"; then
+if test $enable_cifscreds != "no" -o $enable_pam != "no"; then
 	AC_CHECK_HEADERS([keyutils.h], , [
 
-				if test $enable_cifscreds = "yes"; then
+				if test $enable_cifscreds = "yes" -o $enable_pam = "yes"; then
 					AC_MSG_ERROR([keyutils.h not found, consider installing keyutils-libs-devel.])
 				else
-					AC_MSG_WARN([keyutils.h not found, consider installing keyutils-libs-devel. Disabling cifscreds.])
+					AC_MSG_WARN([keyutils.h not found, consider installing keyutils-libs-devel. Disabling cifscreds and cifscreds PAM module.])
 					enable_cifscreds="no"
+					enable_pam="no"
 				fi
 			])
 fi
 
+if test $enable_pam != "no"; then
+	AC_CHECK_HEADERS([security/pam_appl.h], , [
+
+				if test $enable_pam = "yes"; then
+					AC_MSG_ERROR([security/pam_appl.h not found, consider installing keyutils-libs-devel.])
+				else
+					AC_MSG_WARN([security/pam_appl.h not found, consider installing pam-devel. Disabling cifscreds PAM module.])
+					enable_pam="no"
+				fi
+			])
+fi
 
 # ugly, but I'm not sure how to check for functions in a library that's not in $LIBS
 cu_saved_libs=$LIBS
@@ -231,6 +248,7 @@ AM_CONDITIONAL(CONFIG_CIFSUPCALL, [test "$enable_cifsupcall" != "no"])
 AM_CONDITIONAL(CONFIG_CIFSCREDS, [test "$enable_cifscreds" != "no"])
 AM_CONDITIONAL(CONFIG_CIFSIDMAP, [test "$enable_cifsidmap" != "no"])
 AM_CONDITIONAL(CONFIG_CIFSACL, [test "$enable_cifsacl" != "no"])
+AM_CONDITIONAL(CONFIG_PAM, [test "$enable_pam" != "no"])
 AM_CONDITIONAL(CONFIG_PLUGIN, [test "$enable_cifsidmap" != "no" -o "$enable_cifsacl" != "no"])
 
 LIBCAP_NG_PATH
