@@ -21,6 +21,7 @@ fi
 
 if test $enable_cifsacl != "no" -o $enable_cifsacl != "no"; then
 	ac_wbc_save_LDFLAGS="$LDFLAGS"
+	ac_wbc_save_LIBS="$LIBS"
 	LDFLAGS="$LDFLAGS $WBCLIENT_LIBS"
 	AC_CHECK_LIB(wbclient, wbcSidsToUnixIds, , [
 				if test "$enable_cifsidmap" = "yes"; then
@@ -37,6 +38,7 @@ if test $enable_cifsacl != "no" -o $enable_cifsacl != "no"; then
 				fi
 			])
 	LDFLAGS=$ac_wbc_save_LDFLAGS
+	LIBS=$ac_wbc_save_LIBS
 fi
 
 if test $enable_cifsacl != "no"; then
