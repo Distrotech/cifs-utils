@@ -140,7 +140,8 @@ free_password (char *password)
 }
 
 static void
-cleanup_free_password (pam_handle_t *ph, void *data, int pam_end_status)
+cleanup_free_password (pam_handle_t *ph __attribute__((unused)), void *data,
+			int pam_end_status __attribute__((unused)))
 {
 	free_password (data);
 }
@@ -268,7 +269,6 @@ static int cifscreds_pam_update(pam_handle_t *ph, const char *user, const char *
 	int ret = PAM_SUCCESS;
 	char addrstr[MAX_ADDR_LIST_LEN];
 	char *currentaddress, *nextaddress;
-	char *addrs[16];
 	int id, count = 0;
 	char keytype = ((args & ARG_DOMAIN) == ARG_DOMAIN) ? 'd' : 'a';
 
@@ -308,10 +308,8 @@ static int cifscreds_pam_update(pam_handle_t *ph, const char *user, const char *
 		*nextaddress++ = '\0';
 
 	while (currentaddress) {
-		if (key_search(currentaddress, keytype) > 0) {
-			addrs[count] = currentaddress;
+		if (key_search(currentaddress, keytype) > 0)
 			count++;
-		}
 
 		currentaddress = nextaddress;
 		if (currentaddress) {
@@ -322,7 +320,7 @@ static int cifscreds_pam_update(pam_handle_t *ph, const char *user, const char *
 	}
 
 	if (!count) {
-		pam_syslog(ph, LOG_ERR, "You have no same stached credentials for %s", hostdomain);
+		pam_syslog(ph, LOG_ERR, "You have no same stashed credentials for %s", hostdomain);
 		return PAM_SERVICE_ERR;
 	}
 
@@ -344,7 +342,7 @@ static int cifscreds_pam_update(pam_handle_t *ph, const char *user, const char *
  * scenarios are possible:
  *
  * - A session is already available which usually means that the user is already
- *	logged on and PAM has been used inside the screensaver. In that case, no need to 
+ *	logged on and PAM has been used inside the screensaver. In that case, no need to
  *	do anything(?).
  *
  * - A session is not yet available. Store the password inside PAM data so
@@ -356,7 +354,7 @@ static int cifscreds_pam_update(pam_handle_t *ph, const char *user, const char *
  * @param argv array of arguments for this PAM module
  * @return any of the PAM return values
  */
-PAM_EXTERN int pam_sm_authenticate(pam_handle_t *ph, int unused, int argc, const char **argv)
+PAM_EXTERN int pam_sm_authenticate(pam_handle_t *ph, int unused __attribute__((unused)), int argc, const char **argv)
 {
 	const char *hostdomain;
 	const char *user;
@@ -365,7 +363,7 @@ PAM_EXTERN int pam_sm_authenticate(pam_handle_t *ph, int unused, int argc, const
 	int ret;
 
 	args = parse_args(ph, argc, argv, &hostdomain);
-	
+
 	/* Figure out and/or prompt for the user name */
 	ret = pam_get_user(ph, &user, NULL);
 	if (ret != PAM_SUCCESS || !user) {
@@ -411,7 +409,7 @@ PAM_EXTERN int pam_sm_authenticate(pam_handle_t *ph, int unused, int argc, const
  * @param argv array of arguments for this PAM module
  * @return any of the PAM return values
  */
-PAM_EXTERN int pam_sm_open_session(pam_handle_t *ph, int flags, int argc, const char **argv)
+PAM_EXTERN int pam_sm_open_session(pam_handle_t *ph, int flags __attribute__((unused)), int argc, const char **argv)
 {
 	const char *user = NULL;
 	const char *password = NULL;
@@ -484,7 +482,7 @@ PAM_EXTERN int pam_sm_open_session(pam_handle_t *ph, int flags, int argc, const 
  * @param argv array of arguments for this PAM module
  * @return PAM_SUCCESS
  */
-PAM_EXTERN int pam_sm_close_session(pam_handle_t *ph, int flags, int argc, const char **argv)
+PAM_EXTERN int pam_sm_close_session(pam_handle_t *ph __attribute__((unused)), int flags __attribute__((unused)), int argc __attribute__((unused)), const char **argv __attribute__((unused)))
 {
 	return PAM_SUCCESS;
 }
@@ -498,7 +496,7 @@ PAM_EXTERN int pam_sm_close_session(pam_handle_t *ph, int flags, int argc, const
  * @param argv array of arguments for this PAM module
  * @return PAM_SUCCESS
  */
-PAM_EXTERN int pam_sm_setcred(pam_handle_t *ph, int flags, int argc, const char **argv)
+PAM_EXTERN int pam_sm_setcred(pam_handle_t *ph __attribute__((unused)), int flags __attribute__((unused)), int argc __attribute__((unused)), const char **argv __attribute__((unused)))
 {
 	return PAM_SUCCESS;
 }
@@ -520,15 +518,14 @@ pam_sm_chauthtok (pam_handle_t *ph, int flags, int argc, const char **argv)
 	const char *password = NULL;
 	uint args;
 	int ret;
-	
+
 	args = parse_args(ph, argc, argv, &hostdomain);
 
 	if (flags & PAM_UPDATE_AUTHTOK) {
 		/* Figure out the user name */
 		ret = pam_get_user(ph, &user, NULL);
 		if (ret != PAM_SUCCESS) {
-			pam_syslog(ph, LOG_ERR, "couldn't get the user name: %s", 
-				pam_strerror (ph, ret));
+			pam_syslog(ph, LOG_ERR, "couldn't get the user name: %s", pam_strerror (ph, ret));
 			return PAM_SERVICE_ERR;
 		}
 
@@ -537,14 +534,13 @@ pam_sm_chauthtok (pam_handle_t *ph, int flags, int argc, const char **argv)
 			if (ret == PAM_SUCCESS) {
 				pam_syslog(ph, LOG_WARNING, "no password is available for user");
 			} else {
-				pam_syslog(ph, LOG_WARNING, "no password is available for user: %s",
-					pam_strerror(ph, ret));
+				pam_syslog(ph, LOG_WARNING, "no password is available for user: %s", pam_strerror(ph, ret));
 			}
 			return PAM_AUTHTOK_RECOVER_ERR;
 		}
-	
+
 		return cifscreds_pam_update(ph, user, password, args, hostdomain);
 	}
-	else 
+	else
 		return PAM_IGNORE;
 }
