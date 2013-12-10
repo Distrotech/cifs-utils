@@ -98,6 +98,7 @@ pam_PROGRAMS = pam_cifscreds.so
 
 pam_cifscreds.so: pam_cifscreds.c cifskey.c resolve_host.c util.c
 	$(CC) $(CFLAGS) $(AM_CFLAGS) $(LDFLAGS) -shared -fpic -o $@ $+ -lpam -lkeyutils
+man_MANS += pam_cifscreds.8
 endif
 
 SUBDIRS = contrib
