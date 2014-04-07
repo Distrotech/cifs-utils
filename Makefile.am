@@ -92,8 +92,6 @@ idmapwb.8: idmapwb.8.in
 endif
 
 if CONFIG_PAM
-pamdir = $(libdir)/security
-
 pam_PROGRAMS = pam_cifscreds.so
 
 pam_cifscreds.so: pam_cifscreds.c cifskey.c resolve_host.c util.c

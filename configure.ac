@@ -58,6 +58,12 @@ AC_ARG_WITH(idmap-plugin,
 AC_DEFINE_UNQUOTED(IDMAP_PLUGIN_PATH, "$pluginpath", [Location of plugin that ID mapping infrastructure should use. (usually a symlink to real plugin)])
 AC_SUBST([pluginpath])
 
+AC_ARG_WITH(pamdir,
+	[AC_HELP_STRING([--with-pamdir=DIR],[Where to install the PAM module @<:@default=$(libdir)/security@:>@])],
+	pamdir=$withval,
+	pamdir="\$(libdir)/security")
+AC_SUBST([pamdir])
+
 # check for ROOTSBINDIR environment var
 if test -z $ROOTSBINDIR; then
 	ROOTSBINDIR="/sbin"
