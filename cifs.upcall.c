@@ -55,7 +55,6 @@
 #define	CIFS_DEFAULT_KRB5_DIR		"/tmp"
 #define	CIFS_DEFAULT_KRB5_USER_DIR	"/run/user/%U"
 #define	CIFS_DEFAULT_KRB5_PREFIX	"krb5cc"
-#define CIFS_DEFAULT_KRB5_KEYTAB	"/etc/krb5.keytab"
 
 #define	MAX_CCNAME_LEN			PATH_MAX + 5
 
@@ -205,9 +204,15 @@ init_cc_from_keytab(const char *keytab_name, const char *user)
 		goto icfk_cleanup;
 	}
 
-	ret = krb5_kt_resolve(context, keytab_name, &keytab);
+	if (keytab_name)
+		ret = krb5_kt_resolve(context, keytab_name, &keytab);
+	else
+		ret = krb5_kt_default(context, &keytab);
+
 	if (ret) {
-		syslog(LOG_DEBUG, "krb5_kt_resolve: %d", (int)ret);
+		syslog(LOG_DEBUG, "%s: %d",
+			keytab_name ? "krb5_kt_resolve" : "krb5_kt_default",
+			(int)ret);
 		goto icfk_cleanup;
 	}
 
@@ -841,7 +846,7 @@ int main(const int argc, char *const argv[])
 	struct decoded_args arg;
 	const char *oid;
 	uid_t uid;
-	char *keytab_name = CIFS_DEFAULT_KRB5_KEYTAB;
+	char *keytab_name = NULL;
 	time_t best_time = 0;
 
 	hostbuf[0] = '\0';
