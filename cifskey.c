@@ -29,7 +29,8 @@ key_search(const char *addr, char keytype)
 {
 	char desc[INET6_ADDRSTRLEN + sizeof(KEY_PREFIX) + 4];
 
-	sprintf(desc, "%s:%c:%s", KEY_PREFIX, keytype, addr);
+	if (snprintf(desc, sizeof(desc), "%s:%c:%s", KEY_PREFIX, keytype, addr) >= (int)sizeof(desc))
+		return -1;
 
 	return keyctl_search(DEST_KEYRING, CIFS_KEY_TYPE, desc, 0);
 }
@@ -43,10 +44,13 @@ key_add(const char *addr, const char *user, const char *pass, char keytype)
 	char val[MOUNT_PASSWD_SIZE +  MAX_USERNAME_SIZE + 2];
 
 	/* set key description */
-	sprintf(desc, "%s:%c:%s", KEY_PREFIX, keytype, addr);
+	if (snprintf(desc, sizeof(desc), "%s:%c:%s", KEY_PREFIX, keytype, addr) >= (int)sizeof(desc))
+		return -1;
 
 	/* set payload contents */
-	len = sprintf(val, "%s:%s", user, pass);
+	len = snprintf(val, sizeof(val), "%s:%s", user, pass);
+	if (len >= (int)sizeof(val))
+		return -1;
 
 	return add_key(CIFS_KEY_TYPE, desc, val, len + 1, DEST_KEYRING);
 }
