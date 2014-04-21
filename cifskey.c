@@ -20,6 +20,7 @@
 #include <sys/types.h>
 #include <keyutils.h>
 #include <stdio.h>
+#include <errno.h>
 #include "cifskey.h"
 #include "resolve_host.h"
 
@@ -29,8 +30,10 @@ key_search(const char *addr, char keytype)
 {
 	char desc[INET6_ADDRSTRLEN + sizeof(KEY_PREFIX) + 4];
 
-	if (snprintf(desc, sizeof(desc), "%s:%c:%s", KEY_PREFIX, keytype, addr) >= (int)sizeof(desc))
+	if (snprintf(desc, sizeof(desc), "%s:%c:%s", KEY_PREFIX, keytype, addr) >= (int)sizeof(desc)) {
+		errno = EINVAL;
 		return -1;
+	}
 
 	return keyctl_search(DEST_KEYRING, CIFS_KEY_TYPE, desc, 0);
 }

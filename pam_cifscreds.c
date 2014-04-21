@@ -206,6 +206,15 @@ static int cifscreds_pam_add(pam_handle_t *ph, const char *user, const char *pas
 			return PAM_SERVICE_ERR;
 		}
 
+		switch(errno) {
+		case ENOKEY:
+			break;
+		default:
+			pam_syslog(ph, LOG_ERR, "Unable to search keyring for %s (%s)",
+					currentaddress, strerror(errno));
+			return PAM_SERVICE_ERR;
+		}
+
 		currentaddress = nextaddress;
 		if (currentaddress) {
 			*(currentaddress - 1) = ',';

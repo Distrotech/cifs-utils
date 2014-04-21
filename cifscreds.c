@@ -188,6 +188,15 @@ static int cifscreds_add(struct cmdarg *arg)
 			return EXIT_FAILURE;
 		}
 
+		switch(errno) {
+		case ENOKEY:
+			/* success */
+			break;
+		default:
+			printf("Key search failed: %s\n", strerror(errno));
+			return EXIT_FAILURE;
+		}
+
 		currentaddress = nextaddress;
 		if (currentaddress) {
 			*(currentaddress - 1) = ',';
