@@ -47,13 +47,17 @@ key_add(const char *addr, const char *user, const char *pass, char keytype)
 	char val[MOUNT_PASSWD_SIZE +  MAX_USERNAME_SIZE + 2];
 
 	/* set key description */
-	if (snprintf(desc, sizeof(desc), "%s:%c:%s", KEY_PREFIX, keytype, addr) >= (int)sizeof(desc))
+	if (snprintf(desc, sizeof(desc), "%s:%c:%s", KEY_PREFIX, keytype, addr) >= (int)sizeof(desc)) {
+		errno = EINVAL;
 		return -1;
+	}
 
 	/* set payload contents */
 	len = snprintf(val, sizeof(val), "%s:%s", user, pass);
-	if (len >= (int)sizeof(val))
+	if (len >= (int)sizeof(val)) {
+		errno = EINVAL;
 		return -1;
+	}
 
 	return add_key(CIFS_KEY_TYPE, desc, val, len + 1, DEST_KEYRING);
 }

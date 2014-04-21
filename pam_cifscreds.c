@@ -208,6 +208,7 @@ static int cifscreds_pam_add(pam_handle_t *ph, const char *user, const char *pas
 
 		switch(errno) {
 		case ENOKEY:
+			/* success */
 			break;
 		default:
 			pam_syslog(ph, LOG_ERR, "Unable to search keyring for %s (%s)",
@@ -233,8 +234,8 @@ static int cifscreds_pam_add(pam_handle_t *ph, const char *user, const char *pas
 	while (currentaddress) {
 		key_serial_t key = key_add(currentaddress, user, password, keytype);
 		if (key <= 0) {
-			pam_syslog(ph, LOG_ERR, "error: Add credential key for %s",
-				currentaddress);
+			pam_syslog(ph, LOG_ERR, "error: Add credential key for %s: %s",
+				currentaddress, strerror(errno));
 		} else {
 			if ((args & ARG_DEBUG) == ARG_DEBUG) {
 				pam_syslog(ph, LOG_DEBUG, "credential key for \\\\%s\\%s added",
@@ -336,8 +337,8 @@ static int cifscreds_pam_update(pam_handle_t *ph, const char *user, const char *
 	for (id = 0; id < count; id++) {
 		key_serial_t key = key_add(currentaddress, user, password, keytype);
 		if (key <= 0) {
-			pam_syslog(ph, LOG_ERR, "error: Update credential key for %s",
-				currentaddress);
+			pam_syslog(ph, LOG_ERR, "error: Update credential key for %s: %s",
+				currentaddress, strerror(errno));
 		}
 	}
 

@@ -220,8 +220,8 @@ static int cifscreds_add(struct cmdarg *arg)
 	while (currentaddress) {
 		key_serial_t key = key_add(currentaddress, arg->user, pass, arg->keytype);
 		if (key <= 0) {
-			fprintf(stderr, "error: Add credential key for %s\n",
-				currentaddress);
+			fprintf(stderr, "error: Add credential key for %s: %s\n",
+				currentaddress, strerror(errno));
 		} else {
 			if (keyctl(KEYCTL_SETPERM, key, CIFS_KEY_PERMS) < 0) {
 				fprintf(stderr, "error: Setting permissons "
@@ -422,7 +422,7 @@ static int cifscreds_update(struct cmdarg *arg)
 		key_serial_t key = key_add(addrs[id], arg->user, pass, arg->keytype);
 		if (key <= 0)
 			fprintf(stderr, "error: Update credential key "
-				"for %s\n", addrs[id]);
+				"for %s: %s\n", addrs[id], strerror(errno));
 	}
 
 	return EXIT_SUCCESS;
