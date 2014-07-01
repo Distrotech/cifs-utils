@@ -2097,7 +2097,8 @@ mount_retry:
 			if (!already_uppercased &&
 			    uppercase_string(parsed_info->host) &&
 			    uppercase_string(parsed_info->share) &&
-			    uppercase_string(parsed_info->prefix)) {
+			    uppercase_string(parsed_info->prefix) &&
+			    uppercase_string(orig_dev)) {
 				fprintf(stderr,
 					"Retrying with upper case share name\n");
 				already_uppercased = 1;
