@@ -38,6 +38,7 @@
 #include <mntent.h>
 #include <stdlib.h>
 #include <signal.h>
+#include <paths.h>
 #include "mount.h"
 #include "config.h"
 
