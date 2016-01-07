@@ -756,6 +756,8 @@ static int parse_opt_token(const char *token)
 		return OPT_BKUPGID;
 	if (strncmp(token, "nofail", 6) == 0)
 		return OPT_NOFAIL;
+	if (strncmp(token, "x-", 2) == 0)
+		return OPT_IGNORE;
 
 	return OPT_ERROR;
 }
