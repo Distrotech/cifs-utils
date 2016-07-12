@@ -19,7 +19,7 @@ if test $enable_cifsidmap != "no" -o $enable_cifsacl != "no"; then
 			])
 fi
 
-if test $enable_cifsacl != "no" -o $enable_cifsacl != "no"; then
+if test $enable_cifsidmap != "no" -o $enable_cifsacl != "no"; then
 	ac_wbc_save_LDFLAGS="$LDFLAGS"
 	ac_wbc_save_LIBS="$LIBS"
 	LDFLAGS="$LDFLAGS $WBCLIENT_LIBS"
