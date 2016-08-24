@@ -102,19 +102,13 @@ krb5_auth_con_getsendsubkey(krb5_context context,
 #endif
 
 /* does the ccache have a valid TGT? */
-static time_t get_tgt_time(const char *ccname)
+static time_t get_tgt_time(krb5_ccache ccache)
 {
-	krb5_ccache ccache;
 	krb5_cc_cursor cur;
 	krb5_creds creds;
 	krb5_principal principal;
 	time_t credtime = 0;
 	char *realm = NULL;
-
-	if (krb5_cc_resolve(context, ccname, &ccache)) {
-		syslog(LOG_DEBUG, "%s: unable to resolve krb5 cache", __func__);
-		goto err_cache;
-	}
 
 	if (krb5_cc_set_flags(context, ccache, 0)) {
 		syslog(LOG_DEBUG, "%s: unable to set flags", __func__);
@@ -156,8 +150,6 @@ err_endseq:
 	krb5_cc_end_seq_get(context, ccache, &cur);
 err_ccstart:
 	krb5_free_principal(context, principal);
-err_princ:
-	krb5_cc_close(context, ccache);
 err_cache:
 	return credtime;
 }
@@ -167,15 +159,22 @@ get_default_cc(void)
 {
 	const char *ccname;
 	char *rcc = NULL;
+	krb5_ccache ccache;
 
 	ccname = krb5_cc_default_name(context);
 	if (!ccname) {
-		syslog(LOG_DEBUG, "krb5_cc_default returned NULL.");
+		syslog(LOG_DEBUG, "%s: krb5_cc_default returned NULL.", __func__);
 		return NULL;
 	}
 
-	if (get_tgt_time(ccname))
+	if (krb5_cc_resolve(context, ccname, &ccache)) {
+		syslog(LOG_DEBUG, "%s: unable to resolve krb5 cache", __func__);
+		return NULL;
+	}
+
+	if (get_tgt_time(ccache))
 		rcc = strdup(ccname);
+	krb5_cc_close(context, ccache);
 	return rcc;
 }
 
