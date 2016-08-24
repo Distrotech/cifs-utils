@@ -157,9 +157,6 @@ err_endseq:
 err_ccstart:
 	krb5_free_principal(context, principal);
 err_princ:
-#if defined(KRB5_TC_OPENCLOSE)
-	krb5_cc_set_flags(context, ccache, KRB5_TC_OPENCLOSE);
-#endif
 	krb5_cc_close(context, ccache);
 err_cache:
 	return credtime;
@@ -388,9 +385,6 @@ out_free_creds:
 out_free_principal:
 	krb5_free_principal(context, in_creds.client);
 out_free_ccache:
-#if defined(KRB5_TC_OPENCLOSE)
-	krb5_cc_set_flags(context, ccache, KRB5_TC_OPENCLOSE);
-#endif
 	krb5_cc_close(context, ccache);
 	return ret;
 }
